@@ -74,6 +74,7 @@ class AlgoConfig(BaseConfig):
         pf_ppo (dict[str, Any]): Preference feedback PPO settings.
         filter_groups (Optional[FilterGroupsConfig]): Filter groups configuration, used in DAPO and Entropy
     """
+    # m_opt_k :int 
 
     gamma: float = 1.0
     lam: float = 1.0
