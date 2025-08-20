@@ -23,6 +23,8 @@ __all__ = ["register_adv_est", "get_adv_estimator_fn", "AdvantageEstimator"]
 from collections import defaultdict
 from enum import Enum
 from typing import Any, Callable, Optional
+from random import sample
+from math import comb, sqrt
 
 import numpy as np
 import torch
@@ -101,6 +103,7 @@ class AdvantageEstimator(str, Enum):
     OPO = "opo"
     GRPO_PASSK = "grpo_passk"
     GPG = "gpg"
+    BYTEDANCE_PASS_AT_K = "bytedance_pass_at_k"
 
 
 ADV_ESTIMATOR_REGISTRY: dict[str, Any] = {}
@@ -257,6 +260,58 @@ def compute_gae_advantage_return(
 
 
 # NOTE(sgm): this implementation only consider outcome supervision, where the reward is a scalar.
+@register_adv_est(AdvantageEstimator.BYTEDANCE_PASS_AT_K)  # or simply: @register_adv_est("grpo")
+def compute_bytedance_pass_at_k_outcome_advantages(
+    token_level_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.ndarray,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    scores = token_level_rewards.sum(dim=-1) #M: what is the dimension of this tensor? I actually expect it to be 1-dim
+    breakpoint() #(expecting 0-1 1-dim list for scores -- inspect this)
+    pass_at_k_scores = torch.zeros_like(scores)
+
+    # id2score = defaultdict(list)
+    # id2mean = {}
+    # id2std = {}
+    id2indexes = defaultdict(list)
+
+    HARDCODED_K_OPT = 2
+    HARDCODED_R_POS = 1
+    HARDCODED_R_NEG = 0
+    HARDCODED_N_GROUPS = 2
+
+    #M: hardcored comp
+    N_rollouts = scores.size(0)
+    assert N_rollouts >= HARDCODED_K_OPT
+    N_neg = int(N_rollouts - scores.sum(dim=-1).item())
+    R_group_bar = 1 - comb(N_neg, HARDCODED_K_OPT) / comb(N_rollouts, HARDCODED_K_OPT)
+    sigma_group = sqrt(R_group_bar * (1 - R_group_bar))
+    A_pos = (HARDCODED_R_POS - R_group_bar) / sigma_group 
+    A_neg = (HARDCODED_R_NEG - R_group_bar) / sigma_group
+
+
+    with torch.no_grad():
+        bsz = scores.shape[0]
+        for i in range(bsz):
+            # id2score[index[i]].append(scores[i])
+            id2indexes[index[i]].append(i)
+        for id in id2indexes.keys(): #M: i think idx is the uid of generations, in case we have n>1. 
+            assert len(id2indexes[index[i]]) >= HARDCODED_K_OPT, "for pass@k optim need to sample at least k"
+            assert comb(len(id2indexes[index[i]]), HARDCODED_K_OPT) >= HARDCODED_N_GROUPS, f"too many groups {HARDCODED_N_GROUPS=}" 
+            groups = [sample(id2indexes[id], HARDCODED_K_OPT) for _ in range(HARDCODED_N_GROUPS)]  #M: might need torch.sample
+            for group in groups: 
+                pass_at_k_scores[group] += A_pos if torch.max(scores[group], dim=-1).item() >= 1 else A_neg
+            else:
+                raise ValueError(f"no score in prompt index: {idx}")
+        scores = pass_at_k_scores.unsqueeze(-1) * response_mask
+
+    return scores, scores #M: not sure what second return for -- same as GRPO 
+
+
+
+
+
+
 @register_adv_est(AdvantageEstimator.GRPO)  # or simply: @register_adv_est("grpo")
 def compute_grpo_outcome_advantage(
     token_level_rewards: torch.Tensor,
@@ -304,8 +359,9 @@ def compute_grpo_outcome_advantage(
         bsz = scores.shape[0]
         for i in range(bsz):
             id2score[index[i]].append(scores[i])
-        for idx in id2score:
+        for idx in id2score: #M: i think idx is the uid of generations, in case we have n>1. 
             if len(id2score[idx]) == 1:
+                assert False, "bro why are u doing GRPO with n_rollout==1?"
                 id2mean[idx] = torch.tensor(0.0)
                 id2std[idx] = torch.tensor(1.0)
             elif len(id2score[idx]) > 1:
