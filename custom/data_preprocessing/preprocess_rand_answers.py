@@ -34,8 +34,9 @@ def extract_solution(solution_str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="/mnt/xfs/home/aiilyas/rl-exploration/data/gsm8k")
+    parser.add_argument("--local_dir", default="~/data/gsm8k")
     parser.add_argument("--hdfs_dir", default=None)
+    parser.add_argument("--range", default=20)
 
     args = parser.parse_args()
 
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     train_dataset = dataset["train"]
     test_dataset = dataset["test"]
 
-    instruction_following = 'Let\'s think step by step and output the final answer inside <solution></solution>".'
+    instruction_following = 'Let\'s think step by step and output the final answer after "####".'
 
     # add a row to each data item that represents a unique id
     def make_map_fn(split):
