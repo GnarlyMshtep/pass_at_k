@@ -244,12 +244,17 @@ def compute_advantage(
     # prepare response group
 
     if adv_estimator == AdvantageEstimator.BYTEDANCE_PASS_AT_K: 
+        k_opt = 2 if config is None else config.get("pass_at_k_k", 2)
+        # breakpoint()
         advantages, returns = core_algos.compute_bytedance_pass_at_k_outcome_advantages(
             token_level_rewards=data.batch["token_level_rewards"],
             response_mask=data.batch["response_mask"],
             index=data.non_tensor_batch["uid"],
+            k_opt=k_opt,
         )
-    if adv_estimator == AdvantageEstimator.GAE:
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
+    elif adv_estimator == AdvantageEstimator.GAE:
         # Compute advantages and returns using Generalized Advantage Estimation (GAE)
         advantages, returns = core_algos.compute_gae_advantage_return(
             token_level_rewards=data.batch["token_level_rewards"],

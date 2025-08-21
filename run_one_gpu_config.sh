@@ -39,17 +39,19 @@ CONFIG_PATH="$PROJECT_DIR/examples/sglang_multiturn/config"
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0 #I think this is because the debugger complains about slow resolves? Claude suggested. 
 export TOKENIZERS_PARALLELISM=False #M: this is not entirely safe -- what's the utiliaztion here? 
 
+export RAY_DEBUG_POST_MORTEM=1
 
-python3 -m verl.trainer.main_ppo \
+CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=bytedance_pass_at_k \
-    data.train_batch_size=8 \
-    data.val_batch_size=8 \
+    +algorithm.pass_at_k_k=2 \
+    data.train_batch_size=16 \
+    data.val_batch_size=16 \
     data.max_prompt_length=1024 \
     data.max_response_length=1024 \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
     data.return_raw_chat=True \
-    actor_rollout_ref.model.path="$HOME/models/Qwen2_5-1_5B-Instruct" \
+    actor_rollout_ref.model.path="$HF_HOME/models/Qwen2_5-1_5B-Instruct" \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.actor.ppo_mini_batch_size=8 \
@@ -76,22 +78,22 @@ python3 -m verl.trainer.main_ppo \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
     trainer.project_name='bGRPO' \
-    trainer.experiment_name="$(git branch --show-current)" \
+    trainer.experiment_name="gsm8k_dataset_pass_at_2" \
     trainer.n_gpus_per_node=1 \
     trainer.nnodes=1 \
     trainer.save_freq=60 \
-    trainer.test_freq=60 \
+    trainer.test_freq=5 \
     trainer.total_epochs=1 \
     trainer.log_val_generations=False \
-    data.train_files=$HOME/data/gsm8k/train.parquet \
-    data.val_files=$HOME/data/gsm8k/test.parquet \
+    data.train_files="$HF_HOME/data/gsm8k/train.parquet" \
+    data.val_files="$HF_HOME/data/gsm8k/test.parquet" \
     +trainer.rollout.dump_freq=20\
     +trainer.rollout.dump_loss_mask_sanity_check_print=False \
     actor_rollout_ref.rollout.multi_turn.tokenization_sanity_check_mode=disable \
     trainer.rollout_data_dir="rollouts/train" \
     trainer.validation_data_dir="rollouts/val" \
     trainer.resume_mode="disable" \
-    trainer.default_local_dir="/home/user/bytedance_pass@k/checkpoints/$(git branch --show-current)"2>&1 | tee logs/out.txt
+    trainer.default_local_dir="$(pwd)/checkpoints/gsm8k_dataset_pass_at_2" 2>&1 | tee logs/out.txt
 
 #! do I still need to set rollout.n? I think not
 

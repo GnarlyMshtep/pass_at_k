@@ -260,52 +260,80 @@ def compute_gae_advantage_return(
 
 
 # NOTE(sgm): this implementation only consider outcome supervision, where the reward is a scalar.
+def _calc_adv(pass_flags: torch.Tensor, k_opt: int, epsilon: float = 1e-6) -> torch.Tensor:
+    """Compute per-response Pass@k advantages for a single uid group.
+
+    Args:
+        pass_flags: 1D tensor of 0/1 indicators (1 = pass) on some device
+        k_opt: integer k in Pass@k
+        epsilon: small constant added to sigma for stability
+
+    Returns:
+        1D tensor of same length with advantages for each response.
+    """
+    device = pass_flags.device
+    dtype = torch.float32 if pass_flags.dtype.is_floating_point is False else pass_flags.dtype
+    flags_f = pass_flags.to(dtype)
+
+    n = int(flags_f.numel())
+    c = int(torch.count_nonzero(flags_f).item())
+
+    # Eq.(11)-(12)
+    rho = 1.0 - (comb(n - c, k_opt) / comb(n, k_opt))
+    sigma = sqrt(rho * (1.0 - rho))
+    denom = sigma + epsilon
+
+    # Eq.(14)-(15)
+    adv_p = (1.0 - rho) / denom
+    term = 0.0
+    if (k_opt - 1) >= 0 and (n - 1) >= (k_opt - 1) and (n - c - 1) >= (k_opt - 1):
+        term = comb(n - c - 1, k_opt - 1) / comb(n - 1, k_opt - 1)
+    adv_n = (1.0 - rho - term) / denom
+
+    new_val = torch.where(
+        flags_f == 1.0,
+        torch.tensor(adv_p, device=device, dtype=dtype),
+        flags_f,
+    )
+    new_val = torch.where(
+        new_val == 0.0,
+        torch.tensor(adv_n, device=device, dtype=dtype),
+        new_val,
+    )
+    return new_val
+
+
 @register_adv_est(AdvantageEstimator.BYTEDANCE_PASS_AT_K)  # or simply: @register_adv_est("grpo")
 def compute_bytedance_pass_at_k_outcome_advantages(
     token_level_rewards: torch.Tensor,
     response_mask: torch.Tensor,
     index: np.ndarray,
+    k_opt: int = 2,
+    epsilon: float = 1e-6,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    scores = token_level_rewards.sum(dim=-1) #M: what is the dimension of this tensor? I actually expect it to be 1-dim
-    breakpoint() #(expecting 0-1 1-dim list for scores -- inspect this)
-    pass_at_k_scores = torch.zeros_like(scores)
+    # breakpoint()
+    scores = token_level_rewards.sum(dim=-1)
 
-    # id2score = defaultdict(list)
-    # id2mean = {}
-    # id2std = {}
+    advantages_flat = torch.zeros_like(scores, dtype=scores.dtype)
     id2indexes = defaultdict(list)
-
-    HARDCODED_K_OPT = 2
-    HARDCODED_R_POS = 1
-    HARDCODED_R_NEG = 0
-    HARDCODED_N_GROUPS = 2
-
-    #M: hardcored comp
-    N_rollouts = scores.size(0)
-    assert N_rollouts >= HARDCODED_K_OPT
-    N_neg = int(N_rollouts - scores.sum(dim=-1).item())
-    R_group_bar = 1 - comb(N_neg, HARDCODED_K_OPT) / comb(N_rollouts, HARDCODED_K_OPT)
-    sigma_group = sqrt(R_group_bar * (1 - R_group_bar))
-    A_pos = (HARDCODED_R_POS - R_group_bar) / sigma_group 
-    A_neg = (HARDCODED_R_NEG - R_group_bar) / sigma_group
-
 
     with torch.no_grad():
         bsz = scores.shape[0]
         for i in range(bsz):
-            # id2score[index[i]].append(scores[i])
             id2indexes[index[i]].append(i)
-        for id in id2indexes.keys(): #M: i think idx is the uid of generations, in case we have n>1. 
-            assert len(id2indexes[index[i]]) >= HARDCODED_K_OPT, "for pass@k optim need to sample at least k"
-            assert comb(len(id2indexes[index[i]]), HARDCODED_K_OPT) >= HARDCODED_N_GROUPS, f"too many groups {HARDCODED_N_GROUPS=}" 
-            groups = [sample(id2indexes[id], HARDCODED_K_OPT) for _ in range(HARDCODED_N_GROUPS)]  #M: might need torch.sample
-            for group in groups: 
-                pass_at_k_scores[group] += A_pos if torch.max(scores[group], dim=-1).item() >= 1 else A_neg
-            else:
-                raise ValueError(f"no score in prompt index: {idx}")
-        scores = pass_at_k_scores.unsqueeze(-1) * response_mask
+        # breakpoint()
+        for uid, inds in id2indexes.items():
+            n = len(inds)
+            assert n >= k_opt, f"pass@k requires at least k responses per uid; got {n} < {k_opt}"
 
-    return scores, scores #M: not sure what second return for -- same as GRPO 
+            group_scores = scores[inds]
+            pass_flags = (group_scores >= 1).to(dtype=torch.float32)
+            adv_vals = _calc_adv(pass_flags, k_opt=k_opt, epsilon=epsilon).to(group_scores.dtype)
+            advantages_flat[inds] = adv_vals
+
+        advantages = advantages_flat.unsqueeze(-1) * response_mask
+
+    return advantages, advantages 
 
 
 
