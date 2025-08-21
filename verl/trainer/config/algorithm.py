@@ -86,3 +86,5 @@ class AlgoConfig(BaseConfig):
     use_pf_ppo: bool = False
     pf_ppo: dict[str, Any] = field(default_factory=dict)
     filter_groups: Optional[FilterGroupsConfig] = None
+    # Pass@k specific: default k used by BYTEDANCE_PASS_AT_K estimator
+    pass_at_k_k: int = 2
