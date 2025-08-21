@@ -30,48 +30,44 @@ import sglang.srt.entrypoints.engine
 import torch
 import torch.distributed as dist
 from sglang.srt.managers.tokenizer_manager import (
-    ReleaseMemoryOccupationReqInput,
-    ResumeMemoryOccupationReqInput,
-    UpdateWeightsFromTensorReqInput,
-)
+    ReleaseMemoryOccupationReqInput, ResumeMemoryOccupationReqInput,
+    UpdateWeightsFromTensorReqInput)
 from sglang.srt.sampling.sampling_params import SamplingParams
 from sglang.srt.server_args import ServerArgs
-from sglang.srt.utils import (
-    assert_pkg_version,
-    get_ip,
-    get_open_port,
-    is_cuda,
-    set_prometheus_multiproc_dir,
-    set_ulimit,
-)
+from sglang.srt.utils import (assert_pkg_version, get_ip, get_open_port,
+                              is_cuda, set_prometheus_multiproc_dir,
+                              set_ulimit)
 from tensordict import TensorDict
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 from torch.nn.utils.rnn import pad_sequence
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast, ProcessorMixin
+from transformers import (PreTrainedTokenizer, PreTrainedTokenizerFast,
+                          ProcessorMixin)
 
 from verl import DataProto
 from verl.interactions.base import BaseInteraction
-from verl.interactions.utils.interaction_registry import initialize_interactions_from_config
+from verl.interactions.utils.interaction_registry import \
+    initialize_interactions_from_config
 from verl.third_party.sglang import parallel_state as sglang_ps
 from verl.tools.base_tool import BaseTool
-from verl.tools.schemas import OpenAIFunctionCallSchema, OpenAIFunctionParsedSchema, OpenAIFunctionToolCall
+from verl.tools.schemas import (OpenAIFunctionCallSchema,
+                                OpenAIFunctionParsedSchema,
+                                OpenAIFunctionToolCall)
 from verl.tools.utils.tool_registry import initialize_tools_from_config
 from verl.utils.net_utils import is_ipv6
 from verl.utils.profiler import GPUMemoryLogger
-from verl.utils.torch_functional import get_response_mask, pad_sequence_to_length
+from verl.utils.torch_functional import (get_response_mask,
+                                         pad_sequence_to_length)
 from verl.workers.config import RolloutConfig
 from verl.workers.rollout.async_server import TokenOutput
 from verl.workers.rollout.base import BaseRollout
-from verl.workers.rollout.schemas import (
-    AsyncRolloutRequest,
-    AsyncRolloutRequestStateEnum,
-    FinishReasonTypeEnum,
-    Message,
-)
+from verl.workers.rollout.schemas import (AsyncRolloutRequest,
+                                          AsyncRolloutRequestStateEnum,
+                                          FinishReasonTypeEnum, Message)
 from verl.workers.rollout.sglang_rollout.utils import broadcast_pyobj
 
 try:
-    from sglang.srt.function_call.function_call_parser import FunctionCallParser
+    from sglang.srt.function_call.function_call_parser import \
+        FunctionCallParser
 except ImportError:
     from sglang.srt.function_call_parser import FunctionCallParser
 
@@ -1084,9 +1080,30 @@ class SGLangRollout(BaseRollout):
         tgt_device = prompts.batch["input_ids"].device
 
         if self._tp_rank == 0:
-            req_list = self._preprocess_prompt_to_async_rollout_requests(
+            req_list :list[AsyncRolloutRequest]= self._preprocess_prompt_to_async_rollout_requests(
                 prompts,
             )
+
+            if self.config.approach_flag: 
+                # writing a defensive loop to check we're adding approaches correctly.
+                last_uid = None
+                num_encountered = 0
+                tot_num_encountered_first = None 
+                for i in enumerate(len(req_list)):
+                    if last_uid is None: 
+                        num_encountered +=1                   
+                    else: 
+                        if last_uid == req_list.uid: 
+                            num_encountered +=1
+                        else: 
+                            if tot_num_encountered_first is None: 
+                                tot_num_encountered_first = num_encountered
+                            assert num_encountered == tot_num_encountered_first, f"{num_encountered=}, {tot_num_encountered_first=}, and {last_uid=}, {req_list[i].uid=}"
+                            num_encountered = 0  
+                    last_uid = req_list[i].uid
+                    req_list[i].add_user_message(self.processing_class, f"<attempt>{i}</attempt>")
+
+
 
             # distinguish training and validation
             if is_validate:
@@ -1472,6 +1489,7 @@ class SGLangRollout(BaseRollout):
                 use_inference_chat_template=self.config.multi_turn.use_inference_chat_template,
                 tokenization_sanity_check_mode=self.config.multi_turn.tokenization_sanity_check_mode,
                 processing_class=self.processing_class,
+                uid=prompts.non_tensor_batch["uid"][data_idx]
             )
             error_message = f"""Request {req.request_id} has mismatched lengths: 
             input_ids={req.input_ids.shape[-1]}, 

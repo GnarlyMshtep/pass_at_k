@@ -18,6 +18,7 @@ PPO Trainer with Ray-based single controller.
 This trainer supports model-agonistic model initialization with huggingface
 """
 
+
 import json
 import os
 import uuid
@@ -27,7 +28,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 from pprint import pprint
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import ray
@@ -41,24 +42,25 @@ from verl import DataProto
 from verl.experimental.dataset.sampler import AbstractCurriculumSampler
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from verl.single_controller.base import Worker
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
+from verl.single_controller.ray import (RayClassWithInitArgs, RayResourcePool,
+                                        RayWorkerGroup)
 from verl.single_controller.ray.base import create_colocated_worker_cls
 from verl.trainer.config import AlgoConfig
 from verl.trainer.ppo import core_algos
 from verl.trainer.ppo.core_algos import AdvantageEstimator, agg_loss
-from verl.trainer.ppo.metric_utils import (
-    compute_data_metrics,
-    compute_throughout_metrics,
-    compute_timing_metrics,
-    process_validation_metrics,
-)
+from verl.trainer.ppo.metric_utils import (compute_data_metrics,
+                                           compute_throughout_metrics,
+                                           compute_timing_metrics,
+                                           process_validation_metrics)
 from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path, should_save_ckpt_esi
+from verl.utils.checkpoint.checkpoint_manager import (find_latest_ckpt_path,
+                                                      should_save_ckpt_esi)
 from verl.utils.config import omega_conf_to_dataclass
 from verl.utils.debug import marked_timer
 from verl.utils.metric import reduce_metrics
 from verl.utils.rollout_skip import RolloutSkip
-from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
+from verl.utils.seqlen_balancing import (get_seqlen_balanced_partitions,
+                                         log_seqlen_unbalance)
 from verl.utils.torch_functional import masked_mean
 from verl.utils.tracking import ValidationGenerationsLogger
 
@@ -238,6 +240,7 @@ def compute_advantage(
     Returns:
         DataProto: The updated data with computed advantages and returns.
     """
+    extra_advantage_metrics = {}
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch.keys():
         data.batch["response_mask"] = compute_response_mask(data)
@@ -246,7 +249,7 @@ def compute_advantage(
     if adv_estimator == AdvantageEstimator.BYTEDANCE_PASS_AT_K: 
         k_opt = 2 if config is None else config.get("pass_at_k_k", 2)
         # breakpoint()
-        advantages, returns = core_algos.compute_bytedance_pass_at_k_outcome_advantages(
+        advantages, returns, extra_advantage_metrics = core_algos.compute_bytedance_pass_at_k_outcome_advantages(
             token_level_rewards=data.batch["token_level_rewards"],
             response_mask=data.batch["response_mask"],
             index=data.non_tensor_batch["uid"],
@@ -300,7 +303,7 @@ def compute_advantage(
         advantages, returns = adv_estimator_fn(**adv_kwargs)
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
-    return data
+    return data, extra_advantage_metrics
 
 
 class RayPPOTrainer:
@@ -533,7 +536,8 @@ class RayPPOTrainer:
         if train_sampler is None:
             train_sampler = create_rl_sampler(self.config.data, self.train_dataset)
         if collate_fn is None:
-            from verl.utils.dataset.rl_dataset import collate_fn as default_collate_fn
+            from verl.utils.dataset.rl_dataset import \
+                collate_fn as default_collate_fn
 
             collate_fn = default_collate_fn
 
@@ -1127,7 +1131,6 @@ class RayPPOTrainer:
                 # pass global_steps to trace
                 gen_batch.meta_info["global_steps"] = self.global_steps
                 gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
-
                 is_last_step = self.global_steps >= self.total_training_steps
 
                 with marked_timer("step", timing_raw):
@@ -1187,8 +1190,9 @@ class RayPPOTrainer:
                         if self.config.reward_model.launch_reward_fn_async:
                             future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn)
                         else:
-                            reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn)
+                            reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
 
+                    metrics.update(extra_reward_metrics)
                     # recompute old_log_probs
                     with marked_timer("old_log_prob", timing_raw, color="blue"):
                         old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
@@ -1203,7 +1207,8 @@ class RayPPOTrainer:
 
                         if "rollout_log_probs" in batch.batch.keys():
                             # TODO: we may want to add diff of probs too.
-                            from verl.utils.debug.metrics import calculate_debug_metrics
+                            from verl.utils.debug.metrics import \
+                                calculate_debug_metrics
 
                             metrics.update(calculate_debug_metrics(batch))
 
@@ -1247,7 +1252,7 @@ class RayPPOTrainer:
                             "norm_adv_by_std_in_grpo", True
                         )  # GRPO adv normalization factor
 
-                        batch = compute_advantage(
+                        batch, extra_advantage_metrics = compute_advantage(
                             batch,
                             adv_estimator=self.config.algorithm.adv_estimator,
                             gamma=self.config.algorithm.gamma,
@@ -1256,6 +1261,7 @@ class RayPPOTrainer:
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                             config=self.config.algorithm,
                         )
+                        metrics.update(extra_advantage_metrics)
 
                     # update critic
                     if self.use_critic:

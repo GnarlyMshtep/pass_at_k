@@ -20,9 +20,11 @@ from typing import Any, Optional
 
 import torch
 from pydantic import BaseModel, ConfigDict, model_validator
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast, ProcessorMixin
+from transformers import (PreTrainedTokenizer, PreTrainedTokenizerFast,
+                          ProcessorMixin)
 
-from verl.tools.schemas import OpenAIFunctionToolCall, OpenAIFunctionToolSchema, ToolResponse
+from verl.tools.schemas import (OpenAIFunctionToolCall,
+                                OpenAIFunctionToolSchema, ToolResponse)
 from verl.utils.model import compute_position_id_with_mask
 
 logger = logging.getLogger(__file__)
@@ -119,6 +121,8 @@ class AsyncRolloutRequest(BaseModel):
     generation_prompt_ids: Optional[torch.Tensor] = None
     base_conv_wo_gen_prompt_end_pos: int
     base_conv_with_gen_prompt_end_pos: int
+
+    uid: str
 
     @model_validator(mode="before")
     @classmethod

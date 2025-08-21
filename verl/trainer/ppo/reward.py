@@ -27,7 +27,8 @@ from omegaconf import DictConfig
 from verl import DataProto
 from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import get_reward_manager_cls
-from verl.workers.reward_manager.abstract import AbstractRewardManager, RawRewardFn
+from verl.workers.reward_manager.abstract import (AbstractRewardManager,
+                                                  RawRewardFn)
 
 
 def _call_with_kwargs(raw_fn, extra_kwargs, *args, **kwargs):
@@ -157,16 +158,12 @@ def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[t
     Returns:
         Tuple of reward tensor and extra info dictionary.
     """
-    try:
-        reward_result = reward_fn(data, return_dict=True)
-        reward_tensor = reward_result["reward_tensor"]
-        reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
-    except Exception as e:
-        print(f"Error in reward_fn: {e}")
-        reward_tensor = reward_fn(data)
-        reward_extra_infos_dict = {}
-
-    return reward_tensor, reward_extra_infos_dict
+    reward_result = reward_fn(data, return_dict=True)
+    reward_tensor = reward_result["reward_tensor"]
+    reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
+    extra_reward_metrics = reward_result.get("extra_reward_metrics")
+    
+    return reward_tensor, reward_extra_infos_dict, extra_reward_metrics
 
 
 @ray.remote(num_cpus=1)
