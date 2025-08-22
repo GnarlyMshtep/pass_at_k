@@ -542,17 +542,24 @@ class RayPPOTrainer:
             collate_fn = default_collate_fn
 
         num_workers = self.config.data["dataloader_num_workers"]
+        
+        train_batch_size = self.config.data.get("gen_batch_size", self.config.data.train_batch_size)
+        val_batch_size = self.config.data.val_batch_size  # Prefer config value if set
+
+        if self.config.algorithm.adv_estimator == core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+            train_batch_size *=  self.config.actor_rollout_ref.rollout.n
+            val_batch_size *= self.config.actor_rollout_ref.rollout.n
+
 
         self.train_dataloader = StatefulDataLoader(
             dataset=self.train_dataset,
-            batch_size=self.config.data.get("gen_batch_size", self.config.data.train_batch_size),
+            batch_size=train_batch_size,
             num_workers=num_workers,
             drop_last=True,
             collate_fn=collate_fn,
             sampler=train_sampler,
         )
 
-        val_batch_size = self.config.data.val_batch_size  # Prefer config value if set
         if val_batch_size is None:
             val_batch_size = len(self.val_dataset)
 
@@ -655,10 +662,6 @@ class RayPPOTrainer:
             batch_keys=batch_keys_to_pop,
             non_tensor_batch_keys=list(non_tensor_batch_keys_to_pop),
         )
-        #M: add uid back manually because I need them 
-        if "uid" in batch.non_tensor_batch.keys(): # this would not be the case in validate (beforehand, but I now added it so we have the metric? actually, let me just add it yeah)
-            gen_batch.non_tensor_batch["uid"] = batch.non_tensor_batch["uid"]
-
         # For agent loop, we need reward model keys to compute score.
         if self.async_rollout_mode:
             gen_batch.non_tensor_batch.update(batch.non_tensor_batch)
@@ -679,15 +682,17 @@ class RayPPOTrainer:
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
 
-            test_batch.non_tensor_batch["uid"] = np.array(
-                    [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
-            )
+            if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+                test_batch.non_tensor_batch["uid"] = np.array(
+                        [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
+                )
 
-            # repeat test batch
-            test_batch = test_batch.repeat(
-                repeat_times=self.config.actor_rollout_ref.rollout.val_kwargs.n, interleave=True
-            )
-
+                # repeat test batch
+                test_batch = test_batch.repeat(
+                    repeat_times=self.config.actor_rollout_ref.rollout.val_kwargs.n, interleave=True
+                )
+            else: 
+               test_batch.non_tensor_batch["uid"] = self.get_uids("val")
             # we only do validation on rule-based rm
             if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
                 return {}
@@ -1047,6 +1052,23 @@ class RayPPOTrainer:
             if self.use_rm:
                 self.rm_wg.stop_profile()
 
+    def get_uids(self, split: str):
+        uids = []
+        if split =="train":
+            for i in range(self.config.data.train_batch_size):
+                question_uid = str(uuid.uuid4())
+                for j in range(self.config.actor_rollout_ref.rollout.n):
+                    uids.append(question_uid)
+            return np.array(uids)
+        elif split=="val": 
+            for i in range(self.config.data.val_batch_size):
+                question_uid = str(uuid.uuid4())
+                for j in range(self.config.actor_rollout_ref.rollout.val_kwargs.n):
+                    uids.append(question_uid)
+            return np.array(uids)  
+        else:
+            assert False, f"invalid split {split}"
+
     def _balance_batch(self, batch: DataProto, metrics, logging_prefix="global_seqlen"):
         """Reorder the data on single controller such that each dp rank gets similar total tokens"""
         attention_mask = batch.batch["attention_mask"]
@@ -1132,15 +1154,21 @@ class RayPPOTrainer:
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
 
                 # add uid to batch
-                batch.non_tensor_batch["uid"] = np.array(
-                    [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
-                )
+                if self.config.algorithm.adv_estimator!=core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:     
+                    batch.non_tensor_batch["uid"] = np.array(
+                        [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
+                    )
+                else: 
+                    #print(f"DEBUG:")
+                    assert self.config.data.train_batch_size * self.config.actor_rollout_ref.rollout.n == len(batch)  
+                    batch.non_tensor_batch["uid"] = self.get_uids("train")  
 
                 gen_batch = self._get_gen_batch(batch)
 
                 # pass global_steps to trace
                 gen_batch.meta_info["global_steps"] = self.global_steps
-                gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+                    gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                 is_last_step = self.global_steps >= self.total_training_steps
 
                 with marked_timer("step", timing_raw):
@@ -1176,7 +1204,8 @@ class RayPPOTrainer:
                             del gen_baseline_batch, gen_baseline_output
 
                     # repeat to align with repeated responses in rollout
-                    batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                    if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+                        batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     batch = batch.union(gen_batch_output)
 
                     if "response_mask" not in batch.batch.keys():
