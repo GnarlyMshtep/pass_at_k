@@ -134,6 +134,9 @@ class AsyncRolloutRequest(BaseModel):
         if not (processing_class := values.pop("processing_class", None)):
             raise ValueError("processing_class is required for AsyncRolloutRequest initialization")
 
+        non_iid_flag = int(os.getenv("NON_IID_FLAG", 0))
+
+
         values["messages"] = [Message.model_validate(msg) for msg in messages]
 
         # If there is no multi_modal_keys, we assume the multi-modal data is image and video.
@@ -172,7 +175,7 @@ class AsyncRolloutRequest(BaseModel):
                 messages,
                 multi_modal_data=multi_modal_data,
                 tools=tools,
-                add_generation_prompt=True,
+                add_generation_prompt=(not non_iid_flag),
                 tokenize=True,
                 return_dict=True,
             )
@@ -211,12 +214,13 @@ class AsyncRolloutRequest(BaseModel):
             tokenize=True,
         ).shape[-1]
 
+        # Set add_generation_prompt based on NON_IID_FLAG environment variable
         values["base_conv_with_gen_prompt_end_pos"] = cls._handle_apply_chat_template(
             processing_class,
             BASE_CHAT_HISTORY,
             multi_modal_data=multi_modal_data,
             tools=tools,
-            add_generation_prompt=True,
+            add_generation_prompt=(not non_iid_flag),
             tokenize=True,
         ).shape[-1]
 
@@ -370,7 +374,7 @@ class AsyncRolloutRequest(BaseModel):
                 messages,
                 multi_modal_data=self.multi_modal_data,
                 tools=tools,
-                add_generation_prompt=True,
+                add_generation_prompt=False,#TODO: maybe need to change this to not have the assistant prompt being set, but I would be surprised. 
                 tokenize=True,
             )
             return generation_prompt_ids.squeeze(0).tolist()

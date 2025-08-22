@@ -40,6 +40,7 @@ export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0 #I think this is because the debugge
 export TOKENIZERS_PARALLELISM=False #M: this is not entirely safe -- what's the utiliaztion here? 
 
 export RAY_DEBUG_POST_MORTEM=1
+export NON_IID_FLAG=1
 
 CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=bytedance_pass_at_k \
@@ -74,7 +75,7 @@ CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=10 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=8 \
     algorithm.use_kl_in_reward=False \
-    trainer.val_before_train=False \
+    trainer.val_before_train=True \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
     trainer.project_name='bGRPO' \
@@ -85,15 +86,18 @@ CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     trainer.test_freq=5 \
     trainer.total_epochs=1 \
     trainer.log_val_generations=False \
-    data.train_files="$/mnt/xfs/home/aiilyas/rl-exploration/data//gsm8k/train.parquet" \
-    data.val_files="$/mnt/xfs/home/aiilyas/rl-exploration/data//gsm8k/test.parquet" \
+    data.train_files="/mnt/xfs/home/aiilyas/rl-exploration/data/gsm8k/train.parquet" \
+    data.val_files="/mnt/xfs/home/aiilyas/rl-exploration/data//gsm8k/test.parquet" \
     +trainer.rollout.dump_freq=20\
     +trainer.rollout.dump_loss_mask_sanity_check_print=False \
     actor_rollout_ref.rollout.multi_turn.tokenization_sanity_check_mode=disable \
     trainer.rollout_data_dir="rollouts/train" \
     trainer.validation_data_dir="rollouts/val" \
     trainer.resume_mode="disable" \
-    trainer.default_local_dir="/mnt/xfs/home/aiilyas/rl-exploration/checkpoints/$/gsm8k_dataset_pass_at_2" 2>&1 | tee logs/out.txt
+    actor_rollout_ref.rollout.multi_turn.enable=True \
+    trainer.default_local_dir="/mnt/xfs/home/aiilyas/rl-exploration/checkpoints/gsm8k_dataset_pass_at_2" \
+    actor_rollout_ref.rollout.multi_turn.interaction_config_path="$PROJECT_DIR/custom/gsm8k_interaction_config.yaml" \
+    actor_rollout_ref.rollout.update_weights_bucket_megabytes=512 2>&1 | tee logs/out.txt
 
 #! do I still need to set rollout.n? I think not
 

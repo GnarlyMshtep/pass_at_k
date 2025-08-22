@@ -12,42 +12,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Preprocess the GSM8k dataset to parquet format
+Generate a synthetic random number guessing dataset in parquet format
 """
 
 import argparse
 import os
-import re
+import random
 
 import datasets
+from datasets import Dataset
 
 from verl.utils.hdfs_io import copy, makedirs
 
 
-def extract_solution(solution_str):
-    solution = re.search("#### (\\-?[0-9\\.\\,]+)", solution_str)
-    assert solution is not None
-    final_solution = solution.group(0)
-    final_solution = final_solution.split("#### ")[1].replace(",", "")
-    return final_solution
+def generate_synthetic_data(num_samples, range_val):
+    """Generate synthetic random number guessing data"""
+    data = []
+    for i in range(num_samples):
+        # Generate random ground truth answer
+        ground_truth = random.randint(1, range_val)
+        
+        # Create the question
+        question_raw = f"the correct answer is a number in 1,2, ..., {range_val}. Please pick it."
+        
+        # Create a simple answer format for consistency
+        answer_raw = f"The answer is {ground_truth}."
+        
+        data.append({
+            "question": question_raw,
+            "answer": answer_raw,
+            "ground_truth": ground_truth
+        })
+    
+    return data
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="~/data/gsm8k")
+    parser.add_argument("--local_dir", default="/mnt/xfs/home/aiilyas/rl-exploration/data/random_number")
     parser.add_argument("--hdfs_dir", default=None)
-    parser.add_argument("--range", default=20)
+    parser.add_argument("--range", default=20, type=int)
+    parser.add_argument("--train_samples", default=5000, type=int, help="Number of training samples (GSM8k train size)")
+    parser.add_argument("--test_samples", default=50, type=int, help="Number of test samples (GSM8k test size)")
+    parser.add_argument("--seed", default=42, type=int, help="Random seed for reproducibility")
 
     args = parser.parse_args()
+    
+    # Set random seed for reproducibility
+    random.seed(args.seed)
 
-    data_source = "openai/gsm8k"
+    data_source = "synthetic/random_number"
 
-    dataset = datasets.load_dataset(data_source, "main")
+    # Generate synthetic datasets
+    train_data = generate_synthetic_data(args.train_samples, args.range)
+    test_data = generate_synthetic_data(args.test_samples, args.range)
+    
+    # Create HuggingFace datasets
+    train_dataset = Dataset.from_list(train_data)
+    test_dataset = Dataset.from_list(test_data)
 
-    train_dataset = dataset["train"]
-    test_dataset = dataset["test"]
-
-    instruction_following = 'Let\'s think step by step and output the final answer after "####".'
+    instruction_following = 'Let\'s think step by step and output the final answer inside <solution></solution>.'
 
     # add a row to each data item that represents a unique id
     def make_map_fn(split):
@@ -57,7 +81,8 @@ if __name__ == "__main__":
             question = question_raw + " " + instruction_following
 
             answer_raw = example.pop("answer")
-            solution = extract_solution(answer_raw)
+            solution = str(example.pop("ground_truth"))  # Use the pre-generated ground truth
+            
             data = {
                 "data_source": data_source,
                 "prompt": [
@@ -66,13 +91,14 @@ if __name__ == "__main__":
                         "content": question,
                     }
                 ],
-                "ability": "math",
+                "ability": "random_guessing",
                 "reward_model": {"style": "rule", "ground_truth": solution},
                 "extra_info": {
                     "split": split,
                     "index": idx,
                     "answer": answer_raw,
                     "question": question_raw,
+                    "range": args.range,
                 },
             }
             return data
@@ -85,10 +111,17 @@ if __name__ == "__main__":
     local_dir = args.local_dir
     hdfs_dir = args.hdfs_dir
 
+    # Create local directory if it doesn't exist
+    os.makedirs(local_dir, exist_ok=True)
+
     train_dataset.to_parquet(os.path.join(local_dir, "train.parquet"))
     test_dataset.to_parquet(os.path.join(local_dir, "test.parquet"))
 
+    print(f"Generated {len(train_dataset)} training samples and {len(test_dataset)} test samples")
+    print(f"Range: 1 to {args.range}")
+    print(f"Saved to: {local_dir}")
+
     if hdfs_dir is not None:
         makedirs(hdfs_dir)
-
         copy(src=local_dir, dst=hdfs_dir)
+        print(f"Copied to HDFS: {hdfs_dir}")

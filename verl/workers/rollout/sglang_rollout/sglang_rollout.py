@@ -1084,24 +1084,25 @@ class SGLangRollout(BaseRollout):
                 prompts,
             )
 
-            if self.config.approach_flag: 
-                # writing a defensive loop to check we're adding approaches correctly.
+            # Insert defensive loop to check we're adding approaches correctly if NON_IID_FLAG is set
+            NON_IID_FLAG = int(os.environ.get("NON_IID_FLAG", 0))
+            if NON_IID_FLAG:
                 last_uid = None
                 num_encountered = 0
-                tot_num_encountered_first = None 
-                for i in enumerate(len(req_list)):
-                    if last_uid is None: 
-                        num_encountered +=1                   
-                    else: 
-                        if last_uid == req_list.uid: 
-                            num_encountered +=1
-                        else: 
-                            if tot_num_encountered_first is None: 
+                tot_num_encountered_first = None
+                for i in range(len(req_list)):
+                    if last_uid is None:
+                        num_encountered += 1
+                    else:
+                        if last_uid == req_list[i].uid:
+                            num_encountered += 1
+                        else:
+                            if tot_num_encountered_first is None:
                                 tot_num_encountered_first = num_encountered
                             assert num_encountered == tot_num_encountered_first, f"{num_encountered=}, {tot_num_encountered_first=}, and {last_uid=}, {req_list[i].uid=}"
-                            num_encountered = 0  
+                            num_encountered = 1
                     last_uid = req_list[i].uid
-                    req_list[i].add_user_message(self.processing_class, f"<attempt>{i}</attempt>")
+                    req_list[i].add_user_message(self.processing_class, f"<attempt>{i}</attempt>", )
 
 
 
