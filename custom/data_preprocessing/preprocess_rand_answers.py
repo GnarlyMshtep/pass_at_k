@@ -31,7 +31,7 @@ def generate_synthetic_data(num_samples, range_val, N_rollouts):
     for i in range(num_samples):
         # Generate random ground truth answer
         ground_truth = random.randint(1, range_val)
-        answer_raw = f"{ground_truth}."
+        answer_raw = f"{ground_truth}"
         
         # Create the question
         for j in range(N_rollouts):
