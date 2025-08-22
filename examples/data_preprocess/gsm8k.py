@@ -44,7 +44,7 @@ if __name__ == "__main__":
     dataset = datasets.load_dataset(data_source, "main")
 
     train_dataset = dataset["train"]
-    test_dataset = dataset["test"]
+    test_dataset = dataset["test"].take(50)
 
     instruction_following = 'Let\'s think step by step and output the final answer inside <solution></solution>".'
 

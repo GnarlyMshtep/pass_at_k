@@ -644,6 +644,8 @@ class RayPPOTrainer:
         self.validation_generations_logger.log(self.config.trainer.logger, samples, self.global_steps)
 
     def _get_gen_batch(self, batch: DataProto) -> DataProto:
+        # Keep keys that must persist on the main batch (not popped) so downstream stages can access them.
+        # We must preserve 'uid' for advantage grouping, along with reward/eval related keys.
         reward_model_keys = set({"data_source", "reward_model", "extra_info", "uid"}) & batch.non_tensor_batch.keys()
 
         # pop those keys for generation
@@ -653,6 +655,9 @@ class RayPPOTrainer:
             batch_keys=batch_keys_to_pop,
             non_tensor_batch_keys=list(non_tensor_batch_keys_to_pop),
         )
+        #M: add uid back manually because I need them 
+        if "uid" in batch.non_tensor_batch.keys(): # this would not be the case in validate (beforehand, but I now added it so we have the metric? actually, let me just add it yeah)
+            gen_batch.non_tensor_batch["uid"] = batch.non_tensor_batch["uid"]
 
         # For agent loop, we need reward model keys to compute score.
         if self.async_rollout_mode:
@@ -673,6 +678,10 @@ class RayPPOTrainer:
 
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
+
+            test_batch.non_tensor_batch["uid"] = np.array(
+                    [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
+            )
 
             # repeat test batch
             test_batch = test_batch.repeat(
@@ -737,6 +746,7 @@ class RayPPOTrainer:
             reward_tensor = result["reward_tensor"]
             scores = reward_tensor.sum(-1).cpu().tolist()
             sample_scores.extend(scores)
+            #TODO logs reward metrics for validate
 
             reward_extra_infos_dict["reward"].extend(scores)
             print(f"len reward_extra_infos_dict['reward']: {len(reward_extra_infos_dict['reward'])}")
@@ -1118,7 +1128,7 @@ class RayPPOTrainer:
                         if self.config.global_profiler.profile_continuous_steps
                         else curr_step_profile
                     )
-
+                # breakpoint()
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
 
                 # add uid to batch
@@ -1144,6 +1154,7 @@ class RayPPOTrainer:
                         gen_batch_output.meta_info.pop("timing", None)
 
                     if self.config.algorithm.adv_estimator == AdvantageEstimator.REMAX:
+                        assert False, "no REMAX"
                         if self.reward_fn is None:
                             raise ValueError("A reward_fn is required for REMAX advantage estimation.")
 
@@ -1223,6 +1234,7 @@ class RayPPOTrainer:
 
                     # compute values
                     if self.use_critic:
+                        assert False, ""
                         with marked_timer("values", timing_raw, color="cyan"):
                             values = self.critic_wg.compute_values(batch)
                             batch = batch.union(values)

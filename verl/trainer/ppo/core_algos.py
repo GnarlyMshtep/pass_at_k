@@ -302,7 +302,7 @@ def _calc_adv(pass_flags: torch.Tensor, k_opt: int, epsilon: float = 1e-6) -> to
         torch.tensor(adv_n, device=device, dtype=dtype),
         new_val,
     )
-    return new_val, adv_p, adv_n
+    return new_val.to(torch.float32), adv_p, adv_n
 
 
 @register_adv_est(AdvantageEstimator.BYTEDANCE_PASS_AT_K)  # or simply: @register_adv_est("grpo")
@@ -334,15 +334,15 @@ def compute_bytedance_pass_at_k_outcome_advantages(
 
             group_scores = scores[inds]
             pass_flags = (group_scores >= 1).to(dtype=torch.float32)
-            adv_vals, adv_p, adv_n = _calc_adv(pass_flags, k_opt=k_opt, epsilon=epsilon).to(group_scores.dtype)
+            adv_vals, adv_p, adv_n = _calc_adv(pass_flags, k_opt=k_opt, epsilon=epsilon)
             advs_ps.append(adv_p)
             advs_ns.append(adv_n)
             advantages_flat[inds] = adv_vals
 
         advantages = advantages_flat.unsqueeze(-1) * response_mask
     
-    extra_advanatge_metrics.update(compute_statistics(advs_ps))
-    extra_advanatge_metrics.update(compute_statistics(advs_ns))
+    extra_advanatge_metrics.update(compute_statistics(advs_ps, ""))
+    extra_advanatge_metrics.update(compute_statistics(advs_ns, ""))
 
     return advantages, advantages, extra_advanatge_metrics
 
