@@ -22,6 +22,7 @@ import hydra
 import ray
 from omegaconf import OmegaConf
 
+import verl.trainer.ppo.core_algos as core_algos
 from verl.experimental.dataset.sampler import AbstractSampler
 from verl.trainer.constants_ppo import get_ppo_ray_runtime_env
 from verl.trainer.ppo.ray_trainer import RayPPOTrainer
@@ -110,7 +111,8 @@ class TaskRunner:
         from verl.single_controller.ray import RayWorkerGroup
 
         if config.actor_rollout_ref.actor.strategy in {"fsdp", "fsdp2"}:
-            from verl.workers.fsdp_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker
+            from verl.workers.fsdp_workers import (ActorRolloutRefWorker,
+                                                   AsyncActorRolloutRefWorker)
 
             actor_rollout_cls = (
                 AsyncActorRolloutRefWorker
@@ -120,7 +122,8 @@ class TaskRunner:
             ray_worker_group_cls = RayWorkerGroup
 
         elif config.actor_rollout_ref.actor.strategy == "megatron":
-            from verl.workers.megatron_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker
+            from verl.workers.megatron_workers import (
+                ActorRolloutRefWorker, AsyncActorRolloutRefWorker)
 
             actor_rollout_cls = (
                 AsyncActorRolloutRefWorker
@@ -260,6 +263,10 @@ class TaskRunner:
         from verl.utils.dataset.rl_dataset import collate_fn
 
         # Create training and validation datasets.
+        # if config.algorithm.adv_estimator!=core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+        #     config.data.train_batch_size *= config.actor_rollout_ref.rollout.n
+        #     config.data.val_batch_size *= config.actor_rollout_ref.rollout.n            
+
         train_dataset = create_rl_dataset(config.data.train_files, config.data, tokenizer, processor, is_train=True)
         val_dataset = create_rl_dataset(config.data.val_files, config.data, tokenizer, processor, is_train=False)
         train_sampler = create_rl_sampler(config.data, train_dataset)
@@ -367,6 +374,7 @@ def create_rl_sampler(data_config, dataset):
     # Use a sampler to facilitate checkpoint resumption.
     # If shuffling is enabled in the data configuration, create a random sampler.
     elif data_config.shuffle:
+        assert False, "please shuffle at the dataset creation level -- we do not support that here to not breakup <approach>i</approach>"
         train_dataloader_generator = torch.Generator()
         train_dataloader_generator.manual_seed(data_config.get("seed", 1))
         sampler = RandomSampler(data_source=dataset, generator=train_dataloader_generator)

@@ -25,24 +25,25 @@ from datasets import Dataset
 from verl.utils.hdfs_io import copy, makedirs
 
 
-def generate_synthetic_data(num_samples, range_val):
+def generate_synthetic_data(num_samples, range_val, N_rollouts):
     """Generate synthetic random number guessing data"""
     data = []
     for i in range(num_samples):
         # Generate random ground truth answer
         ground_truth = random.randint(1, range_val)
+        answer_raw = f"{ground_truth}."
         
         # Create the question
-        question_raw = f"the correct answer is a number in 1,2, ..., {range_val}. Please pick it."
-        
-        # Create a simple answer format for consistency
-        answer_raw = f"The answer is {ground_truth}."
-        
-        data.append({
-            "question": question_raw,
-            "answer": answer_raw,
-            "ground_truth": ground_truth
-        })
+        for j in range(N_rollouts):
+            question_raw = f"the correct answer is a number in 1,2, ..., {range_val}, please select it. This is <attempt>{j}</attempt>"
+            
+            # Create a simple answer format for consistency
+            
+            data.append({
+                "question": question_raw,
+                "answer": answer_raw,
+                "ground_truth": ground_truth
+            })
     
     return data
 
@@ -52,26 +53,27 @@ if __name__ == "__main__":
     parser.add_argument("--local_dir", default="/mnt/xfs/home/aiilyas/rl-exploration/data/random_number")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--range", default=20, type=int)
+    parser.add_argument("--n-rollout", default=10, type=int)
     parser.add_argument("--train_samples", default=5000, type=int, help="Number of training samples (GSM8k train size)")
     parser.add_argument("--test_samples", default=50, type=int, help="Number of test samples (GSM8k test size)")
     parser.add_argument("--seed", default=42, type=int, help="Random seed for reproducibility")
 
-    args = parser.parse_args()
-    
+
+    args = parser.parse_args()   
     # Set random seed for reproducibility
     random.seed(args.seed)
 
     data_source = "synthetic/random_number"
 
     # Generate synthetic datasets
-    train_data = generate_synthetic_data(args.train_samples, args.range)
-    test_data = generate_synthetic_data(args.test_samples, args.range)
+    train_data = generate_synthetic_data(args.train_samples, args.range, args.n_rollout)
+    test_data = generate_synthetic_data(args.test_samples, args.range, args.n_rollout)
     
     # Create HuggingFace datasets
     train_dataset = Dataset.from_list(train_data)
     test_dataset = Dataset.from_list(test_data)
 
-    instruction_following = 'Let\'s think step by step and output the final answer inside <solution></solution>.'
+    instruction_following = 'Let\'s output the final answer inside <solution></solution>.'
 
     # add a row to each data item that represents a unique id
     def make_map_fn(split):
@@ -80,9 +82,8 @@ if __name__ == "__main__":
 
             question = question_raw + " " + instruction_following
 
-            answer_raw = example.pop("answer")
-            solution = str(example.pop("ground_truth"))  # Use the pre-generated ground truth
-            
+            solution = example.pop("answer")
+             
             data = {
                 "data_source": data_source,
                 "prompt": [
@@ -91,14 +92,13 @@ if __name__ == "__main__":
                         "content": question,
                     }
                 ],
-                "ability": "random_guessing",
+                "ability": "math",
                 "reward_model": {"style": "rule", "ground_truth": solution},
                 "extra_info": {
                     "split": split,
                     "index": idx,
-                    "answer": answer_raw,
+                    "answer": solution,
                     "question": question_raw,
-                    "range": args.range,
                 },
             }
             return data
