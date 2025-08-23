@@ -23,6 +23,7 @@ import ray
 from omegaconf import OmegaConf
 
 import verl.trainer.ppo.core_algos as core_algos
+import wandb
 from verl.experimental.dataset.sampler import AbstractSampler
 from verl.trainer.constants_ppo import get_ppo_ray_runtime_env
 from verl.trainer.ppo.ray_trainer import RayPPOTrainer
@@ -261,11 +262,6 @@ class TaskRunner:
         resource_pool_manager = self.init_resource_pool_mgr(config)
 
         from verl.utils.dataset.rl_dataset import collate_fn
-
-        # Create training and validation datasets.
-        # if config.algorithm.adv_estimator!=core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
-        #     config.data.train_batch_size *= config.actor_rollout_ref.rollout.n
-        #     config.data.val_batch_size *= config.actor_rollout_ref.rollout.n            
 
         train_dataset = create_rl_dataset(config.data.train_files, config.data, tokenizer, processor, is_train=True)
         val_dataset = create_rl_dataset(config.data.val_files, config.data, tokenizer, processor, is_train=False)

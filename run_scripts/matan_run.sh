@@ -22,7 +22,7 @@ unset ROCR_VISIBLE_DEVICES
 
 # echo "DEBUG: Checking data files with interaction support:"
 # ls -la "$HOME/data/gsm8k_with_interaction/train.parquet" || echo "DEBUG: Train file with interaction_kwargs does not exist!"
-# ls -la "$HOME/data/gsm8k_with_interaction/test.parquet" || echo "DEBUG: Test file with interaction_kwargs does not exist!"
+d# ls -la "$HOME/data/gsm8k_with_interaction/test.parquet" || echo "DEBUG: Test file with interaction_kwargs does not exist!"
 
 # if [ ! -f "$HOME/data/gsm8k_with_interaction/train.parquet" ]; then
 #     echo "DEBUG: Creating properly formatted GSM8K data with interaction_kwargs..."
@@ -39,10 +39,12 @@ unset ROCR_VISIBLE_DEVICES
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0 #I think this is because the debugger complains about slow resolves? Claude suggested. 
 export TOKENIZERS_PARALLELISM=False #M: this is not entirely safe -- what's the utiliaztion here? 
 
-export RAY_DEBUG_POST_MORTEM=1
+export RAY_DEBUG_POST_MORTEM=16167
 # export NON_IID_FLAG=1
 export K_OPT=5
 export N_ROLLOUTS=10 
+
+export DATASET_W_BUILTIN_ATTEMPTS=1
 
 CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=bytedance_pass_at_k \
@@ -78,12 +80,13 @@ CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=$N_ROLLOUTS \
     actor_rollout_ref.rollout.val_kwargs.n=$N_ROLLOUTS \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=16 \
+    actor_rollout_ref.rollout.temperature=0.1 \
     algorithm.use_kl_in_reward=False \
     trainer.val_before_train=True \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
     trainer.project_name='bGRPO' \
-    trainer.experiment_name="rand_numbers_pass_at_$K_OPT" \
+    trainer.experiment_name="rand_numbers_pass_at_${K_OPT}_n_rollout_${N_ROLLOUT}" \
     trainer.n_gpus_per_node=1 \
     trainer.nnodes=1 \
     trainer.save_freq=60 \

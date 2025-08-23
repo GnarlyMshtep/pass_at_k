@@ -14,10 +14,11 @@ This script analyzes the diversity of answers in rollout files by:
 import json
 import os
 import re
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 
@@ -140,14 +141,20 @@ def main():
         print(f"Directory {rollouts_dir} does not exist!")
         return
     
-    # Find all .jsonl files
-    jsonl_files = sorted(rollouts_dir.glob("*.jsonl"), key=lambda x: int(x.stem))
+    # Find files 1.jsonl through 51.jsonl
+    jsonl_files = []
+    for i in range(1, 312):  # 1 to 51 inclusive
+        target_file = rollouts_dir / f"{i}.jsonl"
+        if target_file.exists():
+            jsonl_files.append(target_file)
+        else:
+            print(f"Warning: File {target_file} does not exist, skipping...")
     
     if not jsonl_files:
-        print("No .jsonl files found in rollouts/train/")
+        print("No .jsonl files found in the range 1-51!")
         return
     
-    print(f"Found {len(jsonl_files)} files to process")
+    print(f"Found {len(jsonl_files)} files to process (range 1-51)")
     
     # Initialize storage for statistics
     file_stats = {
