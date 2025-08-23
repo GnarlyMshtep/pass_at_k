@@ -38,6 +38,7 @@ from torch.utils.data import Dataset, Sampler
 from torchdata.stateful_dataloader import StatefulDataLoader
 from tqdm import tqdm
 
+import wandb
 from verl import DataProto
 from verl.experimental.dataset.sampler import AbstractCurriculumSampler
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
@@ -545,8 +546,9 @@ class RayPPOTrainer:
         
         train_batch_size = self.config.data.get("gen_batch_size", self.config.data.train_batch_size)
         val_batch_size = self.config.data.val_batch_size  # Prefer config value if set
-
-        if self.config.algorithm.adv_estimator == core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+        # Get boolean environment variable DATASET_W_BUILTIN_ATTEMPTS, default to False
+        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
+        if self.config.algorithm.adv_estimator == core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K or dataset_w_builtin_attempts:
             train_batch_size *=  self.config.actor_rollout_ref.rollout.n
             val_batch_size *= self.config.actor_rollout_ref.rollout.n
 
@@ -679,10 +681,11 @@ class RayPPOTrainer:
         sample_scores = []
         sample_turns = []
 
+        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
-
-            if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+            
+            if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K or not dataset_w_builtin_attempts:
                 test_batch.non_tensor_batch["uid"] = np.array(
                         [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
                 )
@@ -1103,6 +1106,9 @@ class RayPPOTrainer:
             default_backend=self.config.trainer.logger,
             config=OmegaConf.to_container(self.config, resolve=True),
         )
+        #M: hopefully 
+        wandb.save("runs_scripts/*˝")
+        
 
         self.global_steps = 0
 
@@ -1139,6 +1145,8 @@ class RayPPOTrainer:
         )
         next_step_profile = False
 
+        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
+
         for epoch in range(self.config.trainer.total_epochs):
             for batch_dict in self.train_dataloader:
                 metrics = {}
@@ -1154,7 +1162,9 @@ class RayPPOTrainer:
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
 
                 # add uid to batch
-                if self.config.algorithm.adv_estimator!=core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:     
+                dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
+
+                if self.config.algorithm.adv_estimator!=core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K or not dataset_w_builtin_attempts:     
                     batch.non_tensor_batch["uid"] = np.array(
                         [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
                     )
@@ -1167,7 +1177,8 @@ class RayPPOTrainer:
 
                 # pass global_steps to trace
                 gen_batch.meta_info["global_steps"] = self.global_steps
-                if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+                
+                if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K or not dataset_w_builtin_attempts:
                     gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                 is_last_step = self.global_steps >= self.total_training_steps
 
@@ -1204,7 +1215,8 @@ class RayPPOTrainer:
                             del gen_baseline_batch, gen_baseline_output
 
                     # repeat to align with repeated responses in rollout
-                    if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K:
+                    dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
+                    if self.config.algorithm.adv_estimator != core_algos.AdvantageEstimator.BYTEDANCE_PASS_AT_K or not dataset_w_builtin_attempts:
                         batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     batch = batch.union(gen_batch_output)
 
