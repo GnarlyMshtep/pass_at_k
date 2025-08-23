@@ -42,13 +42,13 @@ export TOKENIZERS_PARALLELISM=False #M: this is not entirely safe -- what's the 
 export RAY_DEBUG_POST_MORTEM=16167
 # export NON_IID_FLAG=1
 export K_OPT=5
-export N_ROLLOUTS=10 
+export N_ROLLOUTS=3
 
 export DATASET_W_BUILTIN_ATTEMPTS=1
+export DATASET_PATH="/mnt/xfs/home/aiilyas/rl-exploration/data/random_number_mult_att_per_rollout"
 
 CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
-    algorithm.adv_estimator=bytedance_pass_at_k \
-    +algorithm.pass_at_k_k="$K_OPT" \
+    algorithm.adv_estimator=grpo \
     data.train_batch_size=32 \
     data.val_batch_size=32 \
     data.max_prompt_length=1024 \
@@ -82,7 +82,7 @@ CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=16 \
     actor_rollout_ref.rollout.temperature=0.1 \
     algorithm.use_kl_in_reward=False \
-    trainer.val_before_train=True \
+    trainer.val_before_train=False \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
     trainer.project_name='bGRPO' \
@@ -93,14 +93,17 @@ CUDA_VISIBLE_DEVICES=1 python3 -m verl.trainer.main_ppo \
     trainer.test_freq=50000 \
     trainer.total_epochs=1 \
     trainer.log_val_generations=False \
-    data.train_files="/mnt/xfs/home/aiilyas/rl-exploration/data/random_number/train.parquet" \
-    data.val_files="/mnt/xfs/home/aiilyas/rl-exploration/data/random_number/test.parquet" \
+    data.train_files="$DATASET_PATH/train.parquet" \
+    data.val_files="$DATASET_PATH/test.parquet" \
     +trainer.rollout.dump_freq=20\
     trainer.rollout_data_dir="rollouts/train" \
     trainer.validation_data_dir="rollouts/val" \
     trainer.resume_mode="disable" \
     trainer.default_local_dir="/mnt/xfs/home/aiilyas/rl-exploration/checkpoints/random_number" \
-    actor_rollout_ref.rollout.update_weights_bucket_megabytes=512 2>&1 | tee logs/out.txt
+    actor_rollout_ref.rollout.update_weights_bucket_megabytes=512 \
+    custom_reward_function.path="/mnt/xfs/home/aiilyas/rl-exploration/pass_at_k/custom/reward/reward_utils.py" \
+    custom_reward_function.name="compute_score_multi_attempt_per_rollout" 2>&1 | tee logs/out.txt
+
 
 #! do I still need to set rollout.n? I think not
 #TODO: implement mask_freq

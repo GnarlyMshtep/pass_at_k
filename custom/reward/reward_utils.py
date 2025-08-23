@@ -7,6 +7,93 @@ from math_verify import parse, verify
 from numpy.typing import NDArray
 
 REWARD_CORRECT = 1
+EXPECTED_REWARD_SCORES = ["is_correct"]  # Add other expected reward score keys as needed
+
+
+def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | None:
+    """
+    Extract content from numbered tags like <tagname-1>...</tagname-1>, <tagname-2>...</tagname-2>, etc.
+    Now returns partial results even if some tags are missing/empty/duplicated.
+    
+    Args:
+        sol_str: The input string to search
+        tagname: The base tag name (e.g., "attempt")
+        n_rollout: The number of expected tags (1 to n_rollout)
+    
+    Returns:
+        List of valid strings (may be shorter than n_rollout), or empty list if no valid attempts
+    """
+    if not isinstance(sol_str, str) or not isinstance(tagname, str) or not isinstance(n_rollout, int):
+        return []
+    
+    if n_rollout <= 0:
+        return []
+    
+    results = []
+    
+    for i in range(1, n_rollout + 1):
+        open_tag = f"<{tagname}-{i}>"
+        close_tag = f"</{tagname}-{i}>"
+        
+        # Find first occurrence of open tag
+        first_open = sol_str.find(open_tag)
+        if first_open == -1:
+            continue  # Tag missing, skip this attempt
+        
+        # Find matching close tag
+        open_end = first_open + len(open_tag)
+        first_close = sol_str.find(close_tag, open_end)
+        if first_close == -1:
+            continue  # No matching close tag, skip this attempt
+        
+        # Check for duplicate open tags of same number
+        if sol_str.find(open_tag, open_end) != -1:
+            continue  # Duplicate open tag, skip this attempt
+        
+        # Check for duplicate close tags of same number
+        if sol_str.find(close_tag, first_close + len(close_tag)) != -1:
+            continue  # Duplicate close tag, skip this attempt
+        
+        # Extract content between tags
+        inner = sol_str[open_end:first_close]
+        
+        # Check for nested same tags inside (shouldn't happen with numbered tags but being safe)
+        if inner.find(open_tag) != -1 or inner.find(close_tag) != -1:
+            continue  # Nested tags, skip this attempt
+        
+        # Check if the attempt is empty (contains only whitespace or nothing)
+        if not inner.strip():
+            continue  # Empty attempt, skip this attempt
+        
+        results.append(inner)
+    
+    return results
+
+
+def compute_score_multi_attempt_per_rollout(data_source, solution_str, ground_truth, extra_info=None)-> float:
+    N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
+    assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
+    
+    extracted_attempts = extract_attempts(solution_str, "attempt", N_ROLLOUTS)
+    
+    # If no valid attempts found, return 0
+    if not extracted_attempts: 
+        return 0       
+    
+    # Check correctness for each valid attempt
+    correctness_per_attempt = [_is_correct(proposed_sol=attempt, ground_truth=ground_truth) for attempt in extracted_attempts]
+    
+    # If all attempts are present and at least one is correct, return full reward + formatting bonus
+    if len(extracted_attempts) == N_ROLLOUTS and any(correctness_per_attempt):
+        return max(correctness_per_attempt) + .1
+    
+    # If not all attempts are present, return partial reward based on number of valid attempts
+    if len(extracted_attempts) < N_ROLLOUTS:
+        return 0.1 * len(extracted_attempts) / N_ROLLOUTS
+    
+    # If all attempts are present but none are correct, return formatting bonus only
+    return 0.1
+        
 
 def extra_reward_metrics(responses: list[str], prompts: list[str], ground_truths:list[str]) ->dict[str, Any]:
     # breakpoint() #M: would like to inspect what's going on
