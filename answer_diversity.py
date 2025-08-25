@@ -143,7 +143,7 @@ def main():
     
     # Find files 1.jsonl through 51.jsonl
     jsonl_files = []
-    for i in range(1, 312):  # 1 to 51 inclusive
+    for i in range(2, 65 ):  # 1 to 51 inclusive
         target_file = rollouts_dir / f"{i}.jsonl"
         if target_file.exists():
             jsonl_files.append(target_file)
