@@ -20,6 +20,7 @@ from functools import partial
 from typing import Any, Callable
 
 import numpy as np
+import math
 import torch
 
 from verl import DataProto
@@ -207,6 +208,64 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "prompt_length/min": torch.min(prompt_length).detach().item(),
         "prompt_length/clip_ratio": torch.mean(torch.eq(prompt_length, max_prompt_length).float()).detach().item(),
     }
+
+    # Training pass@k metrics (requires per-sample correctness labels)
+    # We look for common correctness keys in non-tensor batch; fallback to reward-based heuristic if needed.
+    try:
+        if "uid" in batch.non_tensor_batch:
+            uid_list = batch.non_tensor_batch["uid"]
+
+            label_key = None
+            for key in ["acc", "is_correct", "exact_match"]:
+                if key in batch.non_tensor_batch:
+                    label_key = key
+                    break
+
+            labels_np = None
+            if label_key is not None:
+                labels_np = np.asarray(batch.non_tensor_batch[label_key], dtype=float)
+            elif "reward" in batch.non_tensor_batch:
+                labels_np = (np.asarray(batch.non_tensor_batch["reward"], dtype=float) > 0.5).astype(int)
+            else:
+                if "token_level_rewards" in batch.batch:
+                    seq_rewards = batch.batch["token_level_rewards"].sum(-1).detach().cpu().numpy()
+                    labels_np = (seq_rewards > 0.5).astype(int)
+
+            if labels_np is not None and len(labels_np) == len(uid_list):
+                uid_to_indices: dict[Any, list[int]] = defaultdict(list)
+                for idx, uid in enumerate(uid_list):
+                    uid_to_indices[uid].append(idx)
+
+                # Gather per-prompt (n, c)
+                per_prompt_stats: list[tuple[int, int]] = []
+                max_n = 0
+                for _, idxs in uid_to_indices.items():
+                    n = len(idxs)
+                    c = int(labels_np[idxs].sum())
+                    per_prompt_stats.append((n, c))
+                    if n > max_n:
+                        max_n = n
+
+                if max_n > 0:
+                    ks: list[int] = []
+                    k_val = 1
+                    while k_val < max_n:
+                        ks.append(k_val)
+                        k_val *= 2
+                    ks.append(max_n)
+
+                    for k in ks:
+                        vals: list[float] = []
+                        for n, c in per_prompt_stats:
+                            if n >= k:
+                                numer = 0 if k > (n - c) else math.comb(n - c, k)
+                                denom = math.comb(n, k)
+                                vals.append(1.0 - (numer / denom))
+                        if len(vals) > 0:
+                            metrics[f"train/pass@{k}"] = float(np.mean(vals))
+    except Exception:
+        # Be conservative: do not fail training metrics if pass@k cannot be computed
+        pass
 
     # multi-turn conversation
     if "__num_turns__" in batch.non_tensor_batch:
@@ -470,6 +529,26 @@ def process_validation_metrics(
                                 seed=seed,
                             )
                             metric[f"maj@{n}/mean"], metric[f"maj@{n}/std"] = maj_n_mean, maj_n_std
+
+                # Deterministic pass@k (for binary correctness variables)
+                # Apply to common correctness variable names
+                if var_name in {"acc", "is_correct", "exact_match"}:
+                    # Determine binary successes from var_vals
+                    vals_np = np.asarray(var_vals, dtype=float)
+                    successes = (vals_np > 0.5).astype(int)
+                    c = int(successes.sum())
+                    n_total = int(len(successes))
+                    # Powers of two up to n_total, plus n_total; also include k=1
+                    ks: list[int] = []
+                    k_val = 1
+                    while k_val < n_total:
+                        ks.append(k_val)
+                        k_val *= 2
+                    ks.append(n_total)
+                    for k in ks:
+                        numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
+                        denom = math.comb(n_total, k)
+                        metric[f"pass@{k}"] = 1.0 - (numer / denom)
 
                 data_src2prompt2var2metric[data_source][prompt][var_name] = metric
 

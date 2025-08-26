@@ -49,6 +49,15 @@ forward_max_token_len_per_gpu: ${critic.forward_max_token_len_per_gpu}
 # the reward manager can be set to prime for parallel verification.
 reward_manager: naive
 
+# Extra arguments forwarded to the reward manager implementation.
+# You can override any of these via CLI, e.g. +reward_model.reward_kwargs.num_workers=8
+reward_kwargs:
+
+  # Number of worker processes to parallelize per-sample scoring inside the
+  # reward manager where supported (e.g., DAPO).
+  # Set >1 to enable multiprocessing; 1 disables it.
+  num_workers: 1
+
 # Whether to launch custom reward function asynchronously during log_prob
 # custom reward function executed async on CPU, during log_prob
 launch_reward_fn_async: False
