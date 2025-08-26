@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
+import multiprocessing as mp
 
 import torch
 
@@ -34,6 +35,8 @@ class DAPORewardManager(AbstractRewardManager):
         reward_fn_key="data_source",
         max_resp_len=None,
         overlong_buffer_cfg=None,
+        num_workers: int = 1,
+        **kwargs,
     ) -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
@@ -41,6 +44,7 @@ class DAPORewardManager(AbstractRewardManager):
         self.reward_fn_key = reward_fn_key
         self.overlong_buffer_cfg = overlong_buffer_cfg
         self.max_resp_len = max_resp_len
+        self.num_workers = max(1, int(num_workers))
 
         if self.overlong_buffer_cfg is not None:
             assert self.max_resp_len is not None, (
@@ -65,13 +69,14 @@ class DAPORewardManager(AbstractRewardManager):
 
         already_print_data_sources = {}
 
+        # Pre-decode and prepare arguments for scoring
+        prepared_items = []
+        decoded_cache = []  # store for logging and overlong computation
         for i in range(len(data)):
-            data_item = data[i]  # DataProtoItem
+            data_item = data[i]
 
             prompt_ids = data_item.batch["prompts"]
-
             prompt_length = prompt_ids.shape[-1]
-
             valid_prompt_length = data_item.batch["attention_mask"][:prompt_length].sum()
             valid_prompt_ids = prompt_ids[-valid_prompt_length:]
 
@@ -79,7 +84,6 @@ class DAPORewardManager(AbstractRewardManager):
             valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
             valid_response_ids = response_ids[:valid_response_length]
 
-            # decode
             prompt_str = self.tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
             response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
             eos_token = self.tokenizer.eos_token
@@ -87,22 +91,33 @@ class DAPORewardManager(AbstractRewardManager):
                 response_str = response_str[: -len(eos_token)]
 
             ground_truth = data_item.non_tensor_batch["reward_model"]["ground_truth"]
-
             data_source = data_item.non_tensor_batch[self.reward_fn_key]
-
             extra_info = data_item.non_tensor_batch.get("extra_info", None)
 
-            result = self.compute_score(
+            prepared_items.append((self.compute_score, data_source, response_str, ground_truth, extra_info))
+            decoded_cache.append((i, valid_response_length, prompt_str, response_str, ground_truth, data_source))
+
+        def _compute_one(args):
+            compute_fn, data_source, response_str, ground_truth, extra_info = args
+            return compute_fn(
                 data_source=data_source,
                 solution_str=response_str,
                 ground_truth=ground_truth,
                 extra_info=extra_info,
             )
 
-            score: float
+        if self.num_workers > 1 and len(prepared_items) > 1:
+            ctx = mp.get_context("forkserver")
+            with ctx.Pool(processes=self.num_workers) as pool:
+                results = pool.map(_compute_one, prepared_items)
+        else:
+            results = list(map(_compute_one, prepared_items))
+
+        for (i, valid_response_length, prompt_str, response_str, ground_truth, data_source), result in zip(
+            decoded_cache, results, strict=True
+        ):
             if isinstance(result, dict):
                 score = result["score"]
-                # Store the information including original reward
                 for key, value in result.items():
                     reward_extra_info[key].append(value)
             else:
@@ -110,7 +125,6 @@ class DAPORewardManager(AbstractRewardManager):
                 reward_extra_info["acc"].append(score)
 
             reward = score
-
             if self.overlong_buffer_cfg.enable:
                 overlong_buffer_len = self.overlong_buffer_cfg.len
                 expected_len = self.max_resp_len - overlong_buffer_len
@@ -126,7 +140,6 @@ class DAPORewardManager(AbstractRewardManager):
 
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0
-
             if already_print_data_sources[data_source] < self.num_examine:
                 already_print_data_sources[data_source] += 1
                 print("[prompt]", prompt_str)

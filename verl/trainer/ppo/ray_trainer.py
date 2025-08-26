@@ -726,10 +726,17 @@ class RayPPOTrainer:
             test_batch = test_batch.union(test_output_gen_batch)
             test_batch.meta_info["validate"] = True
 
-            # evaluate using reward_function
+            # evaluate using reward_function (optionally async)
             if self.val_reward_fn is None:
                 raise ValueError("val_reward_fn must be provided for validation.")
-            result = self.val_reward_fn(test_batch, return_dict=True)
+
+            if self.config.reward_model.launch_reward_fn_async:
+                future_reward = compute_reward_async.remote(data=test_batch, reward_fn=self.val_reward_fn)
+                reward_tensor, reward_extra = ray.get(future_reward)
+                result = {"reward_tensor": reward_tensor, "reward_extra_info": reward_extra}
+            else:
+                result = self.val_reward_fn(test_batch, return_dict=True)
+
             reward_tensor = result["reward_tensor"]
             scores = reward_tensor.sum(-1).cpu().tolist()
             sample_scores.extend(scores)
