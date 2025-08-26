@@ -27,6 +27,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--local_dir", required=True, help="Local directory to save data, e.g., $HF_HOME/data/maze")
     parser.add_argument("--hdfs_dir", default=None)
+    parser.add_argument(
+        "--test_subset_size",
+        type=int,
+        default=None,
+        help="If set, also save a shuffled test subset parquet with this many rows.",
+    )
+    parser.add_argument(
+        "--test_subset_seed",
+        type=int,
+        default=42,
+        help="Seed used to shuffle the test set before selecting the subset.",
+    )
+    parser.add_argument(
+        "--test_subset_output",
+        type=str,
+        default="test_small.parquet",
+        help="Filename for the small test parquet saved in local_dir.",
+    )
 
     args = parser.parse_args()
 
@@ -71,6 +89,15 @@ if __name__ == "__main__":
 
     train_dataset.to_parquet(os.path.join(local_dir, "train.parquet"))
     test_dataset.to_parquet(os.path.join(local_dir, "test.parquet"))
+
+    # Optionally create a smaller shuffled test subset parquet
+    if args.test_subset_size is not None and args.test_subset_size > 0:
+        subset_size = min(args.test_subset_size, len(test_dataset))
+        small_test = test_dataset
+        if subset_size < len(test_dataset):
+            small_test = test_dataset.shuffle(seed=args.test_subset_seed).select(range(subset_size))
+        small_path = os.path.join(local_dir, args.test_subset_output)
+        small_test.to_parquet(small_path)
 
     if hdfs_dir is not None:
         makedirs(hdfs_dir)
