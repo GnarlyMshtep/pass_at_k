@@ -1,15 +1,21 @@
 ---
 name: Experiment
-about: Describe this issue template's purpose here.
-title: experimentname
+about: experiment
+title: ''
 labels: experiment
 assignees: ''
 
 ---
 
-**What is the experiment trying to measure**
+**One sentence**
 
-**What do you expect**
+**What is interesting to measure?**
+
+**how will u measure it? (where will you read the #-s, which functions to add, etc)**
+
+**What do you expect to see?**
+
+**Planned config**
 
 **Link to wandb and any other configs** 
 
