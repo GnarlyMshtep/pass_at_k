@@ -152,7 +152,8 @@ def check_network(args):
     print("----------Network Test----------")
     if args.timeout > 0:
         print("Setting timeout: {}".format(args.timeout))
-        socket.setdefaulttimeout(10)
+        # Honor the user-provided timeout rather than a hardcoded value
+        socket.setdefaulttimeout(args.timeout)
     for region in args.region.strip().split(","):
         r = region.strip().lower()
         if not r:
