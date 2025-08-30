@@ -161,7 +161,7 @@ def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[t
     reward_result = reward_fn(data, return_dict=True)
     reward_tensor = reward_result["reward_tensor"]
     reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
-    extra_reward_metrics = reward_result.get("extra_reward_metrics")
+    extra_reward_metrics = reward_result.get("extra_reward_metrics", {})
     
     return reward_tensor, reward_extra_infos_dict, extra_reward_metrics
 
