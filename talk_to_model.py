@@ -34,12 +34,13 @@ def format_chat_message(tokenizer, messages):
         formatted += "Assistant: "
         return formatted
 
-def generate_response(model, tokenizer, prompt, max_new_tokens=512, temperature=0.7, do_sample=True):
+def generate_response(model, tokenizer, prompt, max_new_tokens=512, temperature=0.7, do_sample=True, device="auto"):
     """Generate response from the model"""
     # Tokenize input
     inputs = tokenizer(prompt, return_tensors="pt")
     
-    if torch.cuda.is_available():
+    # Respect the requested device when moving inputs
+    if device == "cuda" and torch.cuda.is_available():
         inputs = {k: v.to('cuda') for k, v in inputs.items()}
     
     # Generate
@@ -49,7 +50,7 @@ def generate_response(model, tokenizer, prompt, max_new_tokens=512, temperature=
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             do_sample=do_sample,
-            pad_token_id=tokenizer.eos_token_id,
+            pad_token_id=(tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id),
             repetition_penalty=1.1
         )
     
@@ -60,12 +61,12 @@ def generate_response(model, tokenizer, prompt, max_new_tokens=512, temperature=
 
 def main():
     parser = argparse.ArgumentParser(description='Chat with or complete text using local HF models')
-    parser.add_argument('--model-path', help='Path to HF model directory')
+    parser.add_argument('--model-path', required=True, help='Path to HF model directory')
     parser.add_argument('--completion', default=False,  action='store_true', help='Single completion mode instead of chat')
     parser.add_argument('--max-tokens', type=int, default=2048, help='Max new tokens to generate')
     parser.add_argument('--temperature', type=float, default=0.7, help='Sampling temperature')
     parser.add_argument('--quantize', action='store_true', default=False, help='Use 4-bit quantization (requires bitsandbytes)')
-    parser.add_argument('--device', default='cuda', help='Device to use (auto, cpu, cuda)')
+    parser.add_argument('--device', default='cuda', choices=['auto', 'cpu', 'cuda'], help='Device to use (auto, cpu, cuda)')
     
     args = parser.parse_args()
     
@@ -74,11 +75,14 @@ def main():
     # Set up quantization if requested
     quantization_config = None
     if args.quantize:
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
-        )
+        if args.device != 'cuda' or not torch.cuda.is_available():
+            print("Quantization requires CUDA; disabling quantization since device is not CUDA or CUDA unavailable.")
+        else:
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+            )
     
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
@@ -87,11 +91,15 @@ def main():
     
     # Load model
     model_kwargs = {"quantization_config": quantization_config} if quantization_config else {}
-    if args.device != 'cpu' and torch.cuda.is_available():
+    if args.device in ['cuda', 'auto'] and torch.cuda.is_available():
         model_kwargs["torch_dtype"] = torch.float16
-        model_kwargs["device_map"] = "auto"
+        # Let accelerate infer device map when auto, or when quantization is enabled
+        if args.device == 'auto' or quantization_config is not None:
+            model_kwargs["device_map"] = "auto"
     
-    model = AutoModelForCausalLM.from_pretrained(args.model_path, **model_kwargs)
+    # Filter out None values to avoid passing them
+    model = AutoModelForCausalLM.from_pretrained(args.model_path, **{k: v for k, v in model_kwargs.items() if v is not None})
+    model.eval()
     
     # Detect if this is a chat model
     is_chat_model = detect_chat_template(tokenizer, args.model_path)
@@ -106,7 +114,7 @@ def main():
         print(repr(prompt))
         print(f"=== END INPUT ({len(tokenizer.encode(prompt))} tokens) ===\n")
         
-        response = generate_response(model, tokenizer, prompt, args.max_tokens, args.temperature)
+        response = generate_response(model, tokenizer, prompt, args.max_tokens, args.temperature, device=args.device)
         print(f"Generated: {response}")
         
     else:
@@ -142,7 +150,7 @@ def main():
                 print(repr(full_prompt))
                 print(f"=== END INPUT ({len(tokenizer.encode(full_prompt))} tokens) ===\n")
                 
-                response = generate_response(model, tokenizer, full_prompt, args.max_tokens, args.temperature)
+                response = generate_response(model, tokenizer, full_prompt, args.max_tokens, args.temperature, device=args.device)
                 print(f"Assistant: {response}\n")
                 
                 if is_chat_model:

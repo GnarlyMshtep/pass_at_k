@@ -29,7 +29,14 @@ def calculate(a: int, b: int, operand: str) -> int:
     assert operand in ["+", "-", "*", "@"], f"unknown operand {operand}"
     if operand == "@":
         return 3 * a - 2 * b
-    return eval(f"{a} {operand} {b}")
+    if operand == "+":
+        return a + b
+    if operand == "-":
+        return a - b
+    if operand == "*":
+        return a * b
+    # Should never reach here due to assert
+    raise ValueError(f"Unsupported operand: {operand}")
 
 
 class MathExpressionReactAgentLoop(ReactAgentLoop):
