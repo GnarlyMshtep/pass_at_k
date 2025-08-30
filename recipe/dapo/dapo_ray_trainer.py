@@ -34,6 +34,7 @@ from verl.trainer.ppo.metric_utils import (
     compute_timing_metrics,
     reduce_metrics,
 )
+from verl.trainer.ppo.reward import compute_reward
 from verl.trainer.ppo.ray_trainer import (
     AdvantageEstimator,
     RayPPOTrainer,
@@ -178,14 +179,13 @@ class RayDAPOTrainer(RayPPOTrainer):
                         # we combine with rule-based rm
                         reward_extra_infos_dict: dict[str, list]
                         try:
-                            reward_result = self.reward_fn(new_batch, return_dict=True)
-                            reward_tensor = reward_result["reward_tensor"]
-                            reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
+                            reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
                         except Exception as e:
                             print(f"Error in reward_fn: {e}")
                             reward_tensor = self.reward_fn(new_batch)
                             reward_extra_infos_dict = {}
 
+                        metrics.update(extra_reward_metrics)
                         new_batch.batch["token_level_scores"] = reward_tensor
 
                         if reward_extra_infos_dict:
@@ -308,7 +308,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                     with marked_timer("adv", timing_raw, "brown"):
                         # compute advantages, executed on the driver process
                         norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True)
-                        batch = compute_advantage(
+                        batch, extra_advantage_metrics = compute_advantage(
                             batch,
                             adv_estimator=self.config.algorithm.adv_estimator,
                             gamma=self.config.algorithm.gamma,
@@ -316,6 +316,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                             num_repeat=self.config.actor_rollout_ref.rollout.n,
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                         )
+                        metrics.update(extra_advantage_metrics)
 
                     # update critic
                     if self.use_critic:
