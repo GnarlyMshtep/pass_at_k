@@ -17,7 +17,7 @@ unset HIP_VISIBLE_DEVICES
 # export K_OPT=5
 # export N_ROLLOUTS=3
 # export DATASET_W_BUILTIN_ATTEMPTS=1
-DATASET_PATH="/mnt/xfs/home/aiilyas/rl-exploration/data/taller_puzzles_multatt"
+DATASET_PATH="/mnt/xfs/home/aiilyas/rl-exploration/data/taller_puzzles_reg"
 # export CUDA_VISIBLE_DEVICES="0,2"
 
 # DAPO Configuration
@@ -42,14 +42,13 @@ train_prompt_bsz=32
 gen_prompt_bsz=$((train_prompt_bsz * 1)) # this setting should not be used because I am not resampling (I think this is the max to resample)
 n_resp_per_prompt=8
 total_rollouts_in_batch=$((train_prompt_bsz * n_resp_per_prompt))
-total_rollouts_updated_per_actor=$((total_rollouts_in_batch / n_gpu))
-num_mini_batches=2
+num_mini_batches=4
 train_prompt_mini_bsz=$((train_prompt_bsz / num_mini_batches))
 
 prompt_per_gpu_per_mini=$((train_prompt_mini_bsz / n_gpu))  
 
-#M: but i think that the actual gpu workload could be times n_rollout? nope -- it seems its exactly what we set to here
-ppo_micro_batch_size_per_gpu=$(( prompt_per_gpu_per_mini * n_resp_per_prompt< 8 ? prompt_per_gpu_per_mini * n_resp_per_prompt : 8 ))
+#M: but i think that the actual gpu workload could be times n_rollout?
+ppo_micro_batch_size_per_gpu=$(( prompt_per_gpu_per_mini < 16 ? prompt_per_gpu_per_mini : 16 ))
 ref_log_prob_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu
 rollout_log_prob_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu
 
@@ -104,7 +103,7 @@ top_k=-1
 #   actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4\ \
 #    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=4 \
 
-CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
+CUDA_VISIBLE_DEVICES=2,3 python3 -m recipe.dapo.main_dapo \
     data.train_files="${DATASET_PATH}/train.parquet" \
     data.val_files="${DATASET_PATH}/val.parquet" \
     data.prompt_key=prompt \

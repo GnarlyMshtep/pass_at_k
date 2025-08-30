@@ -42,14 +42,13 @@ train_prompt_bsz=32
 gen_prompt_bsz=$((train_prompt_bsz * 1)) # this setting should not be used because I am not resampling (I think this is the max to resample)
 n_resp_per_prompt=8
 total_rollouts_in_batch=$((train_prompt_bsz * n_resp_per_prompt))
-total_rollouts_updated_per_actor=$((total_rollouts_in_batch / n_gpu))
-num_mini_batches=2
+num_mini_batches=4
 train_prompt_mini_bsz=$((train_prompt_bsz / num_mini_batches))
 
 prompt_per_gpu_per_mini=$((train_prompt_mini_bsz / n_gpu))  
 
-#M: but i think that the actual gpu workload could be times n_rollout? nope -- it seems its exactly what we set to here
-ppo_micro_batch_size_per_gpu=$(( prompt_per_gpu_per_mini * n_resp_per_prompt< 8 ? prompt_per_gpu_per_mini * n_resp_per_prompt : 8 ))
+#M: but i think that the actual gpu workload could be times n_rollout?
+ppo_micro_batch_size_per_gpu=$(( prompt_per_gpu_per_mini * n_resp_per_prompt< 32 ? prompt_per_gpu_per_mini : 32 ))
 ref_log_prob_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu
 rollout_log_prob_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu
 

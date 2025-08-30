@@ -178,12 +178,11 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                         # we combine with rule-based rm
                         reward_extra_infos_dict: dict[str, list]
-                        try:
-                            reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
-                        except Exception as e:
-                            print(f"Error in reward_fn: {e}")
-                            reward_tensor = self.reward_fn(new_batch)
-                            reward_extra_infos_dict = {}
+                        reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(new_batch, self.reward_fn)
+                        # except Exception as e:
+                        #     print(f"Error in reward_fn: {e}")
+                        #     reward_tensor = self.reward_fn(new_batch)
+                        #     reward_extra_infos_dict = {}
 
                         metrics.update(extra_reward_metrics)
                         new_batch.batch["token_level_scores"] = reward_tensor
