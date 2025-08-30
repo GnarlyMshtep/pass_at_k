@@ -71,9 +71,10 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
 
 
 def compute_score_multi_attempt_per_rollout(data_source, solution_str, ground_truth, extra_info=None)-> float:
-    N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
-    assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
-    
+    # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
+    # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
+    N_ROLLOUTS=3   
+
     extracted_attempts = extract_attempts(solution_str, "attempt", N_ROLLOUTS)
     
     # If no valid attempts found, return 0

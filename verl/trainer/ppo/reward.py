@@ -149,7 +149,7 @@ def load_reward_manager(
     )
 
 
-def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[torch.Tensor, dict[str, Any]]:
+def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[torch.Tensor, dict[str, Any], dict[str, Any]]:
     """
     Compute reward for a batch of data.
     Args:
