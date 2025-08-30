@@ -17,12 +17,13 @@ unset HIP_VISIBLE_DEVICES
 # export K_OPT=5
 # export N_ROLLOUTS=3
 # export DATASET_W_BUILTIN_ATTEMPTS=1
-DATASET_PATH="/mnt/xfs/home/aiilyas/rl-exploration/data/taller_puzzles_multatt"
+DATASET_PATH="$HF_HOME/data/taller_puzzles_multatt"
 # export CUDA_VISIBLE_DEVICES="0,2"
 
 # DAPO Configuration
 project_name='matan'
-exp_name=((basename "$0"))
+exp_name="matan_run_dapo_multatt.sh"
+echo $exp_name
 mkdir -p "rollouts/$exp_name"
 
 # =============================================================================
@@ -48,7 +49,7 @@ train_prompt_mini_bsz=$((train_prompt_bsz / num_mini_batches))
 prompt_per_gpu_per_mini=$((train_prompt_mini_bsz / n_gpu))  
 
 #M: but i think that the actual gpu workload could be times n_rollout?
-ppo_micro_batch_size_per_gpu=$(( prompt_per_gpu_per_mini * n_resp_per_prompt< 32 ? prompt_per_gpu_per_mini : 32 ))
+ppo_micro_batch_size_per_gpu=$(( prompt_per_gpu_per_mini * n_resp_per_prompt< 8 ? prompt_per_gpu_per_mini : 8 ))
 ref_log_prob_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu
 rollout_log_prob_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu
 
@@ -128,7 +129,7 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
     algorithm.filter_groups.enable=${enable_filter_groups} \
     algorithm.filter_groups.max_num_gen_batches=${max_num_gen_batches} \
     algorithm.filter_groups.metric=${filter_groups_metric} \
-    actor_rollout_ref.model.path="/mnt/xfs/home/aiilyas/rl-exploration/models/Qwen2_5-1_5B-Instruct" \
+    actor_rollout_ref.model.path="${HF_HOME}/models/Qwen2_5-1_5B-Instruct" \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.use_dynamic_bsz=${use_dynamic_bsz} \
@@ -170,7 +171,7 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.ref.ulysses_sequence_parallel_size=${sp_size} \
     critic.strategy=fsdp2 \
     reward_model.strategy=fsdp2 \
-    custom_reward_function.path="/mnt/xfs/home/aiilyas/rl-exploration/pass_at_k/custom/reward/reward_utils.py" \
+    custom_reward_function.path="custom/reward/reward_utils.py" \
     custom_reward_function.name="compute_score_multi_attempt_per_rollout" \
     trainer.logger='["console","wandb"]' \
     trainer.project_name=$project_name \
@@ -183,7 +184,7 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
     trainer.save_freq=60 \
     trainer.total_epochs=1 \
     trainer.log_val_generations=False \
-    trainer.default_local_dir="/mnt/xfs/home/aiilyas/rl-exploration/checkpoints/$exp_name" \
+    trainer.default_local_dir="checkpoints/$exp_name" \
     trainer.resume_mode=disable \
     +trainer.rollout.dump_freq=3 \
     trainer.rollout_data_dir="rollouts/$exp_name/train" \
