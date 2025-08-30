@@ -20,12 +20,11 @@ import os
 import random
 
 import datasets
-
 from taller_dataset_utils import generate_instance_graph, generate_instance_text
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="../data/taller_puzzles_multatt")
+    parser.add_argument("--local_dir", default="/scratch/m000122/stalaei/huggingface/data/taller_puzzles_multatt")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--ntrain", type=int, default=10000)
     parser.add_argument("--nval", type=int, default=50)
@@ -37,7 +36,7 @@ if __name__ == "__main__":
     # Set random seed for reproducibility
     random.seed(args.seed)
 
-    instruction_following = 'You will be presented with a height comparison puzzle and you have 3 attempts to answer it correctly and you MUST think before each answer. So, your answer format must be <think-1></think-1> <attempt-1></attempt-1>, <think-2></think-2> <attempt-2></attempt-2>, and <think-3></think-3> <attempt-3></attempt-3> where in <think-i> you think about the answer provided in <attempt-i>. Please optimize for getting at least one attempt correct, rather than getting more than one attempt correct (pass@k grading). Your answer should be a comma-separated list of people who could plausibly be the 3rd tallest.\n\n'
+    instruction_following = 'You will be presented with a height comparison puzzle and you have 3 attempts to answer it correctly and you MUST think before each answer. So, your answer format must be <think></think> <attempt-1></attempt-1><attempt-2></attempt-2><attempt-3></attempt-3> where in <think> you think about the question and come up with answers provided in <attempt-1>, <attempt-2>, and <attempt-3>. Please optimize for getting at least one attempt correct, rather than getting more than one attempt correct (pass@k grading). Your answer should be a comma-separated list of people who could plausibly be the 3rd tallest.\n\n'
 
     def generate_puzzle():
         """Generate a single taller puzzle instance"""

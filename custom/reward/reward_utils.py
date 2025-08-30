@@ -82,7 +82,7 @@ def compute_score_multi_attempt_per_rollout(data_source, solution_str, ground_tr
         return 0       
     
     # Check correctness for each valid attempt
-    correctness_per_attempt = [_is_correct(proposed_sol=attempt, ground_truth=ground_truth) for attempt in extracted_attempts]
+    correctness_per_attempt = [_taller_is_correct(proposed_sol=attempt, ground_truth=ground_truth) for attempt in extracted_attempts]
     
     # If all attempts are present and at least one is correct, return full reward + formatting bonus
     if len(extracted_attempts) == N_ROLLOUTS and any(correctness_per_attempt):
@@ -227,6 +227,27 @@ def _get_tagged_data(text: str, tagname: str) -> str | None:
     if inner.find(open_tag) != -1 or inner.find(close_tag) != -1:
         return None
     return inner
+
+def _taller_is_correct(proposed_sol: str, ground_truth:str) -> bool: 
+    proposed_sol= proposed_sol.strip().replace(" ", "")
+    ground_truth=ground_truth.strip().replace(" ", "")
+
+    proposed_sol_set = set()
+    ground_truth_set = set()
+    for i, char in enumerate(proposed_sol): 
+        if i %2 == 0: 
+            proposed_sol_set.add(char)
+        elif char != ",":
+            return False 
+    
+    for i, char in enumerate(ground_truth): 
+        if i %2 == 0: 
+            ground_truth_set.add(char)
+        elif char != ",":
+            print(f"DEBUG: grouth truth has unexpected format {ground_truth}")
+
+    return proposed_sol_set == ground_truth_set   
+    
 
 
 def _is_correct(proposed_sol: str, ground_truth: str, tol: float = 1e-4) -> bool:
