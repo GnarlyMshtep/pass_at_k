@@ -17,7 +17,7 @@ unset HIP_VISIBLE_DEVICES
 # export K_OPT=5
 # export N_ROLLOUTS=3
 # export DATASET_W_BUILTIN_ATTEMPTS=1
-DATASET_PATH="/mnt/xfs/home/aiilyas/rl-exploration/data/taller_puzzles_reg"
+DATASET_PATH="/mnt/xfs/home/aiilyas/rl-exploration/data/taller_puzzles_multatt_4_7_no_gts_1"
 # export CUDA_VISIBLE_DEVICES="0,2"
 
 # DAPO Configuration
@@ -33,14 +33,14 @@ mkdir -p "rollouts/$exp_name"
 sp_size=1
 use_dynamic_bsz=False
 offload=True
-n_gpu=2
+n_gpu=4
 gen_tp=1
 gpu_memory_utilization=0.6
 
 # Batch size parameters
-train_prompt_bsz=32
+train_prompt_bsz=128
 gen_prompt_bsz=$((train_prompt_bsz * 1)) # this setting should not be used because I am not resampling (I think this is the max to resample)
-n_resp_per_prompt=8
+n_resp_per_prompt=16
 total_rollouts_in_batch=$((train_prompt_bsz * n_resp_per_prompt))
 num_mini_batches=4
 train_prompt_mini_bsz=$((train_prompt_bsz / num_mini_batches))
@@ -103,7 +103,7 @@ top_k=-1
 #   actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4\ \
 #    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=4 \
 
-CUDA_VISIBLE_DEVICES=2,3 python3 -m recipe.dapo.main_dapo \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m recipe.dapo.main_dapo \
     data.train_files="${DATASET_PATH}/train.parquet" \
     data.val_files="${DATASET_PATH}/val.parquet" \
     data.prompt_key=prompt \

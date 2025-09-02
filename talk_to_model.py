@@ -27,7 +27,9 @@ def format_chat_message(tokenizer, messages):
         # Fallback: simple format
         formatted = ""
         for msg in messages:
-            if msg["role"] == "user":
+            if msg["role"] == "system":
+                formatted += f"System: {msg['content']}\n"
+            elif msg["role"] == "user":
                 formatted += f"Human: {msg['content']}\n"
             elif msg["role"] == "assistant":
                 formatted += f"Assistant: {msg['content']}\n"
@@ -60,12 +62,13 @@ def generate_response(model, tokenizer, prompt, max_new_tokens=512, temperature=
 
 def main():
     parser = argparse.ArgumentParser(description='Chat with or complete text using local HF models')
-    parser.add_argument('--model-path', help='Path to HF model directory')
+    parser.add_argument('--model-path', default="/scratch/m000122/stalaei/huggingface/models/Qwen2_5-7B-Instruct", help='Path to HF model directory')
     parser.add_argument('--completion', default=False,  action='store_true', help='Single completion mode instead of chat')
     parser.add_argument('--max-tokens', type=int, default=2048, help='Max new tokens to generate')
     parser.add_argument('--temperature', type=float, default=0.7, help='Sampling temperature')
     parser.add_argument('--quantize', action='store_true', default=False, help='Use 4-bit quantization (requires bitsandbytes)')
     parser.add_argument('--device', default='cuda', help='Device to use (auto, cpu, cuda)')
+    parser.add_argument('--system', default=None, help='System prompt to use for chat models')
     
     args = parser.parse_args()
     
@@ -116,6 +119,13 @@ def main():
         
         conversation = []
         
+        # Add system prompt if provided for chat models
+        if args.system and is_chat_model:
+            conversation.append({"role": "system", "content": args.system})
+            print(f"System prompt set: {args.system[:50]}{'...' if len(args.system) > 50 else ''}\n")
+        elif args.system and not is_chat_model:
+            print("Warning: System prompt specified but model is not detected as chat/instruct model. System prompt will be ignored.\n")
+        
         while True:
             try:
                 user_input = input("You: ").strip()
@@ -124,6 +134,9 @@ def main():
                     break
                 elif user_input.lower() == 'clear':
                     conversation = []
+                    # Re-add system prompt if it was provided
+                    if args.system and is_chat_model:
+                        conversation.append({"role": "system", "content": args.system})
                     print("Conversation cleared.\n")
                     continue
                 elif user_input == '':
