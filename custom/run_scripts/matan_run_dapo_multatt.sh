@@ -17,12 +17,12 @@ unset HIP_VISIBLE_DEVICES
 # export K_OPT=5
 # export N_ROLLOUTS=3
 # export DATASET_W_BUILTIN_ATTEMPTS=1
-DATASET_PATH="$HF_HOME/data/taller_puzzles_multatt"
+DATASET_PATH="$HF_HOME/data/taller_puzzles_multatt_5_8_no_gts_1_or_max"
 # export CUDA_VISIBLE_DEVICES="0,2"
 
 # DAPO Configuration
 project_name='matan'
-exp_name="matan_run_dapo_multatt.sh"
+exp_name="harder_n_64_4_7_nodes_no_gts_1_dapo_multatt"
 echo $exp_name
 mkdir -p "rollouts/$exp_name"
 
@@ -39,9 +39,9 @@ gen_tp=1
 gpu_memory_utilization=0.6
 
 # Batch size parameters
-train_prompt_bsz=32
+train_prompt_bsz=16
 gen_prompt_bsz=$((train_prompt_bsz * 1)) # this setting should not be used because I am not resampling (I think this is the max to resample)
-n_resp_per_prompt=8
+n_resp_per_prompt=64
 total_rollouts_in_batch=$((train_prompt_bsz * n_resp_per_prompt))
 num_mini_batches=4
 train_prompt_mini_bsz=$((train_prompt_bsz / num_mini_batches))
@@ -62,7 +62,7 @@ echo "MICRO: ppo_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu"
 max_prompt_length=1024
 max_response_length=2048
 
-enable_overlong_buffer=False
+enable_overlong_buffer=True
 overlong_buffer_len=2048
 overlong_penalty_factor=1.0
 
@@ -104,7 +104,7 @@ top_k=-1
 #   actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4\ \
 #    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=4 \
 
-CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
+CUDA_VISIBLE_DEVICES=2,3 python3 -m recipe.dapo.main_dapo \
     data.train_files="${DATASET_PATH}/train.parquet" \
     data.val_files="${DATASET_PATH}/val.parquet" \
     data.prompt_key=prompt \
@@ -135,9 +135,6 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.use_dynamic_bsz=${use_dynamic_bsz} \
     actor_rollout_ref.ref.log_prob_use_dynamic_bsz=${use_dynamic_bsz} \
     actor_rollout_ref.rollout.log_prob_use_dynamic_bsz=${use_dynamic_bsz} \
-    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=${actor_ppo_max_token_len} \
-    actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=${infer_ppo_max_token_len} \
-    actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=${infer_ppo_max_token_len} \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
     actor_rollout_ref.actor.optim.weight_decay=0.1 \
@@ -184,7 +181,7 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
     trainer.save_freq=60 \
     trainer.total_epochs=1 \
     trainer.log_val_generations=False \
-    trainer.default_local_dir="checkpoints/$exp_name" \
+    trainer.default_local_dir="$HF_HOME/checkpoints/$exp_name" \
     trainer.resume_mode=disable \
     +trainer.rollout.dump_freq=3 \
     trainer.rollout_data_dir="rollouts/$exp_name/train" \
@@ -196,4 +193,4 @@ CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.ref.entropy_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.forward_prefetch=True \
     actor_rollout_ref.ref.fsdp_config.forward_prefetch=True \
-    2>&1 | tee logs/dapo_matan_out.txt
+    2>&1 | tee logs/${exp_name}.txt

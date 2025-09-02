@@ -24,11 +24,12 @@ from taller_dataset_utils import generate_instance_graph, generate_instance_text
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="/scratch/m000122/stalaei/huggingface/data/taller_puzzles_multatt")
+    parser.add_argument("--local_dir", default="/scratch/m000122/stalaei/huggingface/data/taller_puzzles_multatt_3_6_no_gts_1_or_max")
     parser.add_argument("--hdfs_dir", default=None)
     parser.add_argument("--ntrain", type=int, default=10000)
     parser.add_argument("--nval", type=int, default=50)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--n-print", type=int, default=1, help="Number of first dataset items to print")
 
     args = parser.parse_args()
   
@@ -36,32 +37,38 @@ if __name__ == "__main__":
     # Set random seed for reproducibility
     random.seed(args.seed)
 
-    instruction_following = 'You will be presented with a height comparison puzzle and you have 3 attempts to answer it correctly and you MUST think before each answer. So, your answer format must be <think></think> <attempt-1></attempt-1><attempt-2></attempt-2><attempt-3></attempt-3> where in <think> you think about the question and come up with answers provided in <attempt-1>, <attempt-2>, and <attempt-3>. Please optimize for getting at least one attempt correct, rather than getting more than one attempt correct (pass@k grading). Your answer should be a comma-separated list of people who could plausibly be the 3rd tallest.\n\n'
+    instruction_following = 'You will be presented with a height comparison puzzle and you have 3 attempts to answer it correctly and you MUST think before each answer. So, your answer format must be <think></think> <attempt-1></attempt-1><attempt-2></attempt-2><attempt-3></attempt-3> where in <think> you think about the question and come up with 3 attempts. Generate your first attempt and consider why it might be wrong to generate your next attempts. Make sure to think about ALL you attempts in <think>. DON\'T think only about the first attempt and then guess the rest. The attempt answers provided in <attempt-1>, <attempt-2>, and <attempt-3>. Please optimize for getting at least one attempt correct, rather than getting more than one attempt correct (pass@k grading). Try justifying your answer to yourself. Think hard about the answer, spending a long time contemplating. Your answer should be a comma-separated list of people who could plausibly be the 3rd tallest.\n\n'
 
     def generate_puzzle():
         """Generate a single taller puzzle instance"""
-        n_vertices = random.randint(4, 12)
-        max_tallest = random.randint(2, 4)
-        
-        # Generate puzzle using utils (without visualization)
-        graph, third_tallest, split_vertices = generate_instance_graph(n_vertices, max_tallest)
-        puzzle_text, shuffled_third_tallest = generate_instance_text(graph, third_tallest, split_vertices, generate_viz=False)
-        
-        # Extract just the sentences (remove graph visualization line)
-        sentences = [line for line in puzzle_text.split('\n') if line.strip() and not line.startswith('[Graph')]
-        puzzle_sentences = '\n'.join(sentences)
-        
-        # Create ground truth (comma-separated, no spaces)
-        ground_truth = ','.join(sorted(list(shuffled_third_tallest)))
-        
-        return {
-            'puzzle_text': puzzle_sentences,
-            'ground_truth': ground_truth,
-            'n_vertices': n_vertices,
-            'max_tallest': max_tallest,
-            'graph_edges': [(u, v) for u in graph.vertices for v in graph.edges[u]],
-            'split_vertices': split_vertices
-        }
+        while True:
+            n_vertices = random.randint(3, 6)
+            max_tallest = random.randint(2, 3) # this is a target, not exactly
+            
+            # Generate puzzle using utils (without visualization)
+            graph, third_tallest, split_vertices = generate_instance_graph(n_vertices, max_tallest)
+            
+            # Discard responses where len(third_tallest) == 1
+            if len(third_tallest) == 1 or len(third_tallest) == n_vertices:
+                continue
+                
+            puzzle_text, shuffled_third_tallest = generate_instance_text(graph, third_tallest, split_vertices, generate_viz=False)
+            
+            # Extract just the sentences (remove graph visualization line)
+            sentences = [line for line in puzzle_text.split('\n') if line.strip() and not line.startswith('[Graph')]
+            puzzle_sentences = '\n'.join(sentences)
+            
+            # Create ground truth (comma-separated, no spaces)
+            ground_truth = ','.join(sorted(list(shuffled_third_tallest)))
+            
+            return {
+                'puzzle_text': puzzle_sentences,
+                'ground_truth': ground_truth,
+                'n_vertices': n_vertices,
+                'max_tallest': max_tallest,
+                'graph_edges': [(u, v) for u in graph.vertices for v in graph.edges[u]],
+                'split_vertices': split_vertices
+            }
 
     def make_map_fn(split):
         def process_fn(example, idx):
@@ -120,13 +127,21 @@ if __name__ == "__main__":
     train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
     val_dataset = val_dataset.map(function=make_map_fn("val"), with_indices=True)
 
-    print("First element of train_dataset:")
-    for k, v in train_dataset[0].items():
-        print(f"{k}: {v}\n")
+    # Print first n elements of datasets
+    n_print = args.n_print
     
-    print("First element of val_dataset:")
-    for k, v in val_dataset[0].items():
-        print(f"{k}: {v}\n")
+    if n_print > 0:
+        print(f"First {min(n_print, len(train_dataset))} element(s) of train_dataset:")
+        for i in range(min(n_print, len(train_dataset))):
+            print(f"--- Train Example {i+1} ---")
+            for k, v in train_dataset[i].items():
+                print(f"{k}: {v}\n")
+        
+        print(f"First {min(n_print, len(val_dataset))} element(s) of val_dataset:")
+        for i in range(min(n_print, len(val_dataset))):
+            print(f"--- Val Example {i+1} ---")
+            for k, v in val_dataset[i].items():
+                print(f"{k}: {v}\n")
 
     # Save to parquet
     local_dir = args.local_dir
