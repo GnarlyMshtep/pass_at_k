@@ -19,6 +19,7 @@ import sys
 import warnings
 from functools import partial
 from typing import Any, Optional
+import time
 
 import ray
 import torch
@@ -87,7 +88,17 @@ def get_custom_reward_fn(config: DictConfig) -> Optional[RawRewardFn]:
 
     reward_kwargs = dict(reward_fn_config.get("reward_kwargs", {}))
 
-    return partial(_call_with_kwargs, raw_fn, reward_kwargs)
+    wrapped = partial(_call_with_kwargs, raw_fn, reward_kwargs)
+    # Attach metadata so multiprocessing workers can reconstruct the function under spawn/forkserver
+    try:
+        setattr(wrapped, "__custom_file_path__", file_path)
+        setattr(wrapped, "__custom_function_name__", function_name)
+        setattr(wrapped, "__custom_reward_kwargs__", reward_kwargs)
+        setattr(wrapped, "__verl_custom_loader__", True)
+    except Exception:
+        pass
+
+    return wrapped
 
 
 def load_reward_manager(
@@ -115,6 +126,8 @@ def load_reward_manager(
     # registered via `verl.workers.reward_manager.register`
     # By default reward_manager is set to naive (NaiveRewardManager)
     reward_manager_name = config.reward_model.get("reward_manager", "naive")
+    if reward_manager_name == "naive":
+        reward_kwargs.pop("num_workers")
     reward_manager_cls = get_reward_manager_cls(reward_manager_name)
 
     # Try to get a custom reward function based on the configuration
@@ -157,6 +170,7 @@ def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[t
     Returns:
         Tuple of reward tensor and extra info dictionary.
     """
+    _t0 = time.perf_counter()
     try:
         reward_result = reward_fn(data, return_dict=True)
         reward_tensor = reward_result["reward_tensor"]
@@ -165,6 +179,11 @@ def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[t
         print(f"Error in reward_fn: {e}")
         reward_tensor = reward_fn(data)
         reward_extra_infos_dict = {}
+    _t1 = time.perf_counter()
+    try:
+        print(f"[RM Timing] compute_reward total={_t1 - _t0:.4f}s batch_items={len(data)}")
+    except Exception:
+        pass
 
     return reward_tensor, reward_extra_infos_dict
 

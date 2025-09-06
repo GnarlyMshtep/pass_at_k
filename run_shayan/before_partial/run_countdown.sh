@@ -15,13 +15,14 @@ export RAY_DEBUG_POST_MORTEM=1
 export HYDRA_FULL_ERROR=1
 
 K=4
+DATASET_NAME="countdown_3to4" # countdown_3to9_by_level, countdown_3to4
 
-EXPERIMENT_NAME="countdown_pass_at_${K}_$(date +%Y%m%d_%H%M%S)"
+EXPERIMENT_NAME="countdown_pass_at_${K}_${DATASET_NAME}_$(date +%Y%m%d_%H%M%S)"
 
 NUM_GPUS=4
 
 train_bsz=128
-val_bsz=1024
+val_bsz=512
 
 mini_batch_size=32
 train_micro_batch_size_per_gpu=32
@@ -29,7 +30,7 @@ forward_only_micro_batch_size_per_gpu=64
 
 n_rollouts=16
 
-CUDA_VISIBLE_DEVICES=4,5,6,7 python3 -m verl.trainer.main_ppo \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=bytedance_pass_at_k \
     +algorithm.pass_at_k_k=$K \
     data.train_batch_size=$train_bsz \
@@ -81,8 +82,8 @@ CUDA_VISIBLE_DEVICES=4,5,6,7 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.val_kwargs.top_p=0.95 \
     trainer.total_epochs=1 \
     trainer.log_val_generations=True \
-    data.train_files="$HF_HOME/data/countdown_3to9_by_level/train.parquet" \
-    data.val_files="$HF_HOME/data/countdown_3to9_by_level/test.parquet" \
+    data.train_files="$HF_HOME/data/${DATASET_NAME}/train.parquet" \
+    data.val_files="$HF_HOME/data/${DATASET_NAME}/test.parquet" \
     +trainer.rollout.dump_freq=1\
     +trainer.rollout.dump_loss_mask_sanity_check_print=False \
     actor_rollout_ref.rollout.multi_turn.tokenization_sanity_check_mode=disable \

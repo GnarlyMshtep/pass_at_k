@@ -20,7 +20,6 @@ Columns:
 - target (int)
 
 Requirements:
-- Use only rows where len(nums) == 4
 - Split into train and test using requested sizes
 - Build prompts using the provided user template
 
@@ -42,7 +41,7 @@ from verl.utils.hdfs_io import copy, makedirs
 
 PROMPT_TEMPLATE = (
     "Using the numbers {numbers}, create an expression that equals {target}. "
-    "You can use basic arithmetic operations (+, -, *, /) one or multiple times but each number can only be used once. "
+    "You can use basic arithmetic operations (+, -, *, /, (, )) one or multiple times but each number can only be used once. "
     "Don't use = in the expression between the <answer> tags."
     "Show your work in <think> </think> tags. And return the final equation in <answer> </answer> tags, for example <answer> (1 + 2) / 3 </answer>. "
     "Think step by step inside <think> tags."
@@ -89,11 +88,7 @@ if __name__ == "__main__":
     dataset_dict = datasets.load_dataset("Jiayi-Pan/Countdown-Tasks-3to4")
     base_dataset = dataset_dict["train"]
 
-    def _is_len4(example):
-        nums = example.get("nums", None)
-        return isinstance(nums, list) and len(nums) == 4
-
-    filtered = base_dataset.filter(_is_len4)
+    filtered = base_dataset
 
     total = len(filtered)
     if args.train_size < 0 or args.test_size < 0:
@@ -142,6 +137,14 @@ if __name__ == "__main__":
     # Save parquet files
     train_dataset.to_parquet(os.path.join(local_dir, "train.parquet"))
     test_dataset.to_parquet(os.path.join(local_dir, "test.parquet"))
+
+    # Print a sample data row after creating the datasets
+    if len(train_dataset) > 0:
+        print("Sample train row:")
+        print(train_dataset[0])
+    if len(test_dataset) > 0:
+        print("Sample test row:")
+        print(test_dataset[0])
 
     # Optionally copy to HDFS
     if hdfs_dir is not None:

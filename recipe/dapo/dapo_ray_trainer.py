@@ -333,7 +333,8 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                     # Log rollout generations if enabled (mirror base trainer behavior)
                     rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
-                    if rollout_data_dir:
+                    rollout_dump_freq = self.config.trainer.get("rollout_dump_freq", -1)
+                    if rollout_data_dir and rollout_dump_freq > 0 and self.global_steps % rollout_dump_freq == 0:
                         with marked_timer("dump_rollout_generations", timing_raw, "green"):
                             inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
                             outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)

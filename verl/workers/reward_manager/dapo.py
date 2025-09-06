@@ -14,6 +14,8 @@
 
 from collections import defaultdict
 import multiprocessing as mp
+import os
+import time
 
 import torch
 
@@ -21,6 +23,54 @@ from verl import DataProto
 from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import register
 from verl.workers.reward_manager.abstract import AbstractRewardManager
+
+
+_GLOBAL_COMPUTE_SCORE = None
+
+
+def _call_with_kwargs(raw_fn, extra_kwargs, *args, **kwargs):
+    merged_kwargs = {**kwargs, **extra_kwargs}
+    return raw_fn(*args, **merged_kwargs)
+
+
+def _reconstruct_compute_fn_from_meta(meta):
+    try:
+        file_path = meta.get("__custom_file_path__")
+        function_name = meta.get("__custom_function_name__")
+        reward_kwargs = meta.get("__custom_reward_kwargs__", {})
+        if file_path and function_name:
+            import importlib.util
+            import sys
+            spec = importlib.util.spec_from_file_location("custom_module", file_path)
+            assert spec is not None
+            module = importlib.util.module_from_spec(spec)
+            sys.modules["custom_module"] = module
+            assert spec.loader is not None
+            spec.loader.exec_module(module)
+            raw_fn = getattr(module, function_name)
+            from functools import partial as _partial
+            return _partial(_call_with_kwargs, raw_fn, reward_kwargs)
+    except Exception:
+        pass
+    return None
+
+
+def _init_compute_fn(meta):
+    global _GLOBAL_COMPUTE_SCORE
+    # Rebuild compute function from metadata under forkserver/spawn
+    rebuilt = _reconstruct_compute_fn_from_meta(meta or {})
+    _GLOBAL_COMPUTE_SCORE = rebuilt
+
+
+def _dapo_compute_one(args):
+    data_source, response_str, ground_truth, extra_info = args
+    # Use the global compute function set either via fork inheritance or initializer
+    return _GLOBAL_COMPUTE_SCORE(
+        data_source=data_source,
+        solution_str=response_str,
+        ground_truth=ground_truth,
+        extra_info=extra_info,
+    )
 
 
 @register("dapo")
@@ -36,6 +86,7 @@ class DAPORewardManager(AbstractRewardManager):
         max_resp_len=None,
         overlong_buffer_cfg=None,
         num_workers: int = 1,
+        mp_start_method: str | None = None,
         **kwargs,
     ) -> None:
         self.tokenizer = tokenizer
@@ -45,6 +96,14 @@ class DAPORewardManager(AbstractRewardManager):
         self.overlong_buffer_cfg = overlong_buffer_cfg
         self.max_resp_len = max_resp_len
         self.num_workers = max(1, int(num_workers))
+        # Determine multiprocessing start method
+        env_start = os.environ.get("VERL_RM_MP_START")
+        self.mp_start_method = (mp_start_method or env_start or "fork").lower()
+        if self.mp_start_method not in mp.get_all_start_methods():
+            print(
+                f"[DAPORewardManager] Unsupported mp_start_method='{self.mp_start_method}', fallback to 'fork'"
+            )
+            self.mp_start_method = "fork"
 
         if self.overlong_buffer_cfg is not None:
             assert self.max_resp_len is not None, (
@@ -57,6 +116,7 @@ class DAPORewardManager(AbstractRewardManager):
     def __call__(self, data: DataProto, return_dict: bool = False):
         """We will expand this function gradually based on the available datasets"""
 
+        _t0 = time.perf_counter()
         # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
         if "rm_scores" in data.batch.keys():
             if return_dict:
@@ -70,6 +130,7 @@ class DAPORewardManager(AbstractRewardManager):
         already_print_data_sources = {}
 
         # Pre-decode and prepare arguments for scoring
+        _t_decode_start = time.perf_counter()
         prepared_items = []
         decoded_cache = []  # store for logging and overlong computation
         for i in range(len(data)):
@@ -94,25 +155,46 @@ class DAPORewardManager(AbstractRewardManager):
             data_source = data_item.non_tensor_batch[self.reward_fn_key]
             extra_info = data_item.non_tensor_batch.get("extra_info", None)
 
-            prepared_items.append((self.compute_score, data_source, response_str, ground_truth, extra_info))
+            prepared_items.append((data_source, response_str, ground_truth, extra_info))
             decoded_cache.append((i, valid_response_length, prompt_str, response_str, ground_truth, data_source))
 
-        def _compute_one(args):
-            compute_fn, data_source, response_str, ground_truth, extra_info = args
-            return compute_fn(
-                data_source=data_source,
-                solution_str=response_str,
-                ground_truth=ground_truth,
-                extra_info=extra_info,
-            )
+        _t_decode_end = time.perf_counter()
 
         if self.num_workers > 1 and len(prepared_items) > 1:
-            ctx = mp.get_context("forkserver")
-            with ctx.Pool(processes=self.num_workers) as pool:
-                results = pool.map(_compute_one, prepared_items)
-        else:
-            results = list(map(_compute_one, prepared_items))
+            _t_ctx_start = time.perf_counter()
+            ctx = mp.get_context(self.mp_start_method)
+            _t_ctx_end = time.perf_counter()
 
+            if self.mp_start_method == "fork":
+                # Inherit compute function via fork
+                global _GLOBAL_COMPUTE_SCORE
+                _GLOBAL_COMPUTE_SCORE = self.compute_score
+                initializer = None
+                initargs = ()
+            else:
+                # Pass only metadata; do not pickle the function
+                meta = {}
+                for k in ("__verl_custom_loader__", "__custom_file_path__", "__custom_function_name__", "__custom_reward_kwargs__"):
+                    try:
+                        meta[k] = getattr(self.compute_score, k)
+                    except Exception:
+                        pass
+                initializer = _init_compute_fn
+                initargs = (meta,)
+
+            _t_pool_enter = time.perf_counter()
+            with ctx.Pool(processes=self.num_workers, initializer=initializer, initargs=initargs) as pool:
+                _t_pool_created = time.perf_counter()
+                _t_map_start = time.perf_counter()
+                results = pool.map(_dapo_compute_one, prepared_items)
+                _t_map_end = time.perf_counter()
+            _t_pool_exit = time.perf_counter()
+        else:
+            _t_map_start = time.perf_counter()
+            results = list(map(_dapo_compute_one, prepared_items))
+            _t_map_end = time.perf_counter()
+
+        _t_post_start = time.perf_counter()
         for (i, valid_response_length, prompt_str, response_str, ground_truth, data_source), result in zip(
             decoded_cache, results, strict=True
         ):
@@ -125,7 +207,7 @@ class DAPORewardManager(AbstractRewardManager):
                 reward_extra_info["acc"].append(score)
 
             reward = score
-            if self.overlong_buffer_cfg.enable:
+            if self.overlong_buffer_cfg and self.overlong_buffer_cfg.enable:
                 overlong_buffer_len = self.overlong_buffer_cfg.len
                 expected_len = self.max_resp_len - overlong_buffer_len
                 exceed_len = valid_response_length - expected_len
@@ -150,6 +232,27 @@ class DAPORewardManager(AbstractRewardManager):
                         print(f"[{key}]", value)
                 else:
                     print("[score]", score)
+
+        _t_end = time.perf_counter()
+
+        # Print a concise timing summary per call (system perspective)
+        try:
+            total_items = len(prepared_items)
+            if self.num_workers > 1 and total_items > 1:
+                print(
+                    f"[RM Timing] items={total_items} workers={self.num_workers} mp_method={self.mp_start_method} "
+                    f"decode={_t_decode_end - _t_decode_start:.4f}s ctx={_t_ctx_end - _t_ctx_start:.4f}s "
+                    f"pool_create={( _t_pool_created - _t_pool_enter):.4f}s map={_t_map_end - _t_map_start:.4f}s "
+                    f"pool_teardown={( _t_pool_exit - _t_map_end):.4f}s post={_t_end - _t_post_start:.4f}s total={_t_end - _t0:.4f}s"
+                )
+            else:
+                print(
+                    f"[RM Timing] items={total_items} workers={self.num_workers} mp_method={self.mp_start_method} "
+                    f"decode={_t_decode_end - _t_decode_start:.4f}s map={_t_map_end - _t_map_start:.4f}s "
+                    f"post={_t_end - _t_post_start:.4f}s total={_t_end - _t0:.4f}s"
+                )
+        except Exception:
+            pass
 
         if return_dict:
             return {
