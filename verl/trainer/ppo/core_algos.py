@@ -22,9 +22,9 @@ __all__ = ["register_adv_est", "get_adv_estimator_fn", "AdvantageEstimator"]
 
 from collections import defaultdict
 from enum import Enum
-from typing import Any, Callable, Optional
-from random import sample
 from math import comb, sqrt
+from random import sample
+from typing import Any, Callable, Optional
 
 import numpy as np
 import torch
@@ -46,6 +46,8 @@ PolicyLossFn = Callable[
     ],
     tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
 ]
+
+from custom.reward.reward_utils import compute_statistics
 
 POLICY_LOSS_REGISTRY: dict[str, PolicyLossFn] = {}
 
@@ -300,7 +302,7 @@ def _calc_adv(pass_flags: torch.Tensor, k_opt: int, epsilon: float = 1e-6) -> to
         torch.tensor(adv_n, device=device, dtype=dtype),
         new_val,
     )
-    return new_val
+    return new_val.to(torch.float32), adv_p, adv_n
 
 
 @register_adv_est(AdvantageEstimator.BYTEDANCE_PASS_AT_K)  # or simply: @register_adv_est("grpo")
@@ -316,6 +318,10 @@ def compute_bytedance_pass_at_k_outcome_advantages(
 
     advantages_flat = torch.zeros_like(scores, dtype=scores.dtype)
     id2indexes = defaultdict(list)
+    extra_advanatge_metrics = {}
+
+    advs_ps = []
+    advs_ns = []
 
     with torch.no_grad():
         bsz = scores.shape[0]
@@ -328,12 +334,17 @@ def compute_bytedance_pass_at_k_outcome_advantages(
 
             group_scores = scores[inds]
             pass_flags = (group_scores >= 1).to(dtype=torch.float32)
-            adv_vals = _calc_adv(pass_flags, k_opt=k_opt, epsilon=epsilon).to(group_scores.dtype)
+            adv_vals, adv_p, adv_n = _calc_adv(pass_flags, k_opt=k_opt, epsilon=epsilon)
+            advs_ps.append(adv_p)
+            advs_ns.append(adv_n)
             advantages_flat[inds] = adv_vals
 
         advantages = advantages_flat.unsqueeze(-1) * response_mask
+    
+    extra_advanatge_metrics.update(compute_statistics(advs_ps, ""))
+    extra_advanatge_metrics.update(compute_statistics(advs_ns, ""))
 
-    return advantages, advantages 
+    return advantages, advantages, extra_advanatge_metrics
 
 
 

@@ -389,6 +389,7 @@ class DataParallelPPOActor(BasePPOActor):
 
         on_policy = len(mini_batches) == 1 and self.config.ppo_epochs == 1
 
+
         metrics = {}
         for _ in range(self.config.ppo_epochs):
             for batch_idx, mini_batch in enumerate(mini_batches):
@@ -402,6 +403,7 @@ class DataParallelPPOActor(BasePPOActor):
                     micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
 
                 self.actor_optimizer.zero_grad()
+
 
                 for micro_batch in micro_batches:
                     micro_batch = micro_batch.to(get_device_id())

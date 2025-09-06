@@ -28,7 +28,8 @@ from omegaconf import DictConfig
 from verl import DataProto
 from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import get_reward_manager_cls
-from verl.workers.reward_manager.abstract import AbstractRewardManager, RawRewardFn
+from verl.workers.reward_manager.abstract import (AbstractRewardManager,
+                                                  RawRewardFn)
 
 
 def _call_with_kwargs(raw_fn, extra_kwargs, *args, **kwargs):
@@ -161,7 +162,7 @@ def load_reward_manager(
     )
 
 
-def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[torch.Tensor, dict[str, Any]]:
+def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[torch.Tensor, dict[str, Any], dict[str, Any]]:
     """
     Compute reward for a batch of data.
     Args:
@@ -170,22 +171,12 @@ def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[t
     Returns:
         Tuple of reward tensor and extra info dictionary.
     """
-    _t0 = time.perf_counter()
-    try:
-        reward_result = reward_fn(data, return_dict=True)
-        reward_tensor = reward_result["reward_tensor"]
-        reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
-    except Exception as e:
-        print(f"Error in reward_fn: {e}")
-        reward_tensor = reward_fn(data)
-        reward_extra_infos_dict = {}
-    _t1 = time.perf_counter()
-    try:
-        print(f"[RM Timing] compute_reward total={_t1 - _t0:.4f}s batch_items={len(data)}")
-    except Exception:
-        pass
-
-    return reward_tensor, reward_extra_infos_dict
+    reward_result = reward_fn(data, return_dict=True)
+    reward_tensor = reward_result["reward_tensor"]
+    reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
+    extra_reward_metrics = reward_result.get("extra_reward_metrics", {})
+    
+    return reward_tensor, reward_extra_infos_dict, extra_reward_metrics
 
 
 @ray.remote(num_cpus=1)

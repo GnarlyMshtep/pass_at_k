@@ -20,9 +20,11 @@ from typing import Any, Optional
 
 import torch
 from pydantic import BaseModel, ConfigDict, model_validator
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast, ProcessorMixin
+from transformers import (PreTrainedTokenizer, PreTrainedTokenizerFast,
+                          ProcessorMixin)
 
-from verl.tools.schemas import OpenAIFunctionToolCall, OpenAIFunctionToolSchema, ToolResponse
+from verl.tools.schemas import (OpenAIFunctionToolCall,
+                                OpenAIFunctionToolSchema, ToolResponse)
 from verl.utils.model import compute_position_id_with_mask
 
 logger = logging.getLogger(__file__)
@@ -120,6 +122,8 @@ class AsyncRolloutRequest(BaseModel):
     base_conv_wo_gen_prompt_end_pos: int
     base_conv_with_gen_prompt_end_pos: int
 
+    uid: str
+
     @model_validator(mode="before")
     @classmethod
     def initialize_request(cls, values):
@@ -129,6 +133,9 @@ class AsyncRolloutRequest(BaseModel):
             raise ValueError("max_prompt_len is required for AsyncRolloutRequest initialization")
         if not (processing_class := values.pop("processing_class", None)):
             raise ValueError("processing_class is required for AsyncRolloutRequest initialization")
+
+        non_iid_flag = int(os.getenv("NON_IID_FLAG", 0))
+
 
         values["messages"] = [Message.model_validate(msg) for msg in messages]
 
@@ -168,7 +175,7 @@ class AsyncRolloutRequest(BaseModel):
                 messages,
                 multi_modal_data=multi_modal_data,
                 tools=tools,
-                add_generation_prompt=True,
+                add_generation_prompt=(not non_iid_flag),
                 tokenize=True,
                 return_dict=True,
             )
@@ -207,12 +214,13 @@ class AsyncRolloutRequest(BaseModel):
             tokenize=True,
         ).shape[-1]
 
+        # Set add_generation_prompt based on NON_IID_FLAG environment variable
         values["base_conv_with_gen_prompt_end_pos"] = cls._handle_apply_chat_template(
             processing_class,
             BASE_CHAT_HISTORY,
             multi_modal_data=multi_modal_data,
             tools=tools,
-            add_generation_prompt=True,
+            add_generation_prompt=(not non_iid_flag),
             tokenize=True,
         ).shape[-1]
 
@@ -366,7 +374,7 @@ class AsyncRolloutRequest(BaseModel):
                 messages,
                 multi_modal_data=self.multi_modal_data,
                 tools=tools,
-                add_generation_prompt=True,
+                add_generation_prompt=False,#TODO: maybe need to change this to not have the assistant prompt being set, but I would be surprised. 
                 tokenize=True,
             )
             return generation_prompt_ids.squeeze(0).tolist()
