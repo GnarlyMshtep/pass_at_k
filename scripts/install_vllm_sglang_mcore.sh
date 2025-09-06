@@ -1,21 +1,23 @@
 #!/bin/bash
 
-USE_MEGATRON=${USE_MEGATRON:-1}
-USE_SGLANG=${USE_SGLANG:-1}
+USE_MEGATRON=${USE_MEGATRON:-0}
+USE_SGLANG=${USE_SGLANG:-0}
 
 export MAX_JOBS=32
 
+#! activate ur conda env
+
 echo "1. install inference frameworks and pytorch they need"
 if [ $USE_SGLANG -eq 1 ]; then
-    pip install "sglang[all]==0.4.6.post1" --no-cache-dir --find-links https://flashinfer.ai/whl/cu124/torch2.6/flashinfer-python && pip install torch-memory-saver --no-cache-dir
+    pip install "sglang[all]==0.4.6.post3" --no-cache-dir --find-links https://flashinfer.ai/whl/cu124/torch2.6/flashinfer-python && uv pip install torch-memory-saver --no-cache-dir
 fi
 pip install --no-cache-dir "vllm==0.8.5.post1" "torch==2.6.0" "torchvision==0.21.0" "torchaudio==2.6.0" "tensordict==0.6.2" torchdata
 
 echo "2. install basic packages"
 pip install "transformers[hf_xet]>=4.51.0" accelerate datasets peft hf-transfer \
     "numpy<2.0.0" "pyarrow>=15.0.0" pandas \
-    ray[default] codetiming hydra-core pylatexenc qwen-vl-utils wandb dill pybind11 liger-kernel mathruler \
-    pytest py-spy pyext pre-commit ruff tensorboard 
+    "ray[default]" codetiming hydra-core pylatexenc qwen-vl-utils wandb dill pybind11 liger-kernel mathruler \
+    pytest py-spy pyext pre-commit ruff tensorboard math_verify
 
 pip install "nvidia-ml-py>=12.560.30" "fastapi[standard]>=0.115.0" "optree>=0.13.0" "pydantic>=2.9" "grpcio>=1.62.1"
 
@@ -52,3 +54,8 @@ if [ $USE_MEGATRON -eq 1 ]; then
 fi
 
 echo "Successfully installed all packages"
+
+# pip install sglang[all]==0.4.9.post6
+# pip uninstall flash-attn
+# pip install flash-attn --no-build-isolation
+#these work

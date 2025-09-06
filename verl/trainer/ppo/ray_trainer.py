@@ -18,6 +18,7 @@ PPO Trainer with Ray-based single controller.
 This trainer supports model-agonistic model initialization with huggingface
 """
 
+
 import json
 import os
 import uuid
@@ -27,7 +28,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 from pprint import pprint
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import ray
@@ -37,28 +38,30 @@ from torch.utils.data import Dataset, Sampler
 from torchdata.stateful_dataloader import StatefulDataLoader
 from tqdm import tqdm
 
+import wandb
 from verl import DataProto
 from verl.experimental.dataset.sampler import AbstractCurriculumSampler
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from verl.single_controller.base import Worker
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
+from verl.single_controller.ray import (RayClassWithInitArgs, RayResourcePool,
+                                        RayWorkerGroup)
 from verl.single_controller.ray.base import create_colocated_worker_cls
 from verl.trainer.config import AlgoConfig
 from verl.trainer.ppo import core_algos
 from verl.trainer.ppo.core_algos import AdvantageEstimator, agg_loss
-from verl.trainer.ppo.metric_utils import (
-    compute_data_metrics,
-    compute_throughout_metrics,
-    compute_timing_metrics,
-    process_validation_metrics,
-)
+from verl.trainer.ppo.metric_utils import (compute_data_metrics,
+                                           compute_throughout_metrics,
+                                           compute_timing_metrics,
+                                           process_validation_metrics)
 from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path, should_save_ckpt_esi
+from verl.utils.checkpoint.checkpoint_manager import (find_latest_ckpt_path,
+                                                      should_save_ckpt_esi)
 from verl.utils.config import omega_conf_to_dataclass
 from verl.utils.debug import marked_timer
 from verl.utils.metric import reduce_metrics
 from verl.utils.rollout_skip import RolloutSkip
-from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
+from verl.utils.seqlen_balancing import (get_seqlen_balanced_partitions,
+                                         log_seqlen_unbalance)
 from verl.utils.torch_functional import masked_mean
 from verl.utils.tracking import ValidationGenerationsLogger
 
@@ -238,6 +241,7 @@ def compute_advantage(
     Returns:
         DataProto: The updated data with computed advantages and returns.
     """
+    extra_advantage_metrics = {}
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch.keys():
         data.batch["response_mask"] = compute_response_mask(data)
@@ -246,7 +250,7 @@ def compute_advantage(
     if adv_estimator == AdvantageEstimator.BYTEDANCE_PASS_AT_K: 
         k_opt = 2 if config is None else config.get("pass_at_k_k", 2)
         # breakpoint()
-        advantages, returns = core_algos.compute_bytedance_pass_at_k_outcome_advantages(
+        advantages, returns, extra_advantage_metrics = core_algos.compute_bytedance_pass_at_k_outcome_advantages(
             token_level_rewards=data.batch["token_level_rewards"],
             response_mask=data.batch["response_mask"],
             index=data.non_tensor_batch["uid"],
@@ -300,7 +304,7 @@ def compute_advantage(
         advantages, returns = adv_estimator_fn(**adv_kwargs)
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
-    return data
+    return data, extra_advantage_metrics
 
 
 class RayPPOTrainer:
@@ -533,22 +537,30 @@ class RayPPOTrainer:
         if train_sampler is None:
             train_sampler = create_rl_sampler(self.config.data, self.train_dataset)
         if collate_fn is None:
-            from verl.utils.dataset.rl_dataset import collate_fn as default_collate_fn
+            from verl.utils.dataset.rl_dataset import \
+                collate_fn as default_collate_fn
 
             collate_fn = default_collate_fn
 
         num_workers = self.config.data["dataloader_num_workers"]
+        
+        train_batch_size = self.config.data.get("gen_batch_size", self.config.data.train_batch_size)
+        val_batch_size = self.config.data.val_batch_size  # Prefer config value if set
+        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
+        if dataset_w_builtin_attempts:
+            train_batch_size *=  self.config.actor_rollout_ref.rollout.n
+            val_batch_size *= self.config.actor_rollout_ref.rollout.n
+
 
         self.train_dataloader = StatefulDataLoader(
             dataset=self.train_dataset,
-            batch_size=self.config.data.get("gen_batch_size", self.config.data.train_batch_size),
+            batch_size=train_batch_size,
             num_workers=num_workers,
             drop_last=True,
             collate_fn=collate_fn,
             sampler=train_sampler,
         )
 
-        val_batch_size = self.config.data.val_batch_size  # Prefer config value if set
         if val_batch_size is None:
             val_batch_size = len(self.val_dataset)
 
@@ -640,6 +652,8 @@ class RayPPOTrainer:
         self.validation_generations_logger.log(self.config.trainer.logger, samples, self.global_steps)
 
     def _get_gen_batch(self, batch: DataProto) -> DataProto:
+        # Keep keys that must persist on the main batch (not popped) so downstream stages can access them.
+        # We must preserve 'uid' for advantage grouping, along with reward/eval related keys.
         reward_model_keys = set({"data_source", "reward_model", "extra_info", "uid"}) & batch.non_tensor_batch.keys()
 
         # pop those keys for generation
@@ -649,7 +663,6 @@ class RayPPOTrainer:
             batch_keys=batch_keys_to_pop,
             non_tensor_batch_keys=list(non_tensor_batch_keys_to_pop),
         )
-
         # For agent loop, we need reward model keys to compute score.
         if self.async_rollout_mode:
             gen_batch.non_tensor_batch.update(batch.non_tensor_batch)
@@ -667,14 +680,21 @@ class RayPPOTrainer:
         sample_scores = []
         sample_turns = []
 
+        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
+            
+            if not dataset_w_builtin_attempts:
+                test_batch.non_tensor_batch["uid"] = np.array(
+                        [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
+                )
 
-            # repeat test batch
-            test_batch = test_batch.repeat(
-                repeat_times=self.config.actor_rollout_ref.rollout.val_kwargs.n, interleave=True
-            )
-
+                # repeat test batch
+                test_batch = test_batch.repeat(
+                    repeat_times=self.config.actor_rollout_ref.rollout.val_kwargs.n, interleave=True
+                )
+            else: 
+               test_batch.non_tensor_batch["uid"] = self.get_uids("val")
             # we only do validation on rule-based rm
             if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
                 return {}
@@ -740,6 +760,7 @@ class RayPPOTrainer:
             reward_tensor = result["reward_tensor"]
             scores = reward_tensor.sum(-1).cpu().tolist()
             sample_scores.extend(scores)
+            #TODO logs reward metrics for validate
 
             reward_extra_infos_dict["reward"].extend(scores)
             print(f"len reward_extra_infos_dict['reward']: {len(reward_extra_infos_dict['reward'])}")
@@ -1040,6 +1061,23 @@ class RayPPOTrainer:
             if self.use_rm:
                 self.rm_wg.stop_profile()
 
+    def get_uids(self, split: str):
+        uids = []
+        if split =="train":
+            for i in range(self.config.data.train_batch_size):
+                question_uid = str(uuid.uuid4())
+                for j in range(self.config.actor_rollout_ref.rollout.n):
+                    uids.append(question_uid)
+            return np.array(uids)
+        elif split=="val": 
+            for i in range(self.config.data.val_batch_size):
+                question_uid = str(uuid.uuid4())
+                for j in range(self.config.actor_rollout_ref.rollout.val_kwargs.n):
+                    uids.append(question_uid)
+            return np.array(uids)  
+        else:
+            assert False, f"invalid split {split}"
+
     def _balance_batch(self, batch: DataProto, metrics, logging_prefix="global_seqlen"):
         """Reorder the data on single controller such that each dp rank gets similar total tokens"""
         attention_mask = batch.batch["attention_mask"]
@@ -1074,6 +1112,9 @@ class RayPPOTrainer:
             default_backend=self.config.trainer.logger,
             config=OmegaConf.to_container(self.config, resolve=True),
         )
+        #M: hopefully 
+        wandb.save("runs_scripts/*˝")
+        
 
         self.global_steps = 0
 
@@ -1110,6 +1151,8 @@ class RayPPOTrainer:
         )
         next_step_profile = False
 
+        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
+
         for epoch in range(self.config.trainer.total_epochs):
             for batch_dict in self.train_dataloader:
                 metrics = {}
@@ -1121,20 +1164,26 @@ class RayPPOTrainer:
                         if self.config.global_profiler.profile_continuous_steps
                         else curr_step_profile
                     )
-
+                # breakpoint()
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
 
-                # add uid to batch
-                batch.non_tensor_batch["uid"] = np.array(
-                    [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
-                )
+
+                if not dataset_w_builtin_attempts:     
+                    batch.non_tensor_batch["uid"] = np.array(
+                        [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
+                    )
+                else: 
+                    #print(f"DEBUG:")
+                    assert self.config.data.train_batch_size * self.config.actor_rollout_ref.rollout.n == len(batch)  
+                    batch.non_tensor_batch["uid"] = self.get_uids("train")  
 
                 gen_batch = self._get_gen_batch(batch)
 
                 # pass global_steps to trace
                 gen_batch.meta_info["global_steps"] = self.global_steps
-                gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
-
+                
+                if  not dataset_w_builtin_attempts:
+                    gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                 is_last_step = self.global_steps >= self.total_training_steps
 
                 with marked_timer("step", timing_raw):
@@ -1148,6 +1197,7 @@ class RayPPOTrainer:
                         gen_batch_output.meta_info.pop("timing", None)
 
                     if self.config.algorithm.adv_estimator == AdvantageEstimator.REMAX:
+                        assert False, "no REMAX"
                         if self.reward_fn is None:
                             raise ValueError("A reward_fn is required for REMAX advantage estimation.")
 
@@ -1169,7 +1219,9 @@ class RayPPOTrainer:
                             del gen_baseline_batch, gen_baseline_output
 
                     # repeat to align with repeated responses in rollout
-                    batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                    dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
+                    if not dataset_w_builtin_attempts:
+                        batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     batch = batch.union(gen_batch_output)
 
                     if "response_mask" not in batch.batch.keys():
@@ -1194,8 +1246,9 @@ class RayPPOTrainer:
                         if self.config.reward_model.launch_reward_fn_async:
                             future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn)
                         else:
-                            reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn)
+                            reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
 
+                    metrics.update(extra_reward_metrics)
                     # recompute old_log_probs
                     with marked_timer("old_log_prob", timing_raw, color="blue"):
                         old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
@@ -1210,7 +1263,8 @@ class RayPPOTrainer:
 
                         if "rollout_log_probs" in batch.batch.keys():
                             # TODO: we may want to add diff of probs too.
-                            from verl.utils.debug.metrics import calculate_debug_metrics
+                            from verl.utils.debug.metrics import \
+                                calculate_debug_metrics
 
                             metrics.update(calculate_debug_metrics(batch))
 
@@ -1225,6 +1279,7 @@ class RayPPOTrainer:
 
                     # compute values
                     if self.use_critic:
+                        assert False, ""
                         with marked_timer("values", timing_raw, color="cyan"):
                             values = self.critic_wg.compute_values(batch)
                             batch = batch.union(values)
@@ -1254,7 +1309,7 @@ class RayPPOTrainer:
                             "norm_adv_by_std_in_grpo", True
                         )  # GRPO adv normalization factor
 
-                        batch = compute_advantage(
+                        batch, extra_advantage_metrics = compute_advantage(
                             batch,
                             adv_estimator=self.config.algorithm.adv_estimator,
                             gamma=self.config.algorithm.gamma,
@@ -1263,6 +1318,7 @@ class RayPPOTrainer:
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                             config=self.config.algorithm,
                         )
+                        metrics.update(extra_advantage_metrics)
 
                     # update critic
                     if self.use_critic:

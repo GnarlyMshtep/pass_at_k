@@ -1,4 +1,8 @@
-
+.zcompdump
+*zsh_history
+1.jsonl
+*.png
+*.csv
 **/*.pt
 **/checkpoints
 **/wget-log
@@ -127,3 +131,8 @@ logs
 log
 outputs
 .history
+
+
+# Suubmodules
+custom/Enigmata/
+custom/text_to_sql/AlphaSQL/

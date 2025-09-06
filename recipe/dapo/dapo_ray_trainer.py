@@ -42,6 +42,7 @@ from verl.trainer.ppo.ray_trainer import (
     compute_advantage,
     compute_response_mask,
 )
+from verl.trainer.ppo.reward import compute_reward
 from verl.utils.profiler import marked_timer
 from verl.trainer.ppo.reward import compute_reward, compute_reward_async
 from verl.utils.rollout_skip import RolloutSkip
@@ -177,6 +178,13 @@ class RayDAPOTrainer(RayPPOTrainer):
                             reward_tensor = self.rm_wg.compute_rm_score(new_batch)
                             new_batch = new_batch.union(reward_tensor)
 
+                        # we combine with rule-based rm
+                        reward_extra_infos_dict: dict[str, list]
+                        reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(new_batch, self.reward_fn)
+                        # except Exception as e:
+                        #     print(f"Error in reward_fn: {e}")
+                        #     reward_tensor = self.reward_fn(new_batch)
+                        #     reward_extra_infos_dict = {}
                         # compute custom reward function (optionally async via Ray)
                         if self.config.reward_model.launch_reward_fn_async:
                             future_reward = compute_reward_async.remote(data=new_batch, reward_fn=self.reward_fn)
@@ -184,6 +192,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                         else:
                             reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
 
+                        metrics.update(extra_reward_metrics)
                         new_batch.batch["token_level_scores"] = reward_tensor
 
                         if reward_extra_infos_dict:
@@ -306,7 +315,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                     with marked_timer("adv", timing_raw, "brown"):
                         # compute advantages, executed on the driver process
                         norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True)
-                        batch = compute_advantage(
+                        batch, extra_advantage_metrics = compute_advantage(
                             batch,
                             adv_estimator=self.config.algorithm.adv_estimator,
                             gamma=self.config.algorithm.gamma,
@@ -315,6 +324,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                             config=self.config.algorithm,
                         )
+                        metrics.update(extra_advantage_metrics)
 
                     # update critic
                     if self.use_critic:
@@ -399,6 +409,35 @@ class RayDAPOTrainer(RayPPOTrainer):
                 metrics.update(compute_throughout_metrics(batch=batch, timing_raw=timing_raw, n_gpus=n_gpus))
                 timing_raw = defaultdict(float)  # clear timing
 
+
+                # Log rollout generations if enabled
+                rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
+                if rollout_data_dir:
+                    with marked_timer("dump_rollout_generations", timing_raw, color="green"):
+                        inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
+                        outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
+                        scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
+                        sample_gts = [
+                            item.non_tensor_batch.get("reward_model", {}).get("ground_truth", None)
+                            for item in batch
+                        ]
+
+                        if "request_id" in batch.non_tensor_batch:
+                            reward_extra_infos_dict.setdefault(
+                                "request_id",
+                                batch.non_tensor_batch["request_id"].tolist(),
+                            )
+
+                        self._dump_generations(
+                            inputs=inputs,
+                            outputs=outputs,
+                            gts=sample_gts,
+                            scores=scores,
+                            reward_extra_infos_dict=reward_extra_infos_dict,
+                            dump_path=rollout_data_dir,
+                        )
+
+
                 metrics["train/num_gen_batches"] = num_gen_batches
                 batch = None
                 num_prompt_in_batch = 0
@@ -406,7 +445,9 @@ class RayDAPOTrainer(RayPPOTrainer):
                 # breakpoint()
                 # TODO: make a canonical logger that supports various backend
                 logger.log(data=metrics, step=self.global_steps)
-                print(f"Step {self.global_steps}\nMetrics:\n{metrics}")
+
+
+                
 
                 if is_last_step:
                     pprint(f"Final validation metrics: {last_val_metrics}")
