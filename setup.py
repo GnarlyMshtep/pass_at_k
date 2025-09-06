@@ -17,6 +17,13 @@ import os
 from pathlib import Path
 
 from setuptools import find_packages, setup
+from setuptools import Extension
+try:
+    from pybind11.setup_helpers import Pybind11Extension, build_ext
+except Exception:
+    # Fallback if setup-time pybind11 helpers are unavailable; users must have pybind11 installed
+    Pybind11Extension = None  # type: ignore
+    build_ext = None  # type: ignore
 
 version_folder = os.path.dirname(os.path.join(os.path.abspath(__file__)))
 
@@ -74,6 +81,17 @@ extras_require = {
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
+ext_modules = []
+if Pybind11Extension is not None:
+    ext_modules = [
+        Pybind11Extension(
+            "custom.verifiers.countdown._merge_search",
+            ["custom/verifiers/countdown/merge_search.cpp"],
+            cxx_std=17,
+            # extra_compile_args=["-O3"],  # Uncomment to force O3
+        )
+    ]
+
 setup(
     name="verl",
     version=__version__,
@@ -93,4 +111,6 @@ setup(
     include_package_data=True,
     long_description=long_description,
     long_description_content_type="text/markdown",
+    ext_modules=ext_modules,
+    cmdclass={"build_ext": build_ext} if build_ext is not None else {},
 )

@@ -263,6 +263,19 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
                                 vals.append(1.0 - (numer / denom))
                         if len(vals) > 0:
                             metrics[f"train/pass@{k}"] = float(np.mean(vals))
+                    # breakpoint()
+                    # Add max@n and mean@n metrics for training scores
+                    max_vals: list[float] = []
+                    mean_vals: list[float] = []
+                    for uid, idxs in uid_to_indices.items():
+                        # Get scores for this prompt
+                        prompt_scores = sequence_score[idxs].detach().cpu().numpy()
+                        max_vals.append(float(np.max(prompt_scores)))
+                        mean_vals.append(float(np.mean(prompt_scores)))
+                    
+                    if len(max_vals) > 0:
+                        metrics[f"train/max@{max_n}"] = float(np.mean(max_vals))
+                        metrics[f"train/mean@{max_n}"] = float(np.mean(mean_vals))
     except Exception:
         # Be conservative: do not fail training metrics if pass@k cannot be computed
         pass
@@ -495,7 +508,7 @@ def process_validation_metrics(
     for data_source, prompt2var2vals in data_src2prompt2var2vals.items():
         for prompt, var2vals in prompt2var2vals.items():
             for var_name, var_vals in var2vals.items():
-                if isinstance(var_vals[0], str):
+                if isinstance(var_vals[0], str) or any(v is None for v in var_vals):
                     continue
 
                 metric = {}

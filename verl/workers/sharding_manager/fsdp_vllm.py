@@ -205,20 +205,20 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             else:
                 params = self.module.state_dict()
             params = convert_weight_keys(params, getattr(self.module, "_fsdp_wrapped_module", self.module))
-
-            if self.offload_param:
-                offload_fsdp_model_to_cpu(self.module)
-            log_gpu_memory_usage("After state_dict() in sharding manager memory", logger=logger)
+            with simple_timer("offload_fsdp_model_to_cpu", self.timing):
+                if self.offload_param:
+                    offload_fsdp_model_to_cpu(self.module)
+                log_gpu_memory_usage("After state_dict() in sharding manager memory", logger=logger)
 
             # vllm need to set _set_allocator_settings to False
             logger.debug("fsdp vllm sharding_manager _set_allocator_settings to False")
             set_expandable_segments(False)
-
-            if self.rollout_config.free_cache_engine:
-                if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
-                    self.inference_engine.wake_up(tags=["weights"])
-                else:
-                    self.inference_engine.wake_up()
+            with simple_timer("wake_up", self.timing):
+                if self.rollout_config.free_cache_engine:
+                    if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
+                        self.inference_engine.wake_up(tags=["weights"])
+                    else:
+                        self.inference_engine.wake_up()
 
             # update model params
             self.update_params(params, peft_config=peft_config)

@@ -3,10 +3,18 @@ import operator
 import typing as _t
 from collections import Counter
 
-def _extract_answer(s: str) -> str:
-    if ("<answer>" in s and "</answer>" in s):
-        s = s.split("<answer>")[-1].split("</answer>")[0].strip()
-    return s.strip()
+
+def _extract_attempts(s: str, max_attempts: int = 8) -> list[str]:
+    attempts: list[str] = []
+    for i in range(1, max_attempts + 1):
+        start_tag = f"<attempt-{i}>"
+        end_tag = f"</attempt-{i}>"
+        if start_tag in s and end_tag in s:
+            try:
+                attempts.append(s.split(start_tag)[-1].split(end_tag)[0].strip())
+            except Exception:
+                continue
+    return attempts
 
 
 def _extract_nums_from_expr(expr: str) -> list[float]:
@@ -20,8 +28,9 @@ def _extract_nums_from_expr(expr: str) -> list[float]:
             elif isinstance(subnode, ast.Num):  # for Python < 3.8 compatibility
                 nums.append(float(subnode.n))
         return nums
-    except Exception as e:
+    except Exception:
         return []
+
 
 _OPS = {
     ast.Add: operator.add,
@@ -58,29 +67,35 @@ def _safe_eval_arithmetic(expr: str) -> float:
     return float(_eval(node))
 
 
-def countdown_compute_score(
+def countdown_multi_attempts_compute_score(
     *,
     data_source: _t.Any,
     solution_str: str,
     ground_truth: _t.Any,
     extra_info: _t.Optional[dict] = None,
 ) -> float | dict:
-    """Reward for Countdown: parse <answer>, eval expression, compare to target.
-
-    Accept if evaluated value equals target within a small tolerance.
+    """Reward for Countdown multi-attempts:
+    Parse <attempt-i> blocks, eval each expression, compare to target.
+    Accept if any attempt equals target within a small tolerance and uses the exact multiset of numbers.
     """
-    expr = _extract_answer(solution_str)
-    actual_nums = extra_info['nums']
-    expr_nums = _extract_nums_from_expr(expr)
-    # Check if the two multisets (with repetitions) are equal
-    
-    if Counter(expr_nums) != Counter(actual_nums):
-        return 0.0
-    try:
-        value = _safe_eval_arithmetic(expr)
-    except Exception:
+    attempts = _extract_attempts(solution_str, max_attempts=8)
+    if not attempts:
         return 0.0
 
-    return 1.0 if abs(value - ground_truth) < 1e-6 else 0.0
+    actual_nums = extra_info['nums'] if extra_info and 'nums' in extra_info else None
+
+    for expr in attempts:
+        try:
+            if actual_nums is not None:
+                expr_nums = _extract_nums_from_expr(expr)
+                if Counter(expr_nums) != Counter(actual_nums):
+                    continue
+            value = _safe_eval_arithmetic(expr)
+        except Exception:
+            continue
+        if abs(value - float(ground_truth)) < 1e-6:
+            return 1.0
+
+    return 0.0
 
 
