@@ -70,6 +70,56 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
     return results
 
 
+def extract_from_tag(sol_str: str, tagname: str) -> str | None:
+    """
+    Extract content from a single tag like <tagname>...</tagname>.
+    
+    Args:
+        sol_str: The input string to search
+        tagname: The tag name (e.g., "attempt")
+    
+    Returns:
+        String content of the tag, or None if not found/invalid
+    """
+    if not isinstance(sol_str, str) or not isinstance(tagname, str):
+        return None
+    
+    open_tag = f"<{tagname}>"
+    close_tag = f"</{tagname}>"
+    
+    # Find first occurrence of open tag
+    first_open = sol_str.find(open_tag)
+    if first_open == -1:
+        return None  # Tag missing
+    
+    # Find matching close tag
+    open_end = first_open + len(open_tag)
+    first_close = sol_str.find(close_tag, open_end)
+    if first_close == -1:
+        return None  # No matching close tag
+    
+    # Check for duplicate open tags
+    if sol_str.find(open_tag, open_end) != -1:
+        return None  # Duplicate open tag
+    
+    # Check for duplicate close tags
+    if sol_str.find(close_tag, first_close + len(close_tag)) != -1:
+        return None  # Duplicate close tag
+    
+    # Extract content between tags
+    inner = sol_str[open_end:first_close]
+    
+    # Check for nested same tags inside
+    if inner.find(open_tag) != -1 or inner.find(close_tag) != -1:
+        return None  # Nested tags
+    
+    # Check if the attempt is empty (contains only whitespace or nothing)
+    if not inner.strip():
+        return None  # Empty attempt
+    
+    return inner.strip()
+
+
 def compute_score_multi_attempt_per_rollout(data_source, solution_str, ground_truth, extra_info=None)-> float:
     # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
     # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
@@ -82,7 +132,7 @@ def compute_score_multi_attempt_per_rollout(data_source, solution_str, ground_tr
         return 0       
     
     # Check correctness for each valid attempt
-    correctness_per_attempt = [_taller_is_correct(proposed_sol=attempt, ground_truth=ground_truth) for attempt in extracted_attempts]
+    correctness_per_attempt = [_is_correct(proposed_sol=attempt, ground_truth=ground_truth) for attempt in extracted_attempts]
     
     # If all attempts are present and at least one is correct, return full reward + formatting bonus
     if len(extracted_attempts) == N_ROLLOUTS and any(correctness_per_attempt):
@@ -95,6 +145,28 @@ def compute_score_multi_attempt_per_rollout(data_source, solution_str, ground_tr
     # If all attempts are present but none are correct, return formatting bonus only
     return 0.1
         
+def compute_score_single_attempt_per_rollout(data_source, solution_str, ground_truth, extra_info=None) -> float:
+    """
+    Compute score for single attempt format: <attempt>...</attempt>
+    """
+    extracted_attempt = extract_from_tag(solution_str, "attempt")
+    
+    # If no valid attempt found, return 0
+    if not extracted_attempt: 
+        return 0       
+    
+    # Check correctness for the single attempt
+    correctness = _is_correct(proposed_sol=extracted_attempt, ground_truth=ground_truth)
+    
+    # If attempt is correct, return full reward + formatting bonus
+    if correctness:
+        return 1.0 + 0.1
+    
+    # If attempt is present but incorrect, return formatting bonus only
+    return 0.1
+        
+
+
 
 def extra_reward_metrics(responses: list[str], prompts: list[str], ground_truths:list[str]) ->dict[str, Any]:
     # breakpoint() #M: would like to inspect what's going on

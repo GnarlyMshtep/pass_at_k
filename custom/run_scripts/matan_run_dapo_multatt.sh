@@ -17,12 +17,12 @@ unset HIP_VISIBLE_DEVICES
 # export K_OPT=5
 # export N_ROLLOUTS=3
 # export DATASET_W_BUILTIN_ATTEMPTS=1
-DATASET_PATH="$HF_HOME/data/taller_puzzles_multatt_5_8_no_gts_1_or_max"
+DATASET_PATH="/scratch/m000122/stalaei/huggingface/data/big_math_digits_single_att"
 # export CUDA_VISIBLE_DEVICES="0,2"
 
 # DAPO Configuration
 project_name='matan'
-exp_name="harder_n_64_4_7_nodes_no_gts_1_dapo_multatt"
+exp_name="big_math_digits_multatt"
 echo $exp_name
 mkdir -p "rollouts/$exp_name"
 
@@ -60,10 +60,10 @@ echo "MICRO: ppo_micro_batch_size_per_gpu=$ppo_micro_batch_size_per_gpu"
 
 # Token length parameters
 max_prompt_length=1024
-max_response_length=2048
+max_response_length=3000
 
 enable_overlong_buffer=True
-overlong_buffer_len=2048
+overlong_buffer_len=1048
 overlong_penalty_factor=1.0
 
 #M: no need to set since dynamic_bsz is off. 
@@ -104,7 +104,7 @@ top_k=-1
 #   actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4\ \
 #    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=4 \
 
-CUDA_VISIBLE_DEVICES=2,3 python3 -m recipe.dapo.main_dapo \
+CUDA_VISIBLE_DEVICES=0,1 python3 -m recipe.dapo.main_dapo \
     data.train_files="${DATASET_PATH}/train.parquet" \
     data.val_files="${DATASET_PATH}/val.parquet" \
     data.prompt_key=prompt \
@@ -169,7 +169,7 @@ CUDA_VISIBLE_DEVICES=2,3 python3 -m recipe.dapo.main_dapo \
     critic.strategy=fsdp2 \
     reward_model.strategy=fsdp2 \
     custom_reward_function.path="custom/reward/reward_utils.py" \
-    custom_reward_function.name="compute_score_multi_attempt_per_rollout" \
+    custom_reward_function.name="compute_score_single_attempt_per_rollout" \
     trainer.logger='["console","wandb"]' \
     trainer.project_name=$project_name \
     trainer.experiment_name=$exp_name \
