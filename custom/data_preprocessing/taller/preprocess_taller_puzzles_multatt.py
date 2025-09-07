@@ -37,7 +37,7 @@ if __name__ == "__main__":
     # Set random seed for reproducibility
     random.seed(args.seed)
 
-    instruction_following = 'You will be presented with a height comparison puzzle and you have 3 attempts to answer it correctly and you MUST think before each answer. So, your answer format must be <think></think> <attempt-1></attempt-1><attempt-2></attempt-2><attempt-3></attempt-3> where in <think> you think about the question and come up with 3 attempts. Generate your first attempt and consider why it might be wrong to generate your next attempts. Make sure to think about ALL you attempts in <think>. DON\'T think only about the first attempt and then guess the rest. The attempt answers provided in <attempt-1>, <attempt-2>, and <attempt-3>. Please optimize for getting at least one attempt correct, rather than getting more than one attempt correct (pass@k grading). Try justifying your answer to yourself. Think hard about the answer, spending a long time contemplating. Your answer should be a comma-separated list of people who could plausibly be the 3rd tallest.\n\n'
+    instruction_following = 'You will be presented with a logic puzzle and you have 4 attempts to answer it correctly and you MUST think before each answer. So, your answer format must be <think-1></think-1> <attempt-1></attempt-1>, <think-2></think-2> <attempt-2></attempt-2>, and <think-3></think-3> <attempt-3></attempt-3> <think-4></think-4> <attempt-4></attempt-4> where in <think-i> you think about the answer provided in <attempt-i>. Please optimize for getting at least one attempt correct, rather than getting more than one attempt correct (pass@k grading).\n\n'
 
     def generate_puzzle():
         """Generate a single taller puzzle instance"""

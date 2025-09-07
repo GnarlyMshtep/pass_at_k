@@ -2,7 +2,7 @@ set -x
 
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
-export TOKENIZERS_PARALLELISM=False #? can prob change to true, but for test keep
+export TOKENIZERS_PARALLELISM=True #? can prob change to true, but for test keep
 export RAY_DEBUG_POST_MORTEM=1
 export HYDRA_FULL_ERROR=1
 
@@ -16,10 +16,10 @@ dataset_name="bigmathdigits"
 max_response_length=8192
 exp_name="1.5b_$dataset_name_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
-num_gpus=8
-mini_batch_size=$((num_gpus * 4))
-train_batch_size=$((num_gpus * 16))
-val_batch_size=$((num_gpus * 32))
+num_gpus=4
+mini_batch_size=$((num_gpus * 4 * 2))
+train_batch_size=$((num_gpus * 16 * 2))
+val_batch_size=$((num_gpus * 32 * 2))
 
 # Ensure vLLM chunked prefill precondition: max_num_batched_tokens >= max_model_len (= prompt+response by default)
 max_model_len=$((512 + max_response_length))
