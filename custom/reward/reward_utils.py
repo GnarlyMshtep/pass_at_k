@@ -69,8 +69,32 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
     
     return results
 
+def compute_score_multi_attempt_per_rollout_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
+    # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
+    # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
+    N_ROLLOUTS=3   
 
-def compute_score_multi_attempt_per_rollout(data_source, solution_str, ground_truth, extra_info=None)-> float:
+    extracted_attempts = extract_attempts(solution_str, "attempt", N_ROLLOUTS)
+    
+    # If no valid attempts found, return 0
+    if not extracted_attempts: 
+        return 0       
+    
+    # Check correctness for each valid attempt
+    correctness_per_attempt = [_is_correct(proposed_sol=attempt, ground_truth=ground_truth) for attempt in extracted_attempts]
+    
+    # If all attempts are present and at least one is correct, return full reward + formatting bonus
+    if len(extracted_attempts) == N_ROLLOUTS and any(correctness_per_attempt):
+        return max(correctness_per_attempt) + .1
+    
+    # If not all attempts are present, return partial reward based on number of valid attempts
+    if len(extracted_attempts) < N_ROLLOUTS:
+        return 0.1 * len(extracted_attempts) / N_ROLLOUTS
+    
+    # If all attempts are present but none are correct, return formatting bonus only
+    return 0.1
+
+def compute_score_multi_attempt_per_rollout_taller(data_source, solution_str, ground_truth, extra_info=None)-> float:
     # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
     # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
     N_ROLLOUTS=3   
