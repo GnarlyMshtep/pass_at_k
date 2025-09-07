@@ -17,14 +17,16 @@ Metrics related to the PPO trainer.
 
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable
+from typing import Any, Callable, List, Dict, Literal
 
 import numpy as np
+from numpy.typing import NDArray 
 import math
 import torch
 
 from verl import DataProto
 from verl.utils.import_utils import deprecated
+import custom.reward.reward_utils as reward_utils
 
 
 @deprecated("verl.utils.metric.reduce_metrics")
@@ -209,76 +211,10 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "prompt_length/clip_ratio": torch.mean(torch.eq(prompt_length, max_prompt_length).float()).detach().item(),
     }
 
-    # Training pass@k metrics (requires per-sample correctness labels)
-    # We look for common correctness keys in non-tensor batch; fallback to reward-based heuristic if needed.
-    try:
-        if "uid" in batch.non_tensor_batch:
-            uid_list = batch.non_tensor_batch["uid"]
 
-            label_key = None
-            for key in ["acc", "is_correct", "exact_match"]:
-                if key in batch.non_tensor_batch:
-                    label_key = key
-                    break
 
-            labels_np = None
-            if label_key is not None:
-                labels_np = np.asarray(batch.non_tensor_batch[label_key], dtype=float)
-            elif "reward" in batch.non_tensor_batch:
-                labels_np = (np.asarray(batch.non_tensor_batch["reward"], dtype=float) > 0.5).astype(int)
-            else:
-                if "token_level_rewards" in batch.batch:
-                    seq_rewards = batch.batch["token_level_rewards"].sum(-1).detach().cpu().numpy()
-                    labels_np = (seq_rewards > 0.5).astype(int)
-
-            if labels_np is not None and len(labels_np) == len(uid_list):
-                uid_to_indices: dict[Any, list[int]] = defaultdict(list)
-                for idx, uid in enumerate(uid_list):
-                    uid_to_indices[uid].append(idx)
-
-                # Gather per-prompt (n, c)
-                per_prompt_stats: list[tuple[int, int]] = []
-                max_n = 0
-                for _, idxs in uid_to_indices.items():
-                    n = len(idxs)
-                    c = int(labels_np[idxs].sum())
-                    per_prompt_stats.append((n, c))
-                    if n > max_n:
-                        max_n = n
-
-                if max_n > 0:
-                    ks: list[int] = []
-                    k_val = 1
-                    while k_val < max_n:
-                        ks.append(k_val)
-                        k_val *= 2
-                    ks.append(max_n)
-
-                    for k in ks:
-                        vals: list[float] = []
-                        for n, c in per_prompt_stats:
-                            if n >= k:
-                                numer = 0 if k > (n - c) else math.comb(n - c, k)
-                                denom = math.comb(n, k)
-                                vals.append(1.0 - (numer / denom))
-                        if len(vals) > 0:
-                            metrics[f"train/pass@{k}"] = float(np.mean(vals))
-                    # breakpoint()
-                    # Add max@n and mean@n metrics for training scores
-                    max_vals: list[float] = []
-                    mean_vals: list[float] = []
-                    for uid, idxs in uid_to_indices.items():
-                        # Get scores for this prompt
-                        prompt_scores = sequence_score[idxs].detach().cpu().numpy()
-                        max_vals.append(float(np.max(prompt_scores)))
-                        mean_vals.append(float(np.mean(prompt_scores)))
-                    
-                    if len(max_vals) > 0:
-                        metrics[f"train/max@{max_n}"] = float(np.mean(max_vals))
-                        metrics[f"train/mean@{max_n}"] = float(np.mean(mean_vals))
-    except Exception:
-        # Be conservative: do not fail training metrics if pass@k cannot be computed
-        pass
+    reward_updates:dict = reward_utils.more_reward_util_func(batch)
+    metrics.update(reward_updates)
 
     # multi-turn conversation
     if "__num_turns__" in batch.non_tensor_batch:

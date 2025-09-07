@@ -102,23 +102,72 @@ def math_verify(expr1: str, expr2: str, tolerance: float = 1e-9) -> bool:
         return expr1 == expr2
 
 
-def extract_attempts(output_text: str) -> List[str]:
+def extract_attempts(output_text: str, debug=False) -> List[str]:
     """
-    Extract all attempts from the output text using regex.
+    Extract all attempts from the output text using simple string parsing.
     
     Args:
         output_text: The full output text containing attempt tags
+        debug: If True, print debug information
         
     Returns:
         List of attempt values as strings
     """
-    # Pattern to match <attempt-i>value</attempt-i>
-    pattern = r'<attempt-\d+>(.*?)</attempt-\d+>'
-    matches = re.findall(pattern, output_text, re.DOTALL)
+    attempts = []
     
-    # Clean up the attempts (strip whitespace)
-    attempts = [match.strip() for match in matches]
-    return attempts
+    # Look for attempt tags by finding all occurrences
+    text = output_text
+    while True:
+        # Find the next attempt opening tag
+        attempt_start = None
+        attempt_num = None
+        
+        # Look for <attempt-1>, <attempt-2>, <attempt-3>, etc.
+        for i in range(1, 10):  # Check up to attempt-9 (should be max 3 but being safe)
+            tag_start = f"<attempt-{i}>"
+            tag_end = f"</attempt-{i}>"
+            
+            start_pos = text.find(tag_start)
+            if start_pos != -1:
+                end_pos = text.find(tag_end, start_pos + len(tag_start))
+                if end_pos != -1:
+                    # Extract the content between tags
+                    content = text[start_pos + len(tag_start):end_pos].strip()
+                    attempts.append(content)
+                    
+                    if debug:
+                        print(f"Found attempt-{i}: '{content}'")
+                    
+                    # Remove this attempt from text to continue searching
+                    text = text[:start_pos] + text[end_pos + len(tag_end):]
+                    break
+        else:
+            # No more attempts found
+            break
+    
+    # Sort attempts to ensure they're in order (attempt-1, attempt-2, etc.)
+    # We'll re-extract them in order to be sure
+    ordered_attempts = []
+    for i in range(1, 10):
+        tag_start = f"<attempt-{i}>"
+        tag_end = f"</attempt-{i}>"
+        
+        start_pos = output_text.find(tag_start)
+        if start_pos != -1:
+            end_pos = output_text.find(tag_end, start_pos + len(tag_start))
+            if end_pos != -1:
+                content = output_text[start_pos + len(tag_start):end_pos].strip()
+                ordered_attempts.append(content)
+    
+    if debug and len(ordered_attempts) > 3:
+        print(f"DEBUG: Found {len(ordered_attempts)} attempts:")
+        for i, attempt in enumerate(ordered_attempts):
+            print(f"  attempt-{i+1}: '{attempt}'")
+        print("Full output preview:")
+        print(output_text[:500] + "..." if len(output_text) > 500 else output_text)
+        print("---")
+    
+    return ordered_attempts
 
 
 def count_unique_attempts(attempts: List[str]) -> int:
@@ -163,6 +212,7 @@ def analyze_jsonl_file(file_path: str) -> dict:
     high_score_questions = []
     partial_unique_attempt_counts = []
     high_unique_attempt_counts = []
+    malformed_examples = []  # Track cases with >3 attempts
     
     with open(file_path, 'r') as f:
         for line_num, line in enumerate(f, 1):
@@ -170,10 +220,20 @@ def analyze_jsonl_file(file_path: str) -> dict:
                 data = json.loads(line.strip())
                 score = data.get('score', 0)
                 output_text = data.get('output', '')
-                attempts = extract_attempts(output_text)
+                attempts = extract_attempts(output_text, debug=(len(extract_attempts(output_text)) > 3))
                 
                 if attempts:  # Only process if we found attempts
                     unique_count = count_unique_attempts(attempts)
+                    
+                    # Track malformed cases with >3 attempts
+                    if len(attempts) > 3:
+                        malformed_examples.append({
+                            'line_num': line_num,
+                            'score': score,
+                            'total_attempts': len(attempts),
+                            'attempts': attempts,
+                            'output_preview': output_text[:500] + '...' if len(output_text) > 500 else output_text
+                        })
                     
                     question_data = {
                         'line_num': line_num,
@@ -216,24 +276,39 @@ def analyze_jsonl_file(file_path: str) -> dict:
     else:
         high_count_distribution = Counter()
         high_avg_unique = 0
-    
-    results = {
-        'partial_scores': {
-            'total_questions': len(partial_score_questions),
-            'unique_attempt_count_distribution': dict(partial_count_distribution),
-            'average_unique_attempts': partial_avg_unique,
-            'questions_with_details': partial_score_questions[:10],  # Show first 10 for inspection
-            'all_unique_counts': partial_unique_attempt_counts
-        },
-        'high_scores': {
-            'total_questions': len(high_score_questions),
-            'unique_attempt_count_distribution': dict(high_count_distribution),
-            'average_unique_attempts': high_avg_unique,
-            'questions_with_details': high_score_questions[:10],  # Show first 10 for inspection
-            'all_unique_counts': high_unique_attempt_counts
+
+    # Create results dictionary
+    if partial_unique_attempt_counts or high_unique_attempt_counts:
+        results = {
+            'partial_score_questions': len(partial_score_questions),
+            'high_score_questions': len(high_score_questions),
+            'partial_unique_attempt_count_distribution': dict(partial_count_distribution),
+            'high_unique_attempt_count_distribution': dict(high_count_distribution),
+            'partial_average_unique_attempts': partial_avg_unique,
+            'high_average_unique_attempts': high_avg_unique,
+            'partial_questions_with_details': partial_score_questions[:10],
+            'high_questions_with_details': high_score_questions[:10],
+            'malformed_examples': malformed_examples[:10],  # First 10 malformed cases
+            'total_malformed': len(malformed_examples),
+            'partial_all_unique_counts': partial_unique_attempt_counts,
+            'high_all_unique_counts': high_unique_attempt_counts
         }
-    }
-    
+    else:
+        results = {
+            'partial_score_questions': 0,
+            'high_score_questions': 0,
+            'partial_unique_attempt_count_distribution': {},
+            'high_unique_attempt_count_distribution': {},
+            'partial_average_unique_attempts': 0,
+            'high_average_unique_attempts': 0,
+            'partial_questions_with_details': [],
+            'high_questions_with_details': [],
+            'malformed_examples': [],
+            'total_malformed': 0,
+            'partial_all_unique_counts': [],
+            'high_all_unique_counts': []
+        }
+
     return results
 
 
@@ -242,6 +317,8 @@ def main():
     parser.add_argument('jsonl_file', help='Path to the JSONL file to analyze')
     parser.add_argument('--output', '-o', help='Output file for detailed results (optional)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Show detailed output')
+    parser.add_argument('--debug-malformed', action='store_true', help='Show examples of malformed outputs with >3 attempts')
+    parser.add_argument('--save-malformed', help='Save malformed examples to a JSON file for detailed inspection')
     
     args = parser.parse_args()
     
@@ -259,39 +336,64 @@ def main():
     
     # Partial scores analysis
     print(f"\nPARTIAL SCORES (0 < score < 1):")
-    print(f"Total questions: {results['partial_scores']['total_questions']}")
-    if results['partial_scores']['total_questions'] > 0:
-        print(f"Average unique attempts per question: {results['partial_scores']['average_unique_attempts']:.2f}")
+    print(f"Total questions: {results['partial_score_questions']}")
+    if results['partial_score_questions'] > 0:
+        print(f"Average unique attempts per question: {results['partial_average_unique_attempts']:.2f}")
         print("\nDistribution of unique attempt counts:")
-        for count, frequency in sorted(results['partial_scores']['unique_attempt_count_distribution'].items()):
-            percentage = frequency / results['partial_scores']['total_questions'] * 100
+        for count, frequency in sorted(results['partial_unique_attempt_count_distribution'].items()):
+            percentage = frequency / results['partial_score_questions'] * 100
             print(f"  {count} unique attempts: {frequency} questions ({percentage:.1f}%)")
     
     # High scores analysis
     print(f"\nHIGH SCORES (score >= 1):")
-    print(f"Total questions: {results['high_scores']['total_questions']}")
-    if results['high_scores']['total_questions'] > 0:
-        print(f"Average unique attempts per question: {results['high_scores']['average_unique_attempts']:.2f}")
+    print(f"Total questions: {results['high_score_questions']}")
+    if results['high_score_questions'] > 0:
+        print(f"Average unique attempts per question: {results['high_average_unique_attempts']:.2f}")
         print("\nDistribution of unique attempt counts:")
-        for count, frequency in sorted(results['high_scores']['unique_attempt_count_distribution'].items()):
-            percentage = frequency / results['high_scores']['total_questions'] * 100
+        for count, frequency in sorted(results['high_unique_attempt_count_distribution'].items()):
+            percentage = frequency / results['high_score_questions'] * 100
             print(f"  {count} unique attempts: {frequency} questions ({percentage:.1f}%)")
     
+    # Show malformed examples if any
+    if results['total_malformed'] > 0:
+        print(f"\nMALFORMED CASES (>3 attempts): {results['total_malformed']} total")
+        if args.debug_malformed and results['malformed_examples']:
+            print("\nFirst few malformed examples:")
+            for i, example in enumerate(results['malformed_examples'][:3], 1):
+                print(f"\n{i}. Line {example['line_num']}: Score={example['score']:.3f}")
+                print(f"   Found {example['total_attempts']} attempts: {example['attempts']}")
+                
+                # Show the full attempt structure
+                output_text = example['output_preview']
+                print(f"   Attempt tags found:")
+                for j in range(1, 10):
+                    tag_start = f"<attempt-{j}>"
+                    tag_end = f"</attempt-{j}>"
+                    if tag_start in output_text and tag_end in output_text:
+                        start_pos = output_text.find(tag_start)
+                        end_pos = output_text.find(tag_end, start_pos)
+                        if start_pos != -1 and end_pos != -1:
+                            content = output_text[start_pos + len(tag_start):end_pos].strip()
+                            print(f"     <attempt-{j}>{content}</attempt-{j}>")
+                
+                print(f"   Output preview: {example['output_preview'][:300]}...")
+                print("   " + "-"*50)
+    
     if args.verbose:
-        if results['partial_scores']['questions_with_details']:
+        if results['partial_questions_with_details']:
             print("\nFirst 10 PARTIAL SCORE questions (sample):")
             print("-" * 50)
-            for i, q in enumerate(results['partial_scores']['questions_with_details'], 1):
+            for i, q in enumerate(results['partial_questions_with_details'], 1):
                 print(f"{i}. Line {q['line_num']}: Score={q['score']:.3f}")
                 print(f"   Total attempts: {q['total_attempts']}, Unique: {q['unique_attempts']}")
                 print(f"   Attempts: {q['attempts']}")
                 print(f"   Input preview: {q['input_preview']}")
                 print()
         
-        if results['high_scores']['questions_with_details']:
+        if results['high_questions_with_details']:
             print("\nFirst 10 HIGH SCORE questions (sample):")
             print("-" * 50)
-            for i, q in enumerate(results['high_scores']['questions_with_details'], 1):
+            for i, q in enumerate(results['high_questions_with_details'], 1):
                 print(f"{i}. Line {q['line_num']}: Score={q['score']:.3f}")
                 print(f"   Total attempts: {q['total_attempts']}, Unique: {q['unique_attempts']}")
                 print(f"   Attempts: {q['attempts']}")
@@ -303,6 +405,16 @@ def main():
         with open(args.output, 'w') as f:
             json.dump(results, f, indent=2)
         print(f"\nDetailed results saved to {args.output}")
+    
+    # Save malformed examples if requested
+    if args.save_malformed and results['total_malformed'] > 0:
+        malformed_data = {
+            'total_malformed': results['total_malformed'],
+            'examples': results['malformed_examples']
+        }
+        with open(args.save_malformed, 'w') as f:
+            json.dump(malformed_data, f, indent=2)
+        print(f"Malformed examples saved to {args.save_malformed}")
 
 
 if __name__ == "__main__":
