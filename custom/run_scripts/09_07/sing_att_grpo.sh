@@ -11,7 +11,7 @@ DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
 MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
 project_name='test-deeph1'
 model_name='Qwen2_5-1_5B-Instruct'
-dataset_name="bigmath_digits_multatt"
+dataset_name="bigmath_digits"
 
 max_response_length=8192
 exp_name="1.5b_$dataset_name_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
@@ -61,7 +61,7 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
     custom_reward_function.path="${PROJECT_DIR}/custom/reward/reward_utils.py" \
-    custom_reward_function.name="compute_score_multi_attempt_per_rollout_math" \
+    custom_reward_function.name="compute_score_math" \
     reward_model.reward_manager=naive \
     trainer.logger='["console","wandb"]' \
     trainer.project_name="${project_name}" \
