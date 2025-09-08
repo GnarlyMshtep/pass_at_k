@@ -7,6 +7,7 @@ import torch
 from math_verify import parse, verify
 from numpy.typing import NDArray
 import torch
+import math
 
 REWARD_CORRECT = 1
 EXPECTED_REWARD_SCORES = ["is_correct"]  # Add other expected reward score keys as needed
@@ -70,6 +71,21 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
         results.append(inner)
     
     return results
+def compute_score_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
+    # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
+    # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
+
+    extracted_attempt = _get_tagged_data(solution_str, "attempt")
+    
+    # If no valid attempts found, return 0
+    if not extracted_attempt: 
+        return 0       
+    
+    # Check correctness for each valid attempt
+    correctness= _is_correct(proposed_sol=extracted_attempt, ground_truth=ground_truth) 
+    
+    # If all attempts are present but none are correct, return formatting bonus only
+    return 0.1 + (1 if correctness else 0)
 
 def compute_score_multi_attempt_per_rollout_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
     # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
@@ -300,33 +316,36 @@ def more_reward_util_func(batch):
             labels_np = np.asarray(batch.non_tensor_batch[label_key], dtype=float)
         elif "reward" in batch.non_tensor_batch:
             labels_np = (np.asarray(batch.non_tensor_batch["reward"], dtype=float) > 0.5).astype(int)
+        else: 
+            labels_np = (np.asarray(batch.batch['token_level_rewards'].sum(-1), dtype=float) > .5).astype(int)
         if labels_np is not None and len(labels_np) == len(uid_list):
             uid_to_indices: dict[Any, list[int]] = defaultdict(list)
             for idx, uid in enumerate(uid_list):
                 uid_to_indices[uid].append(idx)
-        else:
-            raise ValueError
+
+            
             # if "token_level_rewards" in batch.batch:
             #     seq_rewards = batch.batch["token_level_rewards"].sum(-1).detach().cpu().numpy()
             #     labels_np = (seq_rewards > 0.5).astype(int)
 
         
-        def compute_reward_metrics(rewards: NDArray[float])->Dict[str, float]: 
+        def compute_reward_metrics(rewards: NDArray[float])->Dict[str, float]:
             def expected_pass_at_k(rewards, k)-> float: 
+                rewards=rewards.astype(int) 
                 c = sum(rewards)
                 n = len(rewards)
                 return 1 -  (math.comb(n - c, k) / math.comb(n, k))
             
-            rewards = rewards >=1 # we binarized our reward, we only care about whether you are greater or less than 1 to avoid format confounding and complicating pass@k metric
+            rewards = (rewards >=1).astype(float) # we binarized our reward, we only care about whether you are greater or less than 1 to avoid format confounding and complicating pass@k metric
             return {
-                f"max@{len(rewards)}" : max(rewards),
-                f"mean@{len(rewards)}" : np.mean(rewards),
-                f"min@{len(rewards)}" : min(rewards),
-                f"p25@{len(rewards)}" : np.percentile(rewards, 25),
+                f"reward/max@{len(rewards)}" : max(rewards),
+                f"reward/mean@{len(rewards)}" : np.mean(rewards),
+                f"reward/min@{len(rewards)}" : min(rewards),
+                f"reward/p25@{len(rewards)}" : np.percentile(rewards, 25),
                 f"p75@{len(rewards)}" : np.percentile(rewards, 75),
-                f"pass@2" : expected_pass_at_k(rewards, 2),    
-                f"pass@4" : expected_pass_at_k(rewards, 4),    
-                f"pass@8" : expected_pass_at_k(rewards, 8),    
+                f"reward/pass@2" : expected_pass_at_k(rewards, 2),    
+                f"reward/pass@4" : expected_pass_at_k(rewards, 4),    
+                f"reward/pass@8" : expected_pass_at_k(rewards, 8),    
             }            
 
         metrics_per_qs:List[dict]= [compute_reward_metrics(labels_np[indices]) for indices in uid_to_indices.values()]

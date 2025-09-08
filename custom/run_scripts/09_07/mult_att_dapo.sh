@@ -11,22 +11,24 @@ DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
 MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
 project_name='test-deeph1'
 model_name='Qwen2_5-1_5B-Instruct'
-dataset_name="bigmath_digits_multatt"
+dataset_name="bigmathdigits_multatt"
 
+#https://verl.readthedocs.io/en/latest/algo/dapo.html#overlong-reward-shaping suggests that 
 max_response_length=8192
+overlong_buffer_len=2192
 exp_name="1.5b_$dataset_name_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 num_gpus=4
-mini_batch_size=$((num_gpus * 4 * 2))
-train_batch_size=$((num_gpus * 16 * 2))
+mini_batch_size=$((num_gpus * 4 * 2))  #32 --> 4 mini batches
+train_batch_size=$((num_gpus * 16 * 2)) #128
 val_batch_size=$((num_gpus * 32 * 2))
 
 # Ensure vLLM chunked prefill precondition: max_num_batched_tokens >= max_model_len (= prompt+response by default)
 max_model_len=$((512 + max_response_length))
 max_batched_tokens=$((max_model_len * 2))
 
-
-python3 -m verl.trainer.main_ppo \
+#!GRPO missing
+CUDA_VISIBLE_DEVICES=4,5,6,7 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     actor_rollout_ref.rollout.n=8 \
     data.train_files=$DATASET_DIR/${dataset_name}/train.parquet \
@@ -76,6 +78,15 @@ python3 -m verl.trainer.main_ppo \
     trainer.validation_data_dir="rollouts/${exp_name}/val" \
     trainer.default_local_dir="$MODELS_DIR/ckpts/${project_name}/${exp_name}"\
     actor_rollout_ref.rollout.max_num_batched_tokens=$max_batched_tokens \
+    actor_rollout_ref.actor.clip_ratio_low=0.20\
+    actor_rollout_ref.actor.clip_ratio_low=0.28\
+    +data.reward_model.overlong_buffer.enable=True\
+    +data.reward_model.overlong_buffer.len=$overlong_buffer_len\
+    +data.reward_model.overlong_buffer.penalty_factor=1.0\
+    reward_model.reward_manager=dapo \
+    reward_model.reward_kwargs.num_workers=2\
+
+
 
 
 # reward_model.reward_kwargs.num_workers=1 \
