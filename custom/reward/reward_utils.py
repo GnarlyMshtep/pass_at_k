@@ -26,8 +26,8 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
     Returns:
         List of valid strings (may be shorter than n_rollout), or empty list if no valid attempts
     """
-    if not isinstance(sol_str, str) or not isinstance(tagname, str) or not isinstance(n_rollout, int):
-        return []
+    # if not isinstance(sol_str, str) or not isinstance(tagname, str) or not isinstance(n_rollout, int):
+    #     return []
     
     if n_rollout <= 0:
         return []
@@ -41,36 +41,39 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
         # Find first occurrence of open tag
         first_open = sol_str.find(open_tag)
         if first_open == -1:
-            continue  # Tag missing, skip this attempt
+            return None  # Tag missing, skip this attempt
         
         # Find matching close tag
         open_end = first_open + len(open_tag)
         first_close = sol_str.find(close_tag, open_end)
         if first_close == -1:
-            continue  # No matching close tag, skip this attempt
+            return None  # No matching close tag, skip this attempt
         
         # Check for duplicate open tags of same number
         if sol_str.find(open_tag, open_end) != -1:
-            continue  # Duplicate open tag, skip this attempt
+            return None  # Duplicate open tag, skip this attempt
         
         # Check for duplicate close tags of same number
         if sol_str.find(close_tag, first_close + len(close_tag)) != -1:
-            continue  # Duplicate close tag, skip this attempt
+            return None  # Duplicate close tag, skip this attempt
         
         # Extract content between tags
         inner = sol_str[open_end:first_close]
         
         # Check for nested same tags inside (shouldn't happen with numbered tags but being safe)
         if inner.find(open_tag) != -1 or inner.find(close_tag) != -1:
-            continue  # Nested tags, skip this attempt
+            return None  # Nested tags, skip this attempt
         
         # Check if the attempt is empty (contains only whitespace or nothing)
         if not inner.strip():
-            continue  # Empty attempt, skip this attempt
+            return None  # Empty attempt, skip this attempt
         
         results.append(inner)
     
-    return results
+    #check whether there is an additional tag and penalize for that 
+
+    return None if sol_str.find(f"<attempt-{n_rollout + 1}>") else results
+
 def compute_score_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
     # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
     # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"

@@ -22,7 +22,7 @@ def create_system_prompt() -> str:
 
 def create_user_prefix() -> str:
     """Create the user instruction prefix"""
-    return ("You will be presented with a math question and you MUST think before each answer. So, your answer format must be <think></think> <attempt></attempt>, where in <think> you think about the answer provided in <attempt>.")
+    return ("You will be presented with a math question and you have 4 attempts to answer it correctly and you MUST think before each answer. So, your answer format must be <think-1></think-1> <attempt-1></attempt-1>, <think-2></think-2> <attempt-2></attempt-2>, <think-3></think-3> <attempt-3></attempt-3>, and <think-4></think-4> <attempt-4></attempt-4>  where in <think-i> you think about the answer provided in <attempt-i>. Please optimize for getting at least one attempt correct, rather than getting more than one attempt correct (pass@k grading).")
 
 
 def make_map_fn(split: str):
@@ -70,7 +70,7 @@ def make_map_fn(split: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Preprocess bigmath_digits dataset to parquet format")
-    parser.add_argument("--local_dir", default="../data/bigmath_digits_singatt", 
+    parser.add_argument("--local_dir", default="../data/bigmath_digits_multatt", 
                        help="Local directory to save processed data")
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
@@ -190,7 +190,7 @@ def main():
                 print(f"{k}:")
                 for i, msg in enumerate(v):
                     print(f"  Message {i+1} ({msg['role']}):")
-                    print(f"    {msg['content']}")
+                    print(f"{msg['content']}")
                     print()
             elif k == "extra_info":
                 print(f"{k}:")
@@ -209,7 +209,7 @@ def main():
                 print(f"{k}:")
                 for i, msg in enumerate(v):
                     print(f"  Message {i+1} ({msg['role']}):")
-                    print(f"    {msg['content']}")
+                    print(f"{msg['content']}")
                     print()
             elif k == "extra_info":
                 print(f"{k}:")
@@ -225,7 +225,7 @@ def main():
         if k == "prompt":
             print(f"{k}:")
             for msg in v:
-                print(f"  {msg['role']}: {msg['content'][:200]}...")
+                print(f"  {msg['role']}: {msg['content']}")
         else:
             print(f"{k}: {v}")
         print()
