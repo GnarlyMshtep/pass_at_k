@@ -58,15 +58,20 @@ def run_ppo(config) -> None:
         # Set environment variables in the runtime environment to control tokenizer parallelism,
         # NCCL debug level, VLLM logging level, and allow runtime LoRA updating
         # `num_cpus` specifies the number of CPU cores Ray can use, obtained from the configuration
-        print("\DEBUG: nInitializing ray env\n")
-        default_runtime_env = get_ppo_ray_runtime_env()
-        ray_init_kwargs = config.ray_kwargs.get("ray_init", {})
-        runtime_env_kwargs = ray_init_kwargs.get("runtime_env", {})
-        runtime_env = OmegaConf.merge(default_runtime_env, runtime_env_kwargs)
-        ray_init_kwargs = OmegaConf.create({**ray_init_kwargs, "runtime_env": runtime_env})
-        print(f"ray init kwargs: {ray_init_kwargs}")
-        ray_init_kwargs['num_cpus'] = 100 #https://github.com/Jiayi-Pan/TinyZero/issues/7
-        ray.init(**OmegaConf.to_container(ray_init_kwargs))
+        try:
+            print("Attempting to connect to existing Ray cluster...")
+            ray.init(address="auto")  # Connect to existing 8-GPU cluster
+            print("Connected to existing Ray cluster")
+        except Exception as e:
+            print(f"\DEBUG: nInitializing a new ray env becase {e}\n")
+            default_runtime_env = get_ppo_ray_runtime_env()
+            ray_init_kwargs = config.ray_kwargs.get("ray_init", {})
+            runtime_env_kwargs = ray_init_kwargs.get("runtime_env", {})
+            runtime_env = OmegaConf.merge(default_runtime_env, runtime_env_kwargs)
+            ray_init_kwargs = OmegaConf.create({**ray_init_kwargs, "runtime_env": runtime_env})
+            print(f"ray init kwargs: {ray_init_kwargs}")
+            ray_init_kwargs['num_cpus'] = 100 #https://github.com/Jiayi-Pan/TinyZero/issues/7
+            ray.init(**OmegaConf.to_container(ray_init_kwargs))
 
     # Create a remote instance of the TaskRunner class, and
     # Execute the `run` method of the TaskRunner instance remotely and wait for it to complete
