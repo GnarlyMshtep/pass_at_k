@@ -236,10 +236,10 @@ def main():
     
     print(f"Saving to {local_dir}...")
     train_dataset.to_parquet(os.path.join(local_dir, "train.parquet"))
-    val_dataset.to_parquet(os.path.join(local_dir, "val.parquet"))
+    val_dataset.to_parquet(os.path.join(local_dir, "test.parquet"))
     
     print(f"Saved {len(train_dataset)} training examples to {local_dir}/train.parquet")
-    print(f"Saved {len(val_dataset)} validation examples to {local_dir}/val.parquet")
+    print(f"Saved {len(val_dataset)} validation examples to {local_dir}/test.parquet")
 
     # Copy to HDFS if specified
     if args.hdfs_dir is not None:

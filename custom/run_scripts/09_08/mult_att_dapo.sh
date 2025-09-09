@@ -10,18 +10,20 @@ PROJECT_DIR=$(pwd)
 DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
 MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
 project_name='test-deeph1'
-model_name='Qwen2_5-1_5B-Instruct'
+model_name='Qwen2.5-7B-Instruct'
 
 # Allow override of dataset_name and reward function via environment variables
 dataset_name="${OVERRIDE_DATASET_NAME:-bigmath_digits_multatt}"
 reward_function_name="${OVERRIDE_REWARD_FUNCTION:-compute_score_multi_attempt_per_rollout_math}"
+# Allow override of CUDA devices (default to those used for multi-att)
+CUDA_DEVICES="${OVERRIDE_CUDA_DEVICES:-0,1,2,3}"
 
 #https://verl.readthedocs.io/en/latest/algo/dapo.html#overlong-reward-shaping suggests that 
 max_response_length=8192
-overlong_buffer_len=4096
-overlong_penalty_factor=0.5
+overlong_buffer_len=2000
+overlong_penalty_factor=0.2
 use_dynamic_bsz=True #! currently set for actor only, have not seen any memory issues with rollout and ref yet.
-max_token_len_per_gpu=40000 # this is too much for a 7B model, but probably ok for a 1B?
+max_token_len_per_gpu=5000 # this is too much for a 7B model, but probably ok for a 1B?
 # Ensure vLLM chunked prefill precondition: max_num_batched_tokens >= max_model_len (= prompt+response by default)
 max_model_len=$((512 + max_response_length))
 max_batched_tokens=$((max_model_len * 2)) #! I don't know what this does but its not breaking -- ask shayan
@@ -36,7 +38,7 @@ val_batch_size=$((num_gpus * 32 * 2))
 
 exp_name="1.5b_dapo_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 #!DAPO adv estimator missing -- I think its becuase its GRPO + don't divide.
-CUDA_VISIBLE_DEVICES=4,5,6,7 python3 -m verl.trainer.main_ppo \
+CUDA_VISIBLE_DEVICES=${CUDA_DEVICES} python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     actor_rollout_ref.rollout.n=8 \
     data.train_files=$DATASET_DIR/${dataset_name}/train.parquet \

@@ -1,0 +1,89 @@
+set -x
+
+export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
+export TOKENIZERS_PARALLELISM=True #? can prob change to true, but for test keep
+export RAY_DEBUG_POST_MORTEM=1
+export HYDRA_FULL_ERROR=1
+
+PROJECT_DIR=$(pwd)
+DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
+MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
+project_name='test-deeph1'
+model_name='Qwen3-1_7B'
+
+# Allow override of dataset_name and reward function via environment variables
+dataset_name="${OVERRIDE_DATASET_NAME:-e3_dmath_multatt}"
+reward_function_name="${OVERRIDE_REWARD_FUNCTION:-compute_score_multi_attempt_per_rollout_math}" #! fix
+# Allow override of CUDA devices (default to those used for multi-att)
+CUDA_DEVICES="${OVERRIDE_CUDA_DEVICES:-0,1,2,3}"
+
+#https://verl.readthedocs.io/en/latest/algo/dapo.html#overlong-reward-shaping suggests that 
+max_response_length=8192
+# overlong_buffer_len=2000
+# overlong_penalty_factor=0.2
+use_dynamic_bsz=True #! currently set for actor only, have not seen any memory issues with rollout and ref yet.
+# max_token_len_per_gpu=20000 # they also trained on h100-s, so I iwll take what they suggest
+max_model_len=$((512 + max_response_length))
+# max_batched_tokens=$((max_model_len * 2)) #! if our sys breaks bring this back
+
+
+
+num_gpus=8 #? trying the method where I try to start only 1 cluster
+
+
+exp_name="1.7b_e3_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+
+
+
+CUDA_VISIBLE_DEVICES=${CUDA_DEVICES} python3 -m verl.trainer.main_ppo \
+    algorithm.adv_estimator=grpo \
+    data.train_files=$DATASET_DIR/$dataset_name/train.parquet \
+    data.val_files=$DATASET_DIR/$dataset_name/val.parquet \
+    data.train_batch_size=128 \
+    data.max_prompt_length=512 \
+    data.max_response_length=$max_response_length \
+    data.max_extrapolation_length=$((2 * CONTEXT_LENGTH)) \
+    data.filter_overlong_prompts=True \
+    actor_rollout_ref.model.path=$MODELS_DIR/${model_name} \    
+    actor_rollout_ref.actor.optim.lr=1e-6 \
+    actor_rollout_ref.model.use_remove_padding=True \
+    actor_rollout_ref.actor.ppo_mini_batch_size=32 \
+    actor_rollout_ref.actor.use_dynamic_bsz=True \
+    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=32768 \
+    actor_rollout_ref.actor.use_kl_loss=True \
+    actor_rollout_ref.actor.kl_loss_coef=0.001 \
+    actor_rollout_ref.actor.kl_loss_type=low_var_kl \
+    actor_rollout_ref.actor.entropy_coeff=0 \
+    actor_rollout_ref.model.enable_gradient_checkpointing=True \
+    actor_rollout_ref.actor.fsdp_config.param_offload=False \
+    actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.name=vllm \
+    actor_rollout_ref.rollout.temperature=0.6 \
+    actor_rollout_ref.rollout.val_kwargs.temperature=0.6 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.9 \
+    actor_rollout_ref.rollout.max_num_batched_tokens=16384 \
+    actor_rollout_ref.rollout.n=8 \
+    actor_rollout_ref.rollout.val_kwargs.n=8 \
+    actor_rollout_ref.ref.fsdp_config.param_offload=False \
+    actor_rollout_ref.rollout.enforce_eager=False \
+    actor_rollout_ref.rollout.free_cache_engine=False \
+    algorithm.use_kl_in_reward=False \
+    custom_reward_function.path="${PROJECT_DIR}/custom/reward/reward_utils.py" \
+    custom_reward_function.name="$reward_function_name" \
+    trainer.critic_warmup=0 \
+    trainer.logger=['console','wandb'] \
+    trainer.project_name=$project_name \
+    trainer.experiment_name=$exp_name \
+    trainer.val_before_train=True \
+    trainer.n_gpus_per_node=$n_gpus \
+    trainer.nnodes=1 \
+    trainer.save_freq=50 \
+    trainer.test_freq=50 \
+    trainer.total_epochs=2 $@
+
+
+################## CHANGELOG
+# * no offload for ref
+# * sus of gpu_memory_utilization=0.9 but did not change
+# * actor_rollout_ref.actor.ppo_mini_batch_size=64  (in paper 32, so changed to that)

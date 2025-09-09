@@ -70,7 +70,7 @@ def make_map_fn(split: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Preprocess bigmath_digits dataset to parquet format")
-    parser.add_argument("--local_dir", default="../data/bigmath_digits", 
+    parser.add_argument("--local_dir", default="../data/bigmath_digits_singatt", 
                        help="Local directory to save processed data")
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
@@ -236,10 +236,10 @@ def main():
     
     print(f"Saving to {local_dir}...")
     train_dataset.to_parquet(os.path.join(local_dir, "train.parquet"))
-    val_dataset.to_parquet(os.path.join(local_dir, "val.parquet"))
+    val_dataset.to_parquet(os.path.join(local_dir, "test.parquet"))
     
     print(f"Saved {len(train_dataset)} training examples to {local_dir}/train.parquet")
-    print(f"Saved {len(val_dataset)} validation examples to {local_dir}/val.parquet")
+    print(f"Saved {len(val_dataset)} validation examples to {local_dir}/test.parquet")
 
     # Copy to HDFS if specified
     if args.hdfs_dir is not None:
