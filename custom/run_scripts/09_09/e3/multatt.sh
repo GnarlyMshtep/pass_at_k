@@ -42,9 +42,8 @@ CUDA_VISIBLE_DEVICES=${CUDA_DEVICES} python3 -m verl.trainer.main_ppo \
     data.train_batch_size=128 \
     data.max_prompt_length=512 \
     data.max_response_length=$max_response_length \
-    data.max_extrapolation_length=$((2 * CONTEXT_LENGTH)) \
     data.filter_overlong_prompts=True \
-    actor_rollout_ref.model.path=$MODELS_DIR/${model_name} \    
+    actor_rollout_ref.model.path=$MODELS_DIR/${model_name} \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=32 \
@@ -87,3 +86,4 @@ CUDA_VISIBLE_DEVICES=${CUDA_DEVICES} python3 -m verl.trainer.main_ppo \
 # * no offload for ref
 # * sus of gpu_memory_utilization=0.9 but did not change
 # * actor_rollout_ref.actor.ppo_mini_batch_size=64  (in paper 32, so changed to that)
+# * data.max_extrapolation_length=$((2 * $max_response_length)) \ our version of verl does not have this and I do not know what it is. Actually, my guess is that it was for their eval, where they wanted to show the model learned longer answers then in train for harder questions. We are not too worried about eval rn so I don't care.

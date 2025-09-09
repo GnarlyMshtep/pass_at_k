@@ -10,4 +10,4 @@ export OVERRIDE_CUDA_DEVICES="4,5,6,7" # Use the other 4 GPUs
 
 # Source the mult_att_dapo script from the same directory
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-source "${SCRIPT_DIR}/mulatt.sh"
+source "${SCRIPT_DIR}/multatt.sh"
