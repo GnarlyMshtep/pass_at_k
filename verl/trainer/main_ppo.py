@@ -59,6 +59,7 @@ def run_ppo(config) -> None:
         # NCCL debug level, VLLM logging level, and allow runtime LoRA updating
         # `num_cpus` specifies the number of CPU cores Ray can use, obtained from the configuration
         try:
+            raise ValueError("not trying to connect to the same cluster because scared it won't work")
             print("Attempting to connect to existing Ray cluster...")
             ray.init(address="auto")  # Connect to existing 8-GPU cluster
             print("Connected to existing Ray cluster")
@@ -377,8 +378,6 @@ def create_rl_sampler(data_config, dataset):
 
     # Use a sampler to facilitate checkpoint resumption.
     # If shuffling is enabled in the data configuration, create a random sampler.
-    elif data_config.shuffle:
-        assert False, "please shuffle at the dataset creation level -- we do not support that here to not breakup <approach>i</approach>"
         train_dataloader_generator = torch.Generator()
         train_dataloader_generator.manual_seed(data_config.get("seed", 1))
         sampler = RandomSampler(data_source=dataset, generator=train_dataloader_generator)

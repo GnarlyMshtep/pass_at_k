@@ -13,6 +13,7 @@ REWARD_CORRECT = 1
 EXPECTED_REWARD_SCORES = ["is_correct"]  # Add other expected reward score keys as needed
 
 
+
 def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | None:
     """
     Extract content from numbered tags like <tagname-1>...</tagname-1>, <tagname-2>...</tagname-2>, etc.
@@ -73,6 +74,9 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
     #check whether there is an additional tag and penalize for that 
 
     return None if sol_str.find(f"<attempt-{n_rollout + 1}>") else results
+
+def 
+
 
 def compute_score_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
     # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
