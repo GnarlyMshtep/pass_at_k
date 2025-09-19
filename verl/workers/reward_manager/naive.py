@@ -14,8 +14,10 @@
 
 from collections import defaultdict
 from typing import Any
-
 import torch
+import asyncio
+import inspect
+import time
 
 import custom.reward.reward_utils as reward_utils
 from verl import DataProto
@@ -45,86 +47,105 @@ class NaiveRewardManager(AbstractRewardManager):
         self.reward_fn_key = reward_fn_key  # Store the key for accessing the data source
 
     def __call__(self, data: DataProto, return_dict: bool = False) -> torch.Tensor | dict[str, Any]:
-        """We will expand this function gradually based on the available datasets"""
+        async def subfunction(data: DataProto, return_dict: bool = False): 
+            """We will expand this function gradually based on the available datasets"""
 
-        # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
-        if "rm_scores" in data.batch.keys():
-            if return_dict:
-                reward_extra_keys = data.meta_info.get("reward_extra_keys", [])
-                reward_extra_info = {key: data.non_tensor_batch[key] for key in reward_extra_keys}
-                return {"reward_tensor": data.batch["rm_scores"], "reward_extra_info": reward_extra_info}
-            else:
-                return data.batch["rm_scores"]
-
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
-        reward_extra_info = defaultdict(list)
-
-        already_print_data_sources = {}
-
-        for i in range(len(data)):
-            data_item = data[i]  # DataProtoItem
-
-            prompt_ids = data_item.batch["prompts"]
-
-            prompt_length = prompt_ids.shape[-1]
-
-            valid_prompt_length = data_item.batch["attention_mask"][:prompt_length].sum()
-            valid_prompt_ids = prompt_ids[-valid_prompt_length:]
-
-            response_ids = data_item.batch["responses"]
-            valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
-            valid_response_ids = response_ids[:valid_response_length]
-
-            # decode
-            prompt_str = self.tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
-            response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
-
-            ground_truth = data_item.non_tensor_batch["reward_model"]["ground_truth"]
-            data_source = data_item.non_tensor_batch[self.reward_fn_key]
-            extra_info = data_item.non_tensor_batch.get("extra_info", {})
-            num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
-            extra_info["num_turns"] = num_turns
-
-            score = self.compute_score(
-                data_source=data_source,
-                solution_str=response_str,
-                ground_truth=ground_truth,
-                extra_info=extra_info,
-            )
-
-            if isinstance(score, dict):
-                reward = score["score"]
-                # Store the information including original reward
-                for key, value in score.items():
-                    reward_extra_info[key].append(value)
-            else:
-                reward = score
-
-            reward_tensor[i, valid_response_length - 1] = reward
-
-            if data_source not in already_print_data_sources:
-                already_print_data_sources[data_source] = 0
-
-            if already_print_data_sources[data_source] < self.num_examine:
-                already_print_data_sources[data_source] += 1
-                print("[prompt]", prompt_str)
-                print("[response]", response_str)
-                print("[ground_truth]", ground_truth)
-                if isinstance(score, dict):
-                    for key, value in score.items():
-                        print(f"[{key}]", value)
+            # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
+            if "rm_scores" in data.batch.keys():
+                if return_dict:
+                    reward_extra_keys = data.meta_info.get("reward_extra_keys", [])
+                    reward_extra_info = {key: data.non_tensor_batch[key] for key in reward_extra_keys}
+                    return {"reward_tensor": data.batch["rm_scores"], "reward_extra_info": reward_extra_info}
                 else:
-                    print("[score]", score)
+                    return data.batch["rm_scores"]
 
-        if return_dict:
-            return {
-                "reward_tensor": reward_tensor,
-                "reward_extra_info": reward_extra_info,
-                "extra_reward_metrics": reward_utils.extra_reward_metrics(
-                    responses=self.tokenizer.batch_decode(data.batch["responses"], skip_special_tokens=True), 
-                    prompts=self.tokenizer.batch_decode(data.batch["prompts"], skip_special_tokens=True), 
-                    ground_truths = [item["ground_truth"] for item in  data.non_tensor_batch["reward_model"]]
-                    ) 
-            }
+            reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+            reward_extra_info = defaultdict(list)
+
+            already_print_data_sources = {}
+
+            async def compute_one(i:int): 
+                data_item = data[i]  # DataProtoItem
+
+                prompt_ids = data_item.batch["prompts"]
+
+                prompt_length = prompt_ids.shape[-1]
+
+                valid_prompt_length = data_item.batch["attention_mask"][:prompt_length].sum()
+                valid_prompt_ids = prompt_ids[-valid_prompt_length:]
+
+                response_ids = data_item.batch["responses"]
+                valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
+                valid_response_ids = response_ids[:valid_response_length]
+
+                # decode
+                prompt_str = self.tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
+                response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
+
+                ground_truth = data_item.non_tensor_batch["reward_model"]["ground_truth"]
+                data_source = data_item.non_tensor_batch[self.reward_fn_key]
+                extra_info = data_item.non_tensor_batch.get("extra_info", {})
+                num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
+                extra_info["num_turns"] = num_turns
+
+                result = self.compute_score(
+                    data_source=data_source,
+                    solution_str=response_str,
+                    ground_truth=ground_truth,
+                    extra_info=extra_info,
+                )
+                score = await result if inspect.isawaitable(result) else result
+                return (score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i) 
+            
+
+            rets = await asyncio.gather(*[compute_one(i) for i in range(len(data))])
+            for ret in rets:
+                score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i = ret 
+                if isinstance(score, dict):
+                    reward = score["score"]
+                    # Store the information including original reward
+                    for key, value in score.items():
+                        reward_extra_info["reward_extra_info/" + key].append(value)
+                else:
+                    reward = score
+
+                reward_tensor[i, valid_response_length - 1] = reward
+
+                if data_source not in already_print_data_sources:
+                    already_print_data_sources[data_source] = 0
+
+                if already_print_data_sources[data_source] < self.num_examine:
+                    already_print_data_sources[data_source] += 1
+                    print("[prompt]", prompt_str)
+                    print("[response]", response_str)
+                    print("[ground_truth]", ground_truth)
+                    if isinstance(score, dict):
+                        for key, value in score.items():
+                            print(f"[{key}]", value)
+                    else:
+                        print("[score]", score)
+
+                
+            if return_dict:
+                return {
+                    "reward_tensor": reward_tensor,
+                    "reward_extra_info": reward_extra_info,
+                    "extra_reward_metrics": reward_utils.extra_reward_metrics(
+                        responses=self.tokenizer.batch_decode(data.batch["responses"], skip_special_tokens=True), 
+                        prompts=self.tokenizer.batch_decode(data.batch["prompts"], skip_special_tokens=True), 
+                        ground_truths = [item["ground_truth"] for item in  data.non_tensor_batch["reward_model"]]
+                        ) 
+                }
+            else:
+                return reward_tensor
+        
+        try: 
+            asyncio.get_running_loop() 
+        except RuntimeError: 
+                pass # no loop -> safe
         else:
-            return reward_tensor
+            raise RuntimeError("RewardManager called inside a running event loop; use async path.") 
+        # start_time = time.time()
+        subfunc_ret = asyncio.run(subfunction(data, return_dict))
+        # end_time = time.time()
+        return subfunc_ret

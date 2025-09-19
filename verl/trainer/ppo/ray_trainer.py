@@ -1237,6 +1237,9 @@ class RayPPOTrainer:
                     # compute global_valid tokens
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
 
+                    # if self.global_steps == 1: 
+                    #     breakpoint()
+                    
                     with marked_timer("reward", timing_raw, color="yellow"):
                         # compute reward model score
                         if self.use_rm:
@@ -1244,11 +1247,21 @@ class RayPPOTrainer:
                             batch = batch.union(reward_tensor)
 
                         if self.config.reward_model.launch_reward_fn_async:
+                            assert False
                             future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn)
                         else:
                             reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
 
                     metrics.update(extra_reward_metrics)
+                    def process_v(l: list):
+                        try: 
+                            arr = np.array(l, dtype=float)
+                            mean = np.mean(arr)
+                            return mean
+                        except: 
+                            return -0.6969
+
+                    metrics.update({k: process_v(v) for k, v in reward_extra_infos_dict.items()})
                     # recompute old_log_probs
                     with marked_timer("old_log_prob", timing_raw, color="blue"):
                         old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
@@ -1339,7 +1352,7 @@ class RayPPOTrainer:
                     # Log rollout generations if enabled
                     rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
                     rollout_dump_freq = self.config.trainer.get("rollout_dump_freq", -1)
-                    if rollout_data_dir and rollout_dump_freq > 0 and self.global_steps - 1 % rollout_dump_freq == 0:
+                    if rollout_data_dir and rollout_dump_freq > 0 and (self.global_steps - 1) % rollout_dump_freq == 0:
                         with marked_timer("dump_rollout_generations", timing_raw, color="green"):
                             inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
                             outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)

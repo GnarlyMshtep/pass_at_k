@@ -1,4 +1,13 @@
+#!/bin/bash
 set -x
+
+export OVERRIDE_DATASET_NAME="dmath_e3_singatt"
+export OVERRIDE_REWARD_FUNCTION="math_singlatt_correct_minus_leg"
+# export OVERRIDE_CUDA_DEVICES="4,5,6,7" # Use the other 4 GPUs
+
+# Source the mult_att_dapo script from the same directory
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "${SCRIPT_DIR}/multatt.sh"
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=True #? can prob change to true, but for test keep
@@ -9,25 +18,25 @@ PROJECT_DIR=$(pwd)
 DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
 MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
 project_name='test-deeph1'
-model_name='Qwen2_5-1_5B'
+model_name='Qwen3-1_7B'
 
 # Allow override of dataset_name and reward function via environment variables
 dataset_name="${OVERRIDE_DATASET_NAME:-dmath_e3_multatt}"
 reward_function_name="${OVERRIDE_REWARD_FUNCTION:-compute_score_multi_attempt_per_rollout_math}" 
 # Allow override of CUDA devices (default to those used for multi-att)
-def_cuda_devices="0,1,2,3"
-CUDA_DEVICES="${OVERRIDE_CUDA_DEVICES:-${def_cuda_devices}}"
+# def_cuda_devices="0,1,2,3"
+# CUDA_DEVICES="${OVERRIDE_CUDA_DEVICES:-${def_cuda_devices}}"
 
-# Validate CUDA_DEVICES
-case "$CUDA_DEVICES" in
-    "0,1,2,3"|"4,5,6,7")
-        echo "Using CUDA_DEVICES: $CUDA_DEVICES"
-        ;;
-    *)
-        echo "Error: CUDA_DEVICES must be either '0,1,2,3' or '4,5,6,7', got: '$CUDA_DEVICES'" >&2
-        exit 1
-        ;;
-esac
+# # Validate CUDA_DEVICES
+# case "$CUDA_DEVICES" in
+#     "0,1,2,3"|"4,5,6,7")
+#         echo "Using CUDA_DEVICES: $CUDA_DEVICES"
+#         ;;
+#     *)
+#         echo "Error: CUDA_DEVICES must be either '0,1,2,3' or '4,5,6,7', got: '$CUDA_DEVICES'" >&2
+#         exit 1
+#         ;;
+# esac
 
 n_gpus=8
 
@@ -40,7 +49,7 @@ max_token_len_per_gpu=20000 # they also trained on h100-s, so I iwll take what t
 max_model_len=$((512 + max_response_length)) #VLLM uses this
 # max_batched_tokens=$((max_model_len * 2)) #! if our sys breaks bring this back
 
-exp_name="1.5b_e3_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+exp_name="1.7b_illeg_e3_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 
 
@@ -86,7 +95,7 @@ exp_name="1.5b_e3_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
     trainer.logger=['console','wandb'] \
     trainer.project_name=$project_name \
     trainer.experiment_name=$exp_name \
-    trainer.val_before_train=True \
+    trainer.val_before_train=False \
     trainer.n_gpus_per_node=$n_gpus \
     trainer.nnodes=1 \
     trainer.save_freq=50 \
