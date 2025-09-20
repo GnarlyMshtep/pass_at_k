@@ -69,6 +69,6 @@ python3 -m verl.trainer.main_ppo \
     trainer.test_freq=50 \
     trainer.total_epochs=4 \
     +trainer.rollout_dump_freq=2 \
-    trainer.rollout_data_dir="rollouts/sudoku/sudoku2/${exp_name}/train" \
-    trainer.validation_data_dir="rollouts/sudoku/sudoku2/${exp_name}/val" \
+    trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/sudoku/sudoku2/${exp_name}/train" \
+    trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/sudoku/sudoku2/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}"

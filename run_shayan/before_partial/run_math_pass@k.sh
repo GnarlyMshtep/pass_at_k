@@ -86,8 +86,8 @@ python3 -m verl.trainer.main_ppo \
     +trainer.rollout.dump_freq=1\
     +trainer.rollout.dump_loss_mask_sanity_check_print=False \
     actor_rollout_ref.rollout.multi_turn.tokenization_sanity_check_mode=disable \
-    trainer.rollout_data_dir="rollouts/$EXPERIMENT_NAME/train" \
-    trainer.validation_data_dir="rollouts/$EXPERIMENT_NAME/val" \
+    trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/$EXPERIMENT_NAME/train" \
+    trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/$EXPERIMENT_NAME/val" \
     trainer.resume_mode="disable" \
     trainer.default_local_dir="$(pwd)/checkpoints/$EXPERIMENT_NAME" \
     custom_reward_function.path="$PROJECT_DIR/custom/math_verifier.py" \

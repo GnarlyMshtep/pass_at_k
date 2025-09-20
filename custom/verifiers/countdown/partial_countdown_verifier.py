@@ -135,7 +135,7 @@ def partial_countdown_compute_score(
         return {
             "score": 0.0,
             "time": time.perf_counter() - _t0,
-            "origianl_actions": 0,
+            "original_actions": 0,
             "taken_actions": 0,
         }
 
@@ -151,7 +151,7 @@ def partial_countdown_compute_score(
         return {
             "score": 0.0,
             "time": time.perf_counter() - _t0,
-            "origianl_actions": 0,
+            "original_actions": 0,
             "taken_actions": 0,
         }
 
@@ -164,7 +164,7 @@ def partial_countdown_compute_score(
             return {
                 "score": 0.0,
                 "time": time.perf_counter() - _t0,
-                "origianl_actions": 0,
+                "original_actions": 0,
                 "taken_actions": 0,
             }
 
@@ -177,7 +177,7 @@ def partial_countdown_compute_score(
         return {
             "score": float(correctness_score) + 0.2,
             "time": time.perf_counter() - _t0,
-            "origianl_actions": int(original_actions),
+            "original_actions": int(original_actions),
             "taken_actions": 0,
         }
 
@@ -191,7 +191,7 @@ def partial_countdown_compute_score(
             return {
                 "score": 0.0,
                 "time": time.perf_counter() - _t0,
-                "origianl_actions": 0,
+                "original_actions": 0,
                 "taken_actions": 0,
             }
 
@@ -202,10 +202,15 @@ def partial_countdown_compute_score(
     can_merge, taken_actions = _can_merge_to_target_with_timeout(values, float(ground_truth), tol=1e-6, timeout_s=0.1)
 
     # 3) Reward is the total number of binary ops already performed inside the submitted parts.
-    reward = ((original_actions - taken_actions) / original_actions) if can_merge else 0.0
+    # reward = ((original_actions - taken_actions) / original_actions) if can_merge else 0.0
+    total_operations = len(actual_nums) - 1
+    remaining_operations = len(values) - 1
+    reward = ((total_operations - remaining_operations) / total_operations
+        if can_merge and (total_operations - remaining_operations) >= 2 else 0.0
+    )
     return {
         "score": max(float(reward), 0) + 0.2,
         "time": time.perf_counter() - _t0,
-        "origianl_actions": int(original_actions),
+        "original_actions": int(original_actions),
         "taken_actions": int(taken_actions),
     }

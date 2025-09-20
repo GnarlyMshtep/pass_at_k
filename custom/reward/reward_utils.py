@@ -4,15 +4,15 @@ from collections import defaultdict
 
 import numpy as np
 import torch
+import math
 from math_verify import parse, verify
 from numpy.typing import NDArray
-import torch
 
 REWARD_CORRECT = 1
 EXPECTED_REWARD_SCORES = ["is_correct"]  # Add other expected reward score keys as needed
 
 
-def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | None:
+def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str]:
     """
     Extract content from numbered tags like <tagname-1>...</tagname-1>, <tagname-2>...</tagname-2>, etc.
     Now returns partial results even if some tags are missing/empty/duplicated.
@@ -72,9 +72,18 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
     return results
 
 def compute_score_multi_attempt_per_rollout_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
-    # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
-    # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
-    N_ROLLOUTS=4 
+    # Determine N_ROLLOUTS from extra_info -> env -> default
+    if extra_info is not None and isinstance(extra_info, dict) and "num_attempts" in extra_info:
+        try:
+            N_ROLLOUTS = int(extra_info["num_attempts"])
+        except Exception:
+            N_ROLLOUTS = 4
+    else:
+        try:
+            N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", 4))
+        except Exception:
+            N_ROLLOUTS = 4
+    N_ROLLOUTS = max(1, N_ROLLOUTS)
 
     extracted_attempts = extract_attempts(solution_str, "attempt", N_ROLLOUTS)
     
@@ -97,9 +106,18 @@ def compute_score_multi_attempt_per_rollout_math(data_source, solution_str, grou
     return 0.1
 
 def compute_score_multi_attempt_per_rollout_taller(data_source, solution_str, ground_truth, extra_info=None)-> float:
-    # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
-    # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
-    N_ROLLOUTS=3   
+    # Determine N_ROLLOUTS from extra_info -> env -> default
+    if extra_info is not None and isinstance(extra_info, dict) and "num_attempts" in extra_info:
+        try:
+            N_ROLLOUTS = int(extra_info["num_attempts"])
+        except Exception:
+            N_ROLLOUTS = 3
+    else:
+        try:
+            N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", 3))
+        except Exception:
+            N_ROLLOUTS = 3
+    N_ROLLOUTS = max(1, N_ROLLOUTS)
 
     extracted_attempts = extract_attempts(solution_str, "attempt", N_ROLLOUTS)
     
@@ -135,11 +153,6 @@ def extra_reward_metrics(responses: list[str], prompts: list[str], ground_truths
     #TODO: calculate diversity score avg(set(proposed_answers) / |proposed_answer|) for proposed_answers for a question in questions
 
     return {}
-
-
-    
-    
-    return {"test": 0}
 
 def compute_statistics(float_list : list[float], dir:str): 
     return {}
@@ -290,7 +303,7 @@ def more_reward_util_func(batch):
         uid_list = batch.non_tensor_batch["uid"]
 
         label_key = None
-        for key in ["acc", "is_correct", "exact_match"]: #M: what is my score 
+        for key in ["acc", "is_correct", "exact_match", "score"]: #M: what is my score 
             if key in batch.non_tensor_batch:
                 label_key = key
                 break
@@ -313,17 +326,22 @@ def more_reward_util_func(batch):
         
         def compute_reward_metrics(rewards: NDArray[float])->Dict[str, float]: 
             def expected_pass_at_k(rewards, k)-> float: 
-                c = sum(rewards)
-                n = len(rewards)
-                return 1 -  (math.comb(n - c, k) / math.comb(n, k))
+                c = int(sum(rewards))
+                n = int(len(rewards))
+                if n <= 0 or k <= 0 or k > n:
+                    return 0.0
+                # Clamp c to [0, n] for safety
+                c = max(0, min(c, n))
+                return 1 - (math.comb(n - c, k) / math.comb(n, k))
             
-            rewards = rewards >=1 # we binarized our reward, we only care about whether you are greater or less than 1 to avoid format confounding and complicating pass@k metric
+            rewards = (rewards >=1).astype(int) # we binarized our reward, we only care about whether you are greater or less than 1 to avoid format confounding and complicating pass@k metric
             return {
                 f"max@{len(rewards)}" : max(rewards),
                 f"mean@{len(rewards)}" : np.mean(rewards),
                 f"min@{len(rewards)}" : min(rewards),
                 f"p25@{len(rewards)}" : np.percentile(rewards, 25),
                 f"p75@{len(rewards)}" : np.percentile(rewards, 75),
+                f"pass@1" : expected_pass_at_k(rewards, 1),    
                 f"pass@2" : expected_pass_at_k(rewards, 2),    
                 f"pass@4" : expected_pass_at_k(rewards, 4),    
                 f"pass@8" : expected_pass_at_k(rewards, 8),    
@@ -331,4 +349,6 @@ def more_reward_util_func(batch):
 
         metrics_per_qs:List[dict]= [compute_reward_metrics(labels_np[indices]) for indices in uid_to_indices.values()]
         metrics_update = {k : sum([metrics_per_q[k] for metrics_per_q in metrics_per_qs]) / len(metrics_per_qs) for k in metrics_per_qs[0].keys()} #average across all qs
-        return metrics_update
+        # Prefix with train/ so they appear grouped under training metrics in loggers
+        prefixed_metrics_update = {f"train/{k}": v for k, v in metrics_update.items()}
+        return prefixed_metrics_update

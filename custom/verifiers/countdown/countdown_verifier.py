@@ -2,11 +2,41 @@ import ast
 import operator
 import typing as _t
 from collections import Counter
+import re
+import time
 
-def _extract_answer(s: str) -> str:
-    if ("<answer>" in s and "</answer>" in s):
-        return s.split("<answer>")[-1].split("</answer>")[0].strip()
-    return None
+def _extract_answer_blocks(s: str) -> list[str]:
+    """Extract all <answer>...</answer> blocks, returning their inner contents.
+
+    Only properly paired tags are considered. Stray closing/opening tags are ignored.
+    """
+    blocks: list[str] = []
+    for m in re.finditer(r"<answer>[\s\S]*?</answer>", s):
+        content = m.group(0)[len("<answer>") : -len("</answer>")]
+        blocks.append(content)
+    return [b.strip() for b in blocks]
+
+
+def _extract_attempt_blocks(s: str) -> list[tuple[str, str]]:
+    """Extracts attempt blocks as (tag, content) pairs.
+
+    Supports numbered <attempt-i>...</attempt-i> and generic <attempt>...</attempt>.
+    """
+    attempts: list[tuple[str, str]] = []
+
+    # Numbered attempts: <attempt-1>...</attempt-1>
+    for m in re.finditer(r"<attempt-(\d+)>[\s\S]*?</attempt-\1>", s):
+        tag = f"attempt-{m.group(1)}"
+        content = re.sub(r"^<attempt-\d+>|</attempt-\d+>$", "", m.group(0))
+        attempts.append((tag, content))
+
+    # Generic attempts: <attempt>...</attempt>
+    for m in re.finditer(r"<attempt>[\s\S]*?</attempt>", s):
+        tag = "attempt"
+        content = m.group(0)[len("<attempt>") : -len("</attempt>")]
+        attempts.append((tag, content))
+
+    return attempts
 
 
 def _extract_nums_from_expr(expr: str) -> list[float]:
@@ -65,28 +95,129 @@ def countdown_compute_score(
     ground_truth: _t.Any,
     extra_info: _t.Optional[dict] = None,
 ) -> float | dict:
-    """Reward for Countdown: parse <answer>, eval expression, compare to target.
-
-    Accept if evaluated value equals target within a small tolerance.
     """
-    format_score = 0 #0.1
-    score = 1.0
-    expr = _extract_answer(solution_str)
-    print(expr)
-    if expr is None:
-        return 0.0
-    
-    actual_nums = extra_info['nums']
-    expr_nums = _extract_nums_from_expr(expr)
-    # Check if the two multisets (with repetitions) are equal
-    
-    if Counter(expr_nums) != Counter(actual_nums):
-        return 0.0
-    try:
-        value = _safe_eval_arithmetic(expr)
-    except Exception:
-        return 0.0
+    Reward for Countdown (single or multi-attempt):
+      - Parses multiple <attempt-i>/<attempt> expressions if present; otherwise falls back to single <answer>.
+      - Each attempt must be a single arithmetic expression using each number exactly once.
+      - Score is based on exact match to the target; best attempt is used (1.0 for correct, else 0.0).
+      - Adds a formatting bonus (+0.2) when at least one valid attempt/expression is parsed and evaluated.
+      - Respects extra_info.max_allowed_attempts if provided.
+      - Returns a dict similar to taller_puzzles_verifier.
+    """
+    t0 = time.perf_counter()
 
-    return score if abs(value - ground_truth) < 1e-6 else format_score
+    # Accept both int and float for targets
+    try:
+        target_val = float(ground_truth)
+    except Exception:
+        target_val = None
+
+    nums = []
+    try:
+        if extra_info and isinstance(extra_info, dict):
+            nums = [float(x) for x in extra_info.get("nums", [])]
+    except Exception:
+        nums = []
+
+    # Determine expected attempts (prefer max_allowed_attempts, fallback to num_attempts, default 1)
+    expected_attempts = extra_info["max_allowed_attempts"]
+
+    # Gather attempts or fallback to <answer>
+    attempt_blocks = _extract_attempt_blocks(solution_str)
+    blocks: list[tuple[str, str]] = []
+    if attempt_blocks:
+        # Require at least expected_attempts attempts to be present
+        if len(attempt_blocks) < expected_attempts:
+            t1 = time.perf_counter()
+            return {
+                "score": 0.0,
+                "is_correct": 0,
+                "format_score": 0.0,
+                "time": t1 - t0,
+                "exact_match": 0,
+                "attempts": int(len(attempt_blocks)),
+                "best_attempt_index": None,
+                "pred": "",
+                "ground_truth": str(ground_truth),
+                "reason": "insufficient_attempts",
+            }
+        # Trim to exactly expected_attempts
+        blocks = attempt_blocks[:expected_attempts]
+    else:
+        answer_blocks = _extract_answer_blocks(solution_str)
+        if answer_blocks:
+            # Require the number of <answer> blocks to match expected attempts exactly
+            if len(answer_blocks) != expected_attempts:
+                t1 = time.perf_counter()
+                return {
+                    "score": 0.0,
+                    "is_correct": 0,
+                    "format_score": 0.0,
+                    "time": t1 - t0,
+                    "exact_match": 0,
+                    "attempts": 0,
+                    "best_attempt_index": None,
+                    "pred": "",
+                    "ground_truth": str(ground_truth),
+                    "reason": "wrong_format",
+                }
+            blocks = [("answer", b) for b in answer_blocks]
+
+    if not blocks:
+        t1 = time.perf_counter()
+        return {
+            "score": 0.0,
+            "is_correct": 0,
+            "format_score": 0.0,
+            "time": t1 - t0,
+            "exact_match": 0,
+            "attempts": 0,
+            "best_attempt_index": None,
+            "pred": "",
+            "ground_truth": str(ground_truth),
+            "reason": None,
+        }
+
+    best_exact = 0
+    best_idx = -1
+    best_expr = ""
+    evaluated = 0
+
+    for idx, (_tag, content) in enumerate(blocks):
+        expr = (content or "").strip()
+        if not expr:
+            continue
+        # Basic quick rejection: if contains a comma, likely not a single expression; skip
+        if "," in expr:
+            continue
+        # Validate numbers multiset and evaluate
+        expr_nums = _extract_nums_from_expr(expr)
+        if Counter(expr_nums) != Counter(nums):
+            continue
+        try:
+            value = _safe_eval_arithmetic(expr)
+        except Exception:
+            continue
+        evaluated += 1
+        exact = 1 if abs(value - target_val) < 1e-6 else 0
+        if exact > best_exact:
+            best_exact = exact
+            best_idx = idx
+            best_expr = expr
+
+    t1 = time.perf_counter()
+    format_bonus = 0.2 if (evaluated > 0 and len(blocks) == expected_attempts) else 0.0
+    return {
+        "score": float(best_exact) + format_bonus,
+        "is_correct": int(best_exact),
+        "format_score": format_bonus,
+        "time": t1 - t0,
+        "exact_match": int(best_exact),
+        "attempts": int(evaluated),
+        "best_attempt_index": int(best_idx) if best_idx is not None else None,
+        "pred": best_expr,
+        "ground_truth": str(ground_truth),
+        "reason": None,
+    }
 
 

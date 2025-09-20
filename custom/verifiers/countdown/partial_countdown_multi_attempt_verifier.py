@@ -4,10 +4,10 @@ from collections import Counter
 import time
 
 # Reuse the safe parsing and scoring helpers from the single-attempt verifier
-from custom.partial_countdown_verifier import (
+from custom.verifiers.countdown.partial_countdown_verifier import (
     _safe_eval_arithmetic,
     _extract_nums_from_expr,
-    _can_merge_to_target,
+    _can_merge_to_target_with_timeout,
     partial_countdown_compute_score as _single_attempt_score,
 )
 
@@ -73,11 +73,16 @@ def _score_submission(
         except Exception:
             return 0.0, 0
 
-    can_merge, taken_actions = _can_merge_to_target(values, float(target), tol=tol)
+    can_merge, taken_actions = _can_merge_to_target_with_timeout(values, float(target), tol=tol, timeout_s=0.1)
     if not can_merge:
         return 0.2, int(taken_actions)
 
-    reward = (original_actions - taken_actions) / original_actions
+    # reward = (original_actions - taken_actions) / original_actions
+    total_operations = len(numbers) - 1
+    remaining_operations = len(values) - 1
+    reward = ((total_operations - remaining_operations) / total_operations
+        if can_merge and (total_operations - remaining_operations) >= 2 else 0.0
+    )
     return float(reward) + 0.2, int(taken_actions)
 
 
@@ -112,15 +117,15 @@ def partial_countdown_multi_attempt_compute_score(
         return {
             "score": float(res),
             "time": time.perf_counter() - _t0,
-            "origianl_actions": 0,
+            "original_actions": 0,
             "taken_actions": 0,
         }
 
     target = float(ground_truth)
 
     # Compute the baseline minimal number of actions for the original task once
-    task_solvable, original_actions = _can_merge_to_target(numbers, target, tol=1e-6)
-    assert task_solvable, f"Task is not solvable with the given numbers: {numbers} -> {ground_truth}"
+    original_actions = int(extra_info["original_actions"])
+    assert original_actions >= 0, f"Invalid original actions: {original_actions}"
 
     best_score: float = 0.0
     best_taken_actions: int = 0
@@ -138,7 +143,7 @@ def partial_countdown_multi_attempt_compute_score(
     return {
         "score": float(best_score) if best_score is not None else 0.0,
         "time": time.perf_counter() - _t0,
-        "origianl_actions": int(original_actions),
+        "original_actions": int(original_actions),
         "taken_actions": int(best_taken_actions),
     }
 

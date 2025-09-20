@@ -221,6 +221,11 @@ class vLLMRollout(BaseRollout):
         self.sampling_params = SamplingParams(**kwargs)
 
         self.pad_token_id = tokenizer.pad_token_id
+        # Precompute token id sequence for the closing answer tag to enable cheap post-filtering
+        try:
+            self._post_answer_stop_seq: list[int] = tokenizer.encode("</answer>", add_special_tokens=False)
+        except Exception:
+            self._post_answer_stop_seq = []
 
     @contextmanager
     def update_sampling_params(self, **kwargs):
@@ -380,6 +385,30 @@ class vLLMRollout(BaseRollout):
             response_id=response, eos_token=eos_token_id, dtype=attention_mask.dtype
         )
         attention_mask = torch.cat((attention_mask, response_attention_mask), dim=-1)
+        # breakpoint()
+        # Post-process: zero out response attention mask after first occurrence of "</answer>" token sequence
+        # This avoids training signal on trailing garbage without detokenization.
+
+        stop_seq = self._post_answer_stop_seq
+        if isinstance(stop_seq, list) and len(stop_seq) > 0:
+            resp_len = response.size(1)
+            # Slice the response portion of the attention mask
+            resp_mask = attention_mask[:, -resp_len:]
+            # For each sample, find first match of stop_seq in response token ids
+            stop_len = len(stop_seq)
+            for i in range(batch_size):
+                row = response[i].tolist()
+                # naive sliding window search
+                end_pos = -1
+                for j in range(0, resp_len - stop_len + 1):
+                    if row[j : j + stop_len] == stop_seq:
+                        end_pos = j + stop_len - 1  # inclusive index of last token in the stop sequence
+                        break
+                if end_pos >= 0 and end_pos + 1 < resp_len:
+                    resp_mask[i, end_pos + 1 :] = 0
+            # Write back the filtered response mask
+            attention_mask[:, -resp_len:] = resp_mask
+
 
         # all the tp ranks should contain the same data here. data in all ranks are valid
         batch = TensorDict(

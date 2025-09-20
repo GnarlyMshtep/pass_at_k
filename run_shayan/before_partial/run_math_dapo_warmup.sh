@@ -143,8 +143,8 @@ python3 -m recipe.dapo.main_dapo \
     trainer.save_freq=2 \
     trainer.total_epochs=1 \
     +trainer.rollout.dump_freq=1\
-    trainer.rollout_data_dir="rollouts/${exp_name}/train" \
-    trainer.validation_data_dir="rollouts/${exp_name}/val" \
+    trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/${exp_name}/train" \
+    trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/${exp_name}/val" \
     trainer.default_local_dir="${CKPTS_DIR}" \
     trainer.resume_mode="${RESUME_MODE}" \
     trainer.resume_from_path="${RESUME_FROM_PATH}" 2>&1 | tee logs/out_math_dapo_warmup.txt

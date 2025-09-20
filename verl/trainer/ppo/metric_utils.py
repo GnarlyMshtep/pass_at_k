@@ -216,6 +216,80 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
     reward_updates:dict = reward_utils.more_reward_util_func(batch)
     metrics.update(reward_updates)
 
+    # Train-time pass@k metrics (per-batch), if correctness is available
+    try:
+        non_tensor = batch.non_tensor_batch
+        if "is_correct" in non_tensor and "uid" in non_tensor:
+            # Prepare groupings by prompt uid
+            is_correct_np = np.asarray(non_tensor["is_correct"], dtype=float)
+            successes = (is_correct_np == 1.0).astype(int)
+            uids = np.asarray(non_tensor["uid"])  # dtype object ok
+
+            # Build groups: uid -> indices
+            uid2idxs: dict[Any, list[int]] = defaultdict(list)
+            for i in range(len(successes)):
+                uid2idxs[uids[i]].append(i)
+
+            # Aggregate iid pass@k across prompt groups
+            k2vals: dict[int, list[float]] = defaultdict(list)
+            for _, idxs in uid2idxs.items():
+                grp_success = successes[idxs]
+                n_total = int(len(grp_success))
+                if n_total <= 0:
+                    continue
+                c = int(grp_success.sum())
+                # powers of two up to n_total, plus n_total; ensure k=1 present
+                ks: list[int] = []
+                k_val = 1
+                while k_val < n_total:
+                    ks.append(k_val)
+                    k_val *= 2
+                ks.append(n_total)
+                for k in ks:
+                    numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
+                    denom = math.comb(n_total, k)
+                    k2vals[k].append(1.0 - (numer / denom))
+
+            for k, vals in k2vals.items():
+                if len(vals) > 0:
+                    metrics[f"train/pass/iid@{k}"] = float(np.mean(vals))
+
+            # Non-iid pass@K per prompt if attempt_id is present
+            if "attempt_id" in non_tensor:
+                attempt_ids = np.asarray(non_tensor["attempt_id"])  # expected aligned with samples
+                K2vals: dict[int, list[float]] = defaultdict(list)
+                for _, idxs in uid2idxs.items():
+                    att_grp = attempt_ids[idxs]
+                    suc_grp = successes[idxs]
+                    try:
+                        att_grp = att_grp.astype(int)
+                    except Exception:
+                        continue
+                    unique_ids = np.unique(att_grp)
+                    if unique_ids.size == 0:
+                        continue
+                    p_rs = []
+                    for r in unique_ids:
+                        mask = att_grp == r
+                        denom = int(mask.sum())
+                        if denom == 0:
+                            continue
+                        num = int(suc_grp[mask].sum())
+                        p_r = num / denom
+                        p_rs.append(p_r)
+                    if len(p_rs) == 0:
+                        continue
+                    K = int(len(p_rs))
+                    non_iid = 1.0 - float(np.prod([1.0 - p for p in p_rs]))
+                    K2vals[K].append(non_iid)
+
+                for K, vals in K2vals.items():
+                    if len(vals) > 0:
+                        metrics[f"train/pass/non-iid@{K}"] = float(np.mean(vals))
+    except Exception:
+        # Best-effort: skip train-time pass@k if any inconsistency
+        pass
+
     # multi-turn conversation
     if "__num_turns__" in batch.non_tensor_batch:
         num_turns = batch.non_tensor_batch["__num_turns__"]
@@ -436,55 +510,58 @@ def process_validation_metrics(
     for sample_idx, data_source in enumerate(data_sources):
         prompt = sample_inputs[sample_idx]
         var2vals = data_src2prompt2var2vals[data_source][prompt]
+        combined_var2vals = data_src2prompt2var2vals["combined"][prompt]
         for var_name, var_vals in infos_dict.items():
-            var2vals[var_name].append(var_vals[sample_idx])
-
+            val = var_vals[sample_idx]
+            var2vals[var_name].append(val)
+            combined_var2vals[var_name].append(val)
     # Calculate metrics for each group
     data_src2prompt2var2metric = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
     for data_source, prompt2var2vals in data_src2prompt2var2vals.items():
         for prompt, var2vals in prompt2var2vals.items():
             for var_name, var_vals in var2vals.items():
-                if isinstance(var_vals[0], str) or any(v is None for v in var_vals):
+                if isinstance(var_vals[0], str) or any(v is None for v in var_vals) or not all(isinstance(v, (int, float)) for v in var_vals):
                     continue
 
                 metric = {}
                 n_resps = len(var_vals)
                 metric[f"mean@{n_resps}"] = np.mean(var_vals)
 
-                if n_resps > 1:
-                    metric[f"std@{n_resps}"] = np.std(var_vals)
+                # if n_resps > 1:
+                #     metric[f"std@{n_resps}"] = np.std(var_vals)
 
-                    ns = []
-                    n = 2
-                    while n < n_resps:
-                        ns.append(n)
-                        n *= 2
-                    ns.append(n_resps)
+                #     ns = []
+                #     n = 2
+                #     while n < n_resps:
+                #         ns.append(n)
+                #         n *= 2
+                #     ns.append(n_resps)
 
-                    for n in ns:
-                        [(bon_mean, bon_std), (won_mean, won_std)] = bootstrap_metric(
-                            data=var_vals, subset_size=n, reduce_fns=[np.max, np.min], seed=seed
-                        )
-                        metric[f"best@{n}/mean"], metric[f"best@{n}/std"] = bon_mean, bon_std
-                        metric[f"worst@{n}/mean"], metric[f"worst@{n}/std"] = won_mean, won_std
-                        if var2vals.get("pred", None) is not None:
-                            vote_data = [
-                                {"val": val, "pred": pred} for val, pred in zip(var_vals, var2vals["pred"], strict=True)
-                            ]
-                            [(maj_n_mean, maj_n_std)] = bootstrap_metric(
-                                data=vote_data,
-                                subset_size=n,
-                                reduce_fns=[partial(calc_maj_val, vote_key="pred", val_key="val")],
-                                seed=seed,
-                            )
-                            metric[f"maj@{n}/mean"], metric[f"maj@{n}/std"] = maj_n_mean, maj_n_std
+                #     for n in ns:
+                #         [(bon_mean, bon_std), (won_mean, won_std)] = bootstrap_metric(
+                #             data=var_vals, subset_size=n, reduce_fns=[np.max, np.min], seed=seed
+                #         )
+                #         metric[f"best@{n}/mean"], metric[f"best@{n}/std"] = bon_mean, bon_std
+                #         metric[f"worst@{n}/mean"], metric[f"worst@{n}/std"] = won_mean, won_std
+                #         if var2vals.get("pred", None) is not None:
+                #             vote_data = [
+                #                 {"val": val, "pred": pred} for val, pred in zip(var_vals, var2vals["pred"], strict=True)
+                #             ]
+                #             [(maj_n_mean, maj_n_std)] = bootstrap_metric(
+                #                 data=vote_data,
+                #                 subset_size=n,
+                #                 reduce_fns=[partial(calc_maj_val, vote_key="pred", val_key="val")],
+                #                 seed=seed,
+                #             )
+                #             metric[f"maj@{n}/mean"], metric[f"maj@{n}/std"] = maj_n_mean, maj_n_std
 
-                # Deterministic pass@k (for binary correctness variables)
-                # Apply to common correctness variable names
-                if var_name in {"acc", "is_correct", "exact_match"}:
-                    # Determine binary successes from var_vals
-                    vals_np = np.asarray(var_vals, dtype=float)
-                    successes = (vals_np > 0.5).astype(int)
+                # Deterministic pass@k variants using binary correctness from "is_correct"
+                # 1) iid-pass@k with the standard formula
+                # 2) non-iid-pass@K across attempt IDs: 1 - Π_r (1 - p_r), if attempt_id is available
+                if var_name == "is_correct":
+                    # Use explicit is_correct values for robustness
+                    vals_np = np.asarray(var2vals["is_correct"], dtype=float)
+                    successes = (vals_np == 1.0).astype(int)
                     c = int(successes.sum())
                     n_total = int(len(successes))
                     # Powers of two up to n_total, plus n_total; also include k=1
@@ -497,7 +574,34 @@ def process_validation_metrics(
                     for k in ks:
                         numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
                         denom = math.comb(n_total, k)
-                        metric[f"pass@{k}"] = 1.0 - (numer / denom)
+                        metric[f"iid-pass@{k}"] = 1.0 - (numer / denom)
+
+                    # Non-iid pass@K across attempt IDs (only if multi-attempt is enabled)
+                    attempt_ids = var2vals.get("attempt_id", None)
+                    if attempt_ids is not None:
+                        att = np.asarray(attempt_ids)
+                        # Ensure integral attempt ids; ignore entries where attempt id is missing
+                        try:
+                            att = att.astype(int)
+                        except Exception:
+                            # If attempt ids are not numeric, skip non-iid metric
+                            att = None
+                        if att is not None and att.size == successes.size:
+                            unique_ids = np.unique(att)
+                            K = int(len(unique_ids))
+                            if K > 0:
+                                p_rs = []
+                                for r in unique_ids:
+                                    mask = att == r
+                                    denom = int(mask.sum())
+                                    if denom == 0:
+                                        continue
+                                    num = int(successes[mask].sum())
+                                    p_r = num / denom
+                                    p_rs.append(p_r)
+                                if len(p_rs) > 0:
+                                    non_iid = 1.0 - float(np.prod([1.0 - p for p in p_rs]))
+                                    metric[f"non-iid-pass@{K}"] = non_iid
 
                 data_src2prompt2var2metric[data_source][prompt][var_name] = metric
 

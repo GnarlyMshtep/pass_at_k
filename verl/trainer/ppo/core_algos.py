@@ -106,6 +106,7 @@ class AdvantageEstimator(str, Enum):
     GRPO_PASSK = "grpo_passk"
     GPG = "gpg"
     BYTEDANCE_PASS_AT_K = "bytedance_pass_at_k"
+    MULTI_ATTEMPT_GRPO = "multi_attempt_grpo"
 
 
 ADV_ESTIMATOR_REGISTRY: dict[str, Any] = {}

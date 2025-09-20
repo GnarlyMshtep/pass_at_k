@@ -20,6 +20,7 @@ This trainer supports model-agonistic model initialization with huggingface
 
 
 import json
+import numpy as np
 import os
 import uuid
 import warnings
@@ -546,10 +547,6 @@ class RayPPOTrainer:
         
         train_batch_size = self.config.data.get("gen_batch_size", self.config.data.train_batch_size)
         val_batch_size = self.config.data.val_batch_size  # Prefer config value if set
-        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
-        if dataset_w_builtin_attempts:
-            train_batch_size *=  self.config.actor_rollout_ref.rollout.n
-            val_batch_size *= self.config.actor_rollout_ref.rollout.n
 
 
         self.train_dataloader = StatefulDataLoader(
@@ -599,8 +596,12 @@ class RayPPOTrainer:
         except Exception as e:
             print(f"Warning: Could not set total_training_steps in config. Structure missing? Error: {e}")
 
-    def _dump_generations(self, inputs, outputs, gts, scores, reward_extra_infos_dict, dump_path):
-        """Dump rollout/validation samples as JSONL."""
+    def _dump_generations(self, inputs, outputs, gts, scores, reward_extra_infos_dict, dump_path, non_tensor_fields: Optional[dict] = None):
+        """Dump rollout/validation samples as JSONL.
+
+        Adds any provided non-tensor per-sample metadata fields (from `batch.non_tensor_batch`)
+        to each dumped record when their lengths match the number of samples.
+        """
         os.makedirs(dump_path, exist_ok=True)
         filename = os.path.join(dump_path, f"{self.global_steps}.jsonl")
 
@@ -617,9 +618,78 @@ class RayPPOTrainer:
             if len(v) == n:
                 base_data[k] = v
 
+        # Merge non-tensor fields (e.g., uid, request_id, etc.) if provided and per-sample sized
+        if non_tensor_fields:
+            for k, v in non_tensor_fields.items():
+                if k in base_data:
+                    continue
+                try:
+                    length = len(v)
+                except Exception:
+                    continue
+                if length != n:
+                    continue
+                # Normalize common container types to python lists for JSON serialization
+                try:
+                    import numpy as _np  # local import to avoid top-level dependency in this scope
+                    import torch as _torch
+                    if isinstance(v, _np.ndarray):
+                        base_data[k] = v.tolist()
+                    elif isinstance(v, _torch.Tensor):
+                        base_data[k] = v.detach().cpu().tolist()
+                    elif isinstance(v, (list, tuple)):
+                        base_data[k] = list(v)
+                    else:
+                        # Attempt generic conversion
+                        base_data[k] = list(v)
+                except Exception:
+                    # Best-effort: skip fields that cannot be reliably serialized per-sample
+                    continue
+
         lines = []
+        # Helper to convert nested numpy scalars/tensors to python types
+        def _to_py(obj):
+            try:
+                import numpy as _np
+                import torch as _torch
+                if isinstance(obj, _np.ndarray):
+                    return obj.tolist()
+                if isinstance(obj, _np.generic):
+                    return obj.item()
+                if isinstance(obj, _torch.Tensor):
+                    return obj.detach().cpu().tolist()
+                if isinstance(obj, dict):
+                    return {kk: _to_py(vv) for kk, vv in obj.items()}
+                if isinstance(obj, (list, tuple)):
+                    return [_to_py(x) for x in obj]
+                return obj
+            except Exception:
+                return obj
+        
+        # Check if uid and attempt_id exist for sorting
+        has_uid = "uid" in base_data
+        has_attempt_id = "attempt_id" in base_data
+        
+        # Create list of entries with sorting keys
+        entries_with_keys = []
         for i in range(n):
-            entry = {k: v[i] for k, v in base_data.items()}
+            entry = {k: _to_py(v[i]) for k, v in base_data.items()}
+            
+            # Create sorting key: uid first, then attempt_id
+            sort_key = []
+            if has_uid:
+                sort_key.append(entry.get("uid", ""))
+            if has_attempt_id:
+                sort_key.append(entry.get("attempt_id", 0))
+            
+            entries_with_keys.append((sort_key, entry))
+        
+        # Sort entries by uid, then by attempt_id
+        if has_uid:
+            entries_with_keys.sort(key=lambda x: x[0])
+        
+        # Extract sorted entries
+        for sort_key, entry in entries_with_keys:
             lines.append(json.dumps(entry, ensure_ascii=False))
 
         with open(filename, "w") as f:
@@ -669,6 +739,164 @@ class RayPPOTrainer:
 
         return gen_batch
 
+    def _is_multi_attempt_enabled(self) -> bool:
+        """Check if multi-attempt processing is enabled."""
+        try:
+            return bool(OmegaConf.select(self.config, "multi_attempt.enabled", default=False))
+        except Exception:
+            return False
+
+    def _apply_multi_attempt_prompt_processing(self, batch: DataProto, max_attempts: int = None, num_samples_per_attempt: int = None) -> DataProto:
+        """
+        Apply multi-attempt prompt processing by decoding, adding attempt tokens, and re-encoding.
+        
+        Args:
+            batch: Input batch with tokenized data
+            max_attempts: Number of attempts per prompt
+            num_samples_per_attempt: Number of samples per attempt
+            
+        Returns:
+            New batch with attempt-specific tokens added to tokenized sequences
+        """
+        # Check if multi-attempt is enabled
+        if not hasattr(self.config, 'multi_attempt') or not self.config.multi_attempt.get('enabled', False):
+            return batch
+        
+        # Get multi-attempt configuration
+        attempt_template = self.config.multi_attempt.get('attempt_template', "\n<attempt-{attempt_id}>")
+        # Interpret common CLI escape sequences and support {max_attempts}
+        if isinstance(attempt_template, str):
+            attempt_template = attempt_template.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
+        
+        # Get original sequence length for consistent padding
+        original_seq_length = batch.batch["input_ids"].shape[1]
+        
+        # Prefer reconstructing prompts from raw chat messages provided by the dataset
+        raw_chats = batch.non_tensor_batch.get("raw_prompt", None)
+        use_raw_chat = raw_chats is not None
+
+        # Create new tokenized sequences with attempt-specific tokens
+        new_input_ids = []
+        new_attention_masks = []
+        attempt_ids = []
+        sample_ids = []
+        original_uids = []
+        
+        num_items = len(batch.batch["input_ids"])
+        for i in range(num_items):
+            for attempt_id in range(max_attempts):
+                attempt_text = attempt_template.format(
+                    attempt_id=attempt_id + 1,
+                    max_attempts=max_attempts,
+                )
+                for sample_id in range(num_samples_per_attempt):
+                    if use_raw_chat:
+                        # Build messages from scratch using the dataset's raw chat
+                        messages = raw_chats[i]
+                        assert isinstance(messages, (list, tuple)) and len(messages) > 0, "raw_prompt must be a list of chat messages"
+                        # Find last user message and append attempt_text to its content
+                        last_user_idx = None
+                        for idx in range(len(messages) - 1, -1, -1):
+                            msg = messages[idx]
+                            if isinstance(msg, dict) and msg.get("role") == "user":
+                                last_user_idx = idx
+                                break
+                        assert last_user_idx is not None, "No user message found in raw_prompt"
+                        new_messages = list(messages)
+                        user_msg = dict(new_messages[last_user_idx])
+                        user_content = user_msg.get("content", "")
+                        assert isinstance(user_content, str), "User message content must be a string"
+                        user_msg["content"] = user_content + attempt_text
+                        new_messages[last_user_idx] = user_msg
+                        # Apply chat template to get the final prompt text
+                        new_prompt = self.tokenizer.apply_chat_template(
+                            new_messages, add_generation_prompt=True, tokenize=False
+                        )
+                    else:
+                        # This branch should not occur; raw_prompt is required
+                        raise AssertionError("raw_prompt is required but missing")
+                    
+                    # Re-tokenize the new prompt using the same process as original dataset
+                    # Step 1: Tokenize without special tokens (like original)
+                    model_inputs = self.tokenizer(new_prompt, return_tensors="pt", add_special_tokens=False)
+                    new_input_ids_raw = model_inputs["input_ids"]
+                    new_attention_mask_raw = model_inputs["attention_mask"]
+                    
+                    # Step 2: Apply the same postprocessing as original dataset
+                    from verl.utils.torch_functional import postprocess_data
+                    new_input_ids_processed, new_attention_mask_processed = postprocess_data(
+                        input_ids=new_input_ids_raw,
+                        attention_mask=new_attention_mask_raw,
+                        max_length=original_seq_length,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        left_pad=True,  # Match original left_pad=True
+                        truncation="error"  # Match original truncation setting
+                    )
+                    
+                    new_input_ids.append(new_input_ids_processed.squeeze(0))
+                    new_attention_masks.append(new_attention_mask_processed.squeeze(0))
+                    
+                    # Store metadata
+                    attempt_ids.append(attempt_id)
+                    sample_ids.append(sample_id)
+                    original_uids.append(i)
+        
+        # Create new batch with expanded data instead of modifying existing one
+        stacked_input_ids = torch.stack(new_input_ids)
+        stacked_attention_masks = torch.stack(new_attention_masks)
+        # Compute position_ids to keep expected tensor keys consistent
+        from verl.utils.model import compute_position_id_with_mask
+        stacked_position_ids = compute_position_id_with_mask(stacked_attention_masks)
+
+        new_batch_data = {
+            "input_ids": stacked_input_ids,
+            "attention_mask": stacked_attention_masks,
+            "position_ids": stacked_position_ids,
+        }
+        
+        # Create new non_tensor_batch with expanded data
+        new_non_tensor_batch = {}
+        original_size = num_items
+        repeat_factor = max_attempts * num_samples_per_attempt
+        for key, value in batch.non_tensor_batch.items():
+            if "raw" in key: ## Very important, otherwise the raw_prompt_ids will be repeated, and the new prompts will be ignored by vllm
+                continue
+            # Repeat arrays/lists/tuples that are per-sample to match expanded batch size
+            try:
+                value_len = len(value) if hasattr(value, "__len__") else None
+            except Exception:
+                value_len = None
+
+            if value_len == original_size:
+                if isinstance(value, np.ndarray):
+                    repeated_value = np.repeat(value, repeat_factor, axis=0)
+                    new_non_tensor_batch[key] = repeated_value
+                elif isinstance(value, (list, tuple)):
+                    expanded_list = []
+                    for elem in value:
+                        expanded_list.extend([elem] * repeat_factor)
+                    new_non_tensor_batch[key] = np.array(expanded_list, dtype=object)
+                else:
+                    # Fallback: convert to object array and repeat
+                    obj_arr = np.array(list(value), dtype=object)
+                    new_non_tensor_batch[key] = np.repeat(obj_arr, repeat_factor, axis=0)
+            else:
+                new_non_tensor_batch[key] = value
+        
+        # Add attempt metadata
+        new_non_tensor_batch["attempt_id"] = np.array(attempt_ids, dtype=np.int32)
+        new_non_tensor_batch["sample_id"] = np.array(sample_ids, dtype=np.int32)
+        new_non_tensor_batch["original_uid"] = np.array(original_uids, dtype=np.int32)
+        
+        # Create new DataProto using from_dict with all parameters
+        new_batch = DataProto.from_dict(
+            tensors=new_batch_data,
+            non_tensors=new_non_tensor_batch,
+            meta_info=batch.meta_info
+        )
+        
+        return new_batch
+
     def _validate(self):
         data_source_lst = []
         reward_extra_infos_dict: dict[str, list] = defaultdict(list)
@@ -680,29 +908,56 @@ class RayPPOTrainer:
         sample_scores = []
         sample_turns = []
 
-        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
+            # breakpoint()
+            # Capture original prompt texts BEFORE multi-attempt processing so metrics can group by the true prompt
+            orig_input_ids = test_batch.batch["input_ids"]
+            orig_input_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in orig_input_ids]
+            # Apply multi-attempt prompt processing for validation
+            if self._is_multi_attempt_enabled():
+                val_max_attempts = OmegaConf.select(self.config, "multi_attempt.val_max_attempts", default=3)
+                val_num_samples_per_attempt = OmegaConf.select(
+                    self.config, "multi_attempt.val_num_samples_per_attempt", default=4
+                )
+                test_batch = self._apply_multi_attempt_prompt_processing(
+                    test_batch,
+                    max_attempts=val_max_attempts,
+                    num_samples_per_attempt=val_num_samples_per_attempt,
+                )
             
-            if not dataset_w_builtin_attempts:
+            # Assign group-wise uid so that all samples from the same original prompt share one uid
+            if "original_uid" in test_batch.non_tensor_batch:
+                orig_indices = test_batch.non_tensor_batch["original_uid"].tolist()
+                unique_orig = sorted(set(int(i) for i in orig_indices))
+                idx_to_uuid = {idx: str(uuid.uuid4()) for idx in unique_orig}
+                grouped_uids = [idx_to_uuid[int(i)] for i in orig_indices]
+                test_batch.non_tensor_batch["uid"] = np.array(grouped_uids, dtype=object)
+            else:
                 test_batch.non_tensor_batch["uid"] = np.array(
-                        [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
+                    [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
                 )
 
-                # repeat test batch
+            # repeat test batch
+            if not self._is_multi_attempt_enabled():
                 test_batch = test_batch.repeat(
                     repeat_times=self.config.actor_rollout_ref.rollout.val_kwargs.n, interleave=True
                 )
-            else: 
-               test_batch.non_tensor_batch["uid"] = self.get_uids("val")
             # we only do validation on rule-based rm
             if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
                 return {}
 
-            # Store original inputs
-            input_ids = test_batch.batch["input_ids"]
-            # TODO: Can we keep special tokens except for padding tokens?
-            input_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in input_ids]
+            # Store inputs for logging/metrics
+            # In multi-attempt mode, keep the original prompt text and repeat it to match the expanded batch
+            if self._is_multi_attempt_enabled():
+                repeat_factor = val_max_attempts * val_num_samples_per_attempt
+                input_texts = []
+                for txt in orig_input_texts:
+                    input_texts.extend([txt] * repeat_factor)
+            else:
+                input_ids = test_batch.batch["input_ids"]
+                # TODO: Can we keep special tokens except for padding tokens?
+                input_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in input_ids]
             sample_inputs.extend(input_texts)
 
             ground_truths = [
@@ -749,7 +1004,7 @@ class RayPPOTrainer:
             # evaluate using reward_function (optionally async)
             if self.val_reward_fn is None:
                 raise ValueError("val_reward_fn must be provided for validation.")
-
+            # breakpoint()
             if self.config.reward_model.launch_reward_fn_async:
                 future_reward = compute_reward_async.remote(data=test_batch, reward_fn=self.val_reward_fn)
                 reward_tensor, reward_extra = ray.get(future_reward)
@@ -802,9 +1057,11 @@ class RayPPOTrainer:
                 n_max = max([int(name.split("@")[-1].split("/")[0]) for name in metric2val.keys()])
                 for metric_name, metric_val in metric2val.items():
                     if (
-                        (var_name == core_var)
-                        and any(metric_name.startswith(pfx) for pfx in ["mean", "maj", "best"])
-                        and (f"@{n_max}" in metric_name)
+                        # (var_name == core_var)
+                        # and any(metric_name.startswith(pfx) for pfx in ["mean", "maj", "best"])
+                        # and (f"@{n_max}" in metric_name)
+                        (f"pass@" in metric_name)
+                        and ("combined" in data_source)
                     ):
                         metric_sec = "val-core"
                     else:
@@ -1151,8 +1408,6 @@ class RayPPOTrainer:
         )
         next_step_profile = False
 
-        dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
-
         for epoch in range(self.config.trainer.total_epochs):
             for batch_dict in self.train_dataloader:
                 metrics = {}
@@ -1164,25 +1419,35 @@ class RayPPOTrainer:
                         if self.config.global_profiler.profile_continuous_steps
                         else curr_step_profile
                     )
-                # breakpoint()
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
+                # breakpoint()
+                # Apply multi-attempt prompt processing if enabled
+                if self._is_multi_attempt_enabled():
+                    train_max_attempts = self.config.multi_attempt['max_attempts']
+                    train_num_samples_per_attempt = self.config.multi_attempt['num_samples_per_attempt']
+                    batch = self._apply_multi_attempt_prompt_processing(
+                        batch=batch, 
+                        max_attempts=train_max_attempts, 
+                        num_samples_per_attempt=train_num_samples_per_attempt)
 
-
-                if not dataset_w_builtin_attempts:     
+                # Assign group-wise uid so that all samples from the same original prompt share one uid
+                if "original_uid" in batch.non_tensor_batch:
+                    orig_indices = batch.non_tensor_batch["original_uid"].tolist()
+                    unique_orig = sorted(set(int(i) for i in orig_indices))
+                    idx_to_uuid = {idx: str(uuid.uuid4()) for idx in unique_orig}
+                    grouped_uids = [idx_to_uuid[int(i)] for i in orig_indices]
+                    batch.non_tensor_batch["uid"] = np.array(grouped_uids, dtype=object)
+                else:
                     batch.non_tensor_batch["uid"] = np.array(
                         [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
                     )
-                else: 
-                    #print(f"DEBUG:")
-                    assert self.config.data.train_batch_size * self.config.actor_rollout_ref.rollout.n == len(batch)  
-                    batch.non_tensor_batch["uid"] = self.get_uids("train")  
 
                 gen_batch = self._get_gen_batch(batch)
 
                 # pass global_steps to trace
                 gen_batch.meta_info["global_steps"] = self.global_steps
                 
-                if  not dataset_w_builtin_attempts:
+                if not self._is_multi_attempt_enabled():
                     gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                 is_last_step = self.global_steps >= self.total_training_steps
 
@@ -1219,8 +1484,7 @@ class RayPPOTrainer:
                             del gen_baseline_batch, gen_baseline_output
 
                     # repeat to align with repeated responses in rollout
-                    dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
-                    if not dataset_w_builtin_attempts:
+                    if not self._is_multi_attempt_enabled():
                         batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     batch = batch.union(gen_batch_output)
 
@@ -1236,7 +1500,7 @@ class RayPPOTrainer:
 
                     # compute global_valid tokens
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
-
+                    # breakpoint()
                     with marked_timer("reward", timing_raw, color="yellow"):
                         # compute reward model score
                         if self.use_rm:
@@ -1246,9 +1510,8 @@ class RayPPOTrainer:
                         if self.config.reward_model.launch_reward_fn_async:
                             future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn)
                         else:
-                            reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
+                            reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn)
 
-                    metrics.update(extra_reward_metrics)
                     # recompute old_log_probs
                     with marked_timer("old_log_prob", timing_raw, color="blue"):
                         old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
@@ -1362,6 +1625,7 @@ class RayPPOTrainer:
                                 scores=scores,
                                 reward_extra_infos_dict=reward_extra_infos_dict,
                                 dump_path=rollout_data_dir,
+                                non_tensor_fields=batch.non_tensor_batch,
                             )
 
                 # validate

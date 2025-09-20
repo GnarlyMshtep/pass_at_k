@@ -160,10 +160,15 @@ class DAPORewardManager(AbstractRewardManager):
 
         _t_decode_end = time.perf_counter()
 
-        if self.num_workers > 1 and len(prepared_items) > 1:
+        # Only use multiprocessing if we have enough work to justify the overhead
+        min_items_for_mp = max(32, self.num_workers * 2)  # At least 2 items per worker
+        if self.num_workers > 1 and len(prepared_items) > min_items_for_mp:
+            print(f"[DAPO] Using multiprocessing with {self.num_workers} workers, method={self.mp_start_method}, items={len(prepared_items)}")
+            
             _t_ctx_start = time.perf_counter()
             ctx = mp.get_context(self.mp_start_method)
             _t_ctx_end = time.perf_counter()
+            print(f"[DAPO] Context creation took {_t_ctx_end - _t_ctx_start:.6f}s")
 
             if self.mp_start_method == "fork":
                 # Inherit compute function via fork
@@ -171,6 +176,7 @@ class DAPORewardManager(AbstractRewardManager):
                 _GLOBAL_COMPUTE_SCORE = self.compute_score
                 initializer = None
                 initargs = ()
+                print(f"[DAPO] Using fork method - compute function inherited")
             else:
                 # Pass only metadata; do not pickle the function
                 meta = {}
@@ -181,19 +187,28 @@ class DAPORewardManager(AbstractRewardManager):
                         pass
                 initializer = _init_compute_fn
                 initargs = (meta,)
+                print(f"[DAPO] Using {self.mp_start_method} method - passing metadata")
 
             _t_pool_enter = time.perf_counter()
             with ctx.Pool(processes=self.num_workers, initializer=initializer, initargs=initargs) as pool:
                 _t_pool_created = time.perf_counter()
+                print(f"[DAPO] Pool creation took {_t_pool_created - _t_pool_enter:.6f}s")
+                
                 _t_map_start = time.perf_counter()
                 results = pool.map(_dapo_compute_one, prepared_items)
                 _t_map_end = time.perf_counter()
+                print(f"[DAPO] Parallel computation took {_t_map_end - _t_map_start:.6f}s")
             _t_pool_exit = time.perf_counter()
+            print(f"[DAPO] Pool cleanup took {_t_pool_exit - _t_map_end:.6f}s")
         else:
+            reason = "too few items" if len(prepared_items) <= min_items_for_mp else "single worker"
+            print(f"[DAPO] Using single-threaded processing ({reason}: workers={self.num_workers}, items={len(prepared_items)}, threshold={min_items_for_mp})")
             _t_map_start = time.perf_counter()
             results = list(map(_dapo_compute_one, prepared_items))
             _t_map_end = time.perf_counter()
+            print(f"[DAPO] Single-threaded computation took {_t_map_end - _t_map_start:.6f}s")
 
+        ## token level rewards
         _t_post_start = time.perf_counter()
         for (i, valid_response_length, prompt_str, response_str, ground_truth, data_source), result in zip(
             decoded_cache, results, strict=True

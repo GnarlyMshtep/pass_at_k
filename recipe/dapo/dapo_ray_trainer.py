@@ -192,7 +192,9 @@ class RayDAPOTrainer(RayPPOTrainer):
                         else:
                             reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
 
-                        metrics.update(extra_reward_metrics)
+                        # Prefix extra reward metrics under train/ for consistent logging
+                        if isinstance(extra_reward_metrics, dict) and extra_reward_metrics:
+                            metrics.update({f"train/{k}": v for k, v in extra_reward_metrics.items()})
                         new_batch.batch["token_level_scores"] = reward_tensor
 
                         if reward_extra_infos_dict:

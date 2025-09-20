@@ -126,6 +126,11 @@ def load_reward_manager(
     # Note(haibin.lin): For custom reward managers, please make sure they are imported and
     # registered via `verl.workers.reward_manager.register`
     # By default reward_manager is set to naive (NaiveRewardManager)
+    
+    # Import custom reward managers to ensure they are registered in Ray workers
+    import custom.workers.reward_manager.multi_attempt_reward_manager
+
+    
     reward_manager_name = config.reward_model.get("reward_manager", "naive")
     if reward_manager_name == "naive":
         reward_kwargs.pop("num_workers")
@@ -152,12 +157,41 @@ def load_reward_manager(
         else:
             final_compute_score = default_compute_score
 
+    # Extract multi-attempt parameters from config if they exist
+    multi_attempt_params: dict[str, Any] = {}
+    # Enable/disable flag under reward_model
+    if hasattr(config, "reward_model") and config.reward_model is not None:
+        if "enabled" in config.reward_model:
+            multi_attempt_params["enabled"] = config.reward_model.get("enabled")
+        # Pass through base reward manager name if provided
+        if "base_reward_manager" in config.reward_model:
+            multi_attempt_params["base_reward_manager"] = config.reward_model.get("base_reward_manager")
+
+    # Attempt parameters live under top-level multi_attempt
+    if hasattr(config, "multi_attempt") and config.multi_attempt is not None:
+        for key in [
+            "max_attempts",
+            "num_samples_per_attempt",
+            "val_max_attempts",
+            "val_num_samples_per_attempt",
+        ]:
+            if key in config.multi_attempt:
+                multi_attempt_params[key] = config.multi_attempt.get(key)
+
+    # Log the multi-attempt parameters for debugging
+    if reward_manager_name == "multi_attempt_reward_manager":
+        print(
+            f"Initializing multi-attempt reward manager (split={'val' if num_examine == 1 else 'train'}) "
+            f"with params: {multi_attempt_params} and extra kwargs: {list(reward_kwargs.keys())}"
+        )
+
     # Instantiate and return the reward manager with the specified parameters
     return reward_manager_cls(
         tokenizer=tokenizer,
         num_examine=num_examine,
         compute_score=final_compute_score,
         reward_fn_key=config.data.reward_fn_key,
+        **multi_attempt_params,
         **reward_kwargs,
     )
 
@@ -174,9 +208,8 @@ def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[t
     reward_result = reward_fn(data, return_dict=True)
     reward_tensor = reward_result["reward_tensor"]
     reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
-    extra_reward_metrics = reward_result.get("extra_reward_metrics", {})
     
-    return reward_tensor, reward_extra_infos_dict, extra_reward_metrics
+    return reward_tensor, reward_extra_infos_dict
 
 
 @ray.remote(num_cpus=1)
