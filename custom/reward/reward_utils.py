@@ -62,7 +62,7 @@ Remeber! Innocent until proven guilty! If you are unsure whether a criteria ia s
 THINKING TRACE: \n
 """
 MONITOR_MODEL="gpt-4o-mini"
-TOTAL_STEPS = 500
+# TOTAL_STEPS = 500
 LEG_MULTIPLIER=0.5
 
 
@@ -473,7 +473,7 @@ def extract_boxed(text: str) -> str | None:
     return None
 
 async def math_singlatt_correct_minus_leg(data_source, solution_str, ground_truth, extra_info=None):
-    DEF_LEG_SCORE = 0.5151 # this is the leg score if we fail to extract a legibility score 
+    DEF_LEG_SCORE = 0.9191 # this is the leg score if we fail to extract a legibility score 
 
     # get answer and evaluate it
     extracted_answer = extract_boxed(solution_str)
