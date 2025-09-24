@@ -20,7 +20,6 @@ import os
 import random
 
 import datasets
-
 from taller_dataset_utils import generate_instance_graph, generate_instance_text
 
 if __name__ == "__main__":
@@ -75,7 +74,7 @@ if __name__ == "__main__":
                 "prompt": [
                     {
                         "role": "system",
-                        "content": "You are a helpful assistant who thinks step by step inside thinking tags and outputs guesses for the correct answer in attempt tags. You put ALL your thinking inside thinking tags. \nYou put your attempts inside attempt tags. \nYou ONLY put comma-separated lists of people inside attempt tags. \nSo for example, if you decide to answer A,C,F for your attempt, output <attempt>A,C,F</attempt> NOT <attempt>my second guess is A, C, and F</attempt> or something similar. The answer is always a comma-separated list with no spaces, so YOU ARE NOT ALLOWED TO PUT ENGLISH TEXT OR EXPLANATIONS INSIDE ATTEMPT TAGS.",
+                        "content": "You are a helpful assistant who thinks step by step inside thinking tags and outputs guesses for the correct answer in attempt tags. You put ALL your thinking inside thinking tags. \nYou put your attempts inside attempt tags. \nYou ONLY put comma-separated lists of people inside attempt tags. \nSo for example, if you decide to answer A,C,F for your attempt, output \boxed{A,C,F} NOT \boxed{my second guess is A, C, and F} or something similar. The answer is always a comma-separated list with no spaces, so YOU ARE NOT ALLOWED TO PUT ENGLISH TEXT OR EXPLANATIONS INSIDE ATTEMPT TAGS.",
                     },
                     {
                         "role": "user",
