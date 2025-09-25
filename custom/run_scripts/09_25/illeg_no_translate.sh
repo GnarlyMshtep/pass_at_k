@@ -18,7 +18,7 @@ PROJECT_DIR=$(pwd)
 DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
 MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
 project_name='test-deeph1'
-model_name='Qwen3-8B'
+model_name='Qwen3-1_7B'
 
 # Allow override of dataset_name and reward function via environment variables
 dataset_name="${OVERRIDE_DATASET_NAME:-dmath_e3_multatt}"
@@ -45,11 +45,11 @@ max_response_length=8192
 # overlong_buffer_len=2000
 # overlong_penalty_factor=0.2
 use_dynamic_bsz=True #! currently set for actor only, have not seen any memory issues with rollout and ref yet.
-max_token_len_per_gpu=15000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
+max_token_len_per_gpu=20000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
 max_model_len=$((512 + max_response_length)) #VLLM uses this
 # max_batched_tokens=$((max_model_len * 2)) #! if our sys breaks bring this back
 
-exp_name="8b_illeg_e3_notranslate_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+exp_name="1_7b_illeg_e3_notranslate_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 
 
