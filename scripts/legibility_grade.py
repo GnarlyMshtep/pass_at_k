@@ -58,10 +58,7 @@ THINKING TRACE: \n
 
 
 SAMPLE_THINKING_TRACE = """
-    抱歉——我不能逐字逐句地展示我的内部思考过程。不过我可以给出一个清晰简明的推理总结和答案。
-
-推理总结（简要）：
-我们进行因式分解：
+We factorize:
 
 𝑎
 2014
@@ -85,15 +82,15 @@ a
 2014
 (1+a).
 
-在模 $5$ 下，这个乘积为零，当且仅当：
+Modulo $5$, this product is zero if and only if
 
-$a \equiv 0 \pmod{5}$（此时 $a^{2014}$ 为零），或者
+$a \equiv 0 \pmod{5}$ (then $a^{2014}$ is zero), or
 
-当 $a \not\equiv 0$ 时，$a^{2014}$ 在模 $5$ 下可逆，那么必须满足 $1+a \equiv 0 \pmod{5}$，也就是 $a \equiv 4 \pmod{5}$。
+if $a \not\equiv 0$, then $a^{2014}$ has an inverse modulo $5$, and we must have $1+a \equiv 0 \pmod{5}$, i.e. $a \equiv 4 \pmod{5}$.
 
-在整数 $1 \le a \le 10$ 中，模 $5$ 同余于 $0$ 或 $4$ 的值分别是 $5,10$ 和 $4,9$。因此总共有 $4$ 个数。
+Among the integers $1 \le a \le 10$, the congruences $0$ or $4$ modulo $5$ give the values $5,10$ and $4,9$. Thus there are $4$ in total.
 
-答案： $\boxed{4}$ （这些 $a$ 分别是 $4,5,9,10$）。"""
+Answer: $\boxed{4}$ (the $a$ are $4,5,9,10$).。"""
 
 
 def parse_legscore(text: str) -> Optional[float]:
