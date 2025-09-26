@@ -66,8 +66,10 @@ def pathfinder_compute_score(
             for v,u in edges:
                 nodes.add(v)
                 nodes.add(u)
-    except Exception:
-        edges = []
+        else:
+            print(f"no edges, or nodes found")
+    except Exception as e:
+        print(f"no edges, or nodes found {e}")
 
     # Determine expected attempts (prefer max_allowed_attempts, fallback to num_attempts, default 1)
     expected_attempts = extra_info["max_allowed_attempts"]
@@ -157,7 +159,7 @@ def pathfinder_compute_score(
 
         exact = 1 
         for checking_edge_index in range(len(path)-1):
-            edge = (path[checking_edge_index], path[checking_edge_index+1])
+            edge = [path[checking_edge_index], path[checking_edge_index+1]]
             if edge not in edges:
                 exact=0
                 reason += f"{idx}: {path[checking_edge_index]}->{path[checking_edge_index+1]} doesn't exist at edges.\n"

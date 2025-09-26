@@ -787,7 +787,7 @@ if __name__ == "__main__":
         for parameter in parameters:
             for _ in range(1000): # Generate 5000 examples per level for the training pool
                 train_samples.append(generate_graph_data(level, **parameter))
-            for _ in range(500): # Generate 500 examples per level for the test pool
+            for _ in range(200): # Generate 200 examples per level for the test pool
                 test_samples.append(generate_graph_data(level, **parameter))
 
     # Convert the lists of dictionaries into Hugging Face Dataset objects
