@@ -166,7 +166,7 @@ def pathfinder_compute_score(
         if exact >= best_exact:
             best_exact = exact
             best_idx = idx
-            best_path = path
+            best_path = (content or "").strip()
 
     t1 = time.perf_counter()
     format_bonus = 0.2 if (evaluated > 0 and len(blocks) == expected_attempts) else 0.0
