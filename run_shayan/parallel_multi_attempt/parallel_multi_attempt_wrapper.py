@@ -10,8 +10,11 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-# Import custom reward manager to register it
+# Import custom reward managers to register them
 import custom.workers.reward_manager.multi_attempt_reward_manager
+import custom.workers.reward_manager.multi_attempt_reward_manager_kami
+import custom.workers.reward_manager.multi_attempt_adv_reward_manager
+import custom.workers.reward_manager.multi_attempt_rollout_adv_reward_manager
 
 # Now run the main training script
 if __name__ == "__main__":

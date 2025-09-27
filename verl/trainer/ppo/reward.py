@@ -129,6 +129,9 @@ def load_reward_manager(
     
     # Import custom reward managers to ensure they are registered in Ray workers
     import custom.workers.reward_manager.multi_attempt_reward_manager
+    import custom.workers.reward_manager.multi_attempt_reward_manager_kami
+    import custom.workers.reward_manager.multi_attempt_adv_reward_manager
+    import custom.workers.reward_manager.multi_attempt_rollout_adv_reward_manager
 
     
     reward_manager_name = config.reward_model.get("reward_manager", "naive")
@@ -179,7 +182,7 @@ def load_reward_manager(
                 multi_attempt_params[key] = config.multi_attempt.get(key)
 
     # Log the multi-attempt parameters for debugging
-    if reward_manager_name == "multi_attempt_reward_manager":
+    if reward_manager_name in {"multi_attempt_reward_manager", "multi_attempt_reward_manager_kami"}:
         print(
             f"Initializing multi-attempt reward manager (split={'val' if num_examine == 1 else 'train'}) "
             f"with params: {multi_attempt_params} and extra kwargs: {list(reward_kwargs.keys())}"

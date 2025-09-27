@@ -764,6 +764,9 @@ class RayPPOTrainer:
         
         # Get multi-attempt configuration
         attempt_template = self.config.multi_attempt.get('attempt_template', "\n<attempt-{attempt_id}>")
+        attempt_insertion_position = self.config.multi_attempt.get(
+            'attempt_insertion_position', 'user_message_end'
+        )
         # Interpret common CLI escape sequences and support {max_attempts}
         if isinstance(attempt_template, str):
             attempt_template = attempt_template.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
@@ -794,20 +797,46 @@ class RayPPOTrainer:
                         # Build messages from scratch using the dataset's raw chat
                         messages = raw_chats[i]
                         assert isinstance(messages, (list, tuple)) and len(messages) > 0, "raw_prompt must be a list of chat messages"
-                        # Find last user message and append attempt_text to its content
-                        last_user_idx = None
-                        for idx in range(len(messages) - 1, -1, -1):
-                            msg = messages[idx]
-                            if isinstance(msg, dict) and msg.get("role") == "user":
-                                last_user_idx = idx
-                                break
-                        assert last_user_idx is not None, "No user message found in raw_prompt"
+                        # Insert attempt_text at configured position
                         new_messages = list(messages)
-                        user_msg = dict(new_messages[last_user_idx])
-                        user_content = user_msg.get("content", "")
-                        assert isinstance(user_content, str), "User message content must be a string"
-                        user_msg["content"] = user_content + attempt_text
-                        new_messages[last_user_idx] = user_msg
+                        # Helper to find first/last index by role
+                        def _find_index_by_role(role: str, reverse: bool = False):
+                            rng = range(len(new_messages) - 1, -1, -1) if reverse else range(len(new_messages))
+                            for idx in rng:
+                                msg = new_messages[idx]
+                                if isinstance(msg, dict) and msg.get("role") == role:
+                                    return idx
+                            return None
+                        pos = attempt_insertion_position
+                        if pos in ("user_message_end", "user_message_begin"):
+                            idx = _find_index_by_role("user", reverse=True)  # prefer the last user msg
+                            assert idx is not None, "No user message found in raw_prompt"
+                            msg = dict(new_messages[idx])
+                            content = msg.get("content", "")
+                            assert isinstance(content, str), "User message content must be a string"
+                            if pos == "user_message_end":
+                                msg["content"] = content + attempt_text
+                            else:
+                                msg["content"] = attempt_text + content
+                            new_messages[idx] = msg
+                        elif pos in ("system_message_end", "system_message_begin"):
+                            idx = _find_index_by_role("system", reverse=False)
+                            if idx is None:
+                                # If there is no system message, prepend one
+                                sys_msg = {"role": "system", "content": attempt_text}
+                                new_messages = [sys_msg] + new_messages if pos == "system_message_begin" else new_messages + [sys_msg]
+                            else:
+                                msg = dict(new_messages[idx])
+                                content = msg.get("content", "")
+                                assert isinstance(content, str), "System message content must be a string"
+                                if pos == "system_message_end":
+                                    msg["content"] = content + attempt_text
+                                else:
+                                    msg["content"] = attempt_text + content
+                                new_messages[idx] = msg
+                        else:
+                            raise AssertionError(f"Invalid attempt_insertion_position: {pos}")
+
                         # Apply chat template to get the final prompt text
                         new_prompt = self.tokenizer.apply_chat_template(
                             new_messages, add_generation_prompt=True, tokenize=False
