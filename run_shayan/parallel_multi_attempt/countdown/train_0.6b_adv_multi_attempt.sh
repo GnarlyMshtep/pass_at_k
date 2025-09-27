@@ -4,18 +4,18 @@ set -x
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
-export RAY_DEBUG_POST_MORTEM=1
+export RAY_DEBUG_POST_MORTEM=0
 export HYDRA_FULL_ERROR=1
 export PYTHONPATH=$PWD:$PYTHONPATH
 export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
 export RAY_DISABLE_IMPORT_WARNING=1
 
 PROJECT_DIR=$(pwd)
-project_name='verl_grpo_full_pathfinder_multi_attempt'
+project_name='verl_grpo_full_countdown_multi_attempt'
 model_name='Qwen3-0.6B'
-dataset_name='pathfinder_3to7'
-max_response_length=1024
-exp_name="${model_name}_${dataset_name}_adv_multi_attempt_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+dataset_name='countdown_3to5'
+max_response_length=4096
+exp_name="0.6b_countdown_3to5_adv_multi_attempt_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Multi-attempt parameters
 enable_multi_attempt=True
@@ -25,7 +25,7 @@ total_rollouts_per_prompt=$((max_attempts * num_samples_per_attempt))
 
 # Evaluation parameters (can be different from training)
 val_max_attempts=4
-val_num_samples_per_attempt=1
+val_num_samples_per_attempt=4
 val_total_rollouts_per_prompt=$((val_max_attempts * val_num_samples_per_attempt))
 
 # Advantage-mixing hyperparameters
@@ -36,14 +36,14 @@ w1=1.0
 w2=0.5
 a_max=3.0
 
-num_gpus=4
-mini_batch_size=32
-train_batch_size=64
-val_batch_size=512
+num_gpus=1
+mini_batch_size=4
+train_batch_size=16
+val_batch_size=32
 
-num_workers=3
+num_workers=2
 
-max_model_len=$((1024 + max_response_length))
+max_model_len=$((512 + max_response_length))
 max_batched_tokens=$((max_model_len + 1024))
 
 # Best checkpoint settings: monitor multi_attempt aggregated val metric
@@ -58,7 +58,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
     data.train_batch_size=$train_batch_size \
     data.val_batch_size=$val_batch_size \
-    data.max_prompt_length=1024 \
+    data.max_prompt_length=512 \
     data.max_response_length=${max_response_length} \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
@@ -66,7 +66,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     data.return_raw_chat=True \
     data.return_full_prompt=True \
     actor_rollout_ref.model.path=$HF_HOME/models/${model_name} \
-    actor_rollout_ref.actor.optim.lr=3e-6 \
+    actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2 \
@@ -78,8 +78,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
-    +actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
-    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2 \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
     actor_rollout_ref.ref.log_prob_use_dynamic_bsz=True \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
@@ -87,12 +86,12 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     actor_rollout_ref.rollout.max_num_batched_tokens=$max_batched_tokens \
     actor_rollout_ref.rollout.load_format=safetensors \
     actor_rollout_ref.rollout.layered_summon=False \
-    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2 \
+    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=8 \
     actor_rollout_ref.ref.fsdp_config.param_offload=False \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
-    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/pathfinder/pathfinder_verifier.py" \
-    custom_reward_function.name="pathfinder_compute_score" \
+    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/countdown/countdown_verifier.py" \
+    custom_reward_function.name="countdown_compute_score" \
     reward_model.reward_manager=multi_attempt_adv_reward_manager \
     +reward_model.base_reward_manager=dapo \
     +reward_model.enabled=True \
@@ -107,8 +106,8 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.test_freq=20 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
-    trainer.rollout_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/train" \
-    trainer.validation_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/val" \
+    trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_countdown/${exp_name}/train" \
+    trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_countdown/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
     +trainer.best_checkpoint.monitor=${monitor_metric} \
     +trainer.best_checkpoint.mode=max \
@@ -125,7 +124,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     +multi_attempt.w1=$w1 \
     +multi_attempt.w2=$w2 \
     +multi_attempt.a_max=$a_max \
-    actor_rollout_ref.rollout.temperature=0.5 \
+    actor_rollout_ref.rollout.temperature=0.6 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True
 
