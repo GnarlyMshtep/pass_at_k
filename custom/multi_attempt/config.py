@@ -15,6 +15,9 @@ class MultiAttemptConfig:
     
     # Prompt template for attempt-specific text
     attempt_template: str = "\n<attempt-{attempt_id}>"
+    # Where to insert attempt text within chat messages
+    # Allowed values: "user_message_end", "user_message_begin", "system_message_end", "system_message_begin"
+    attempt_insertion_position: str = "user_message_end"
     
     # Whether to enable multi-attempt strategy
     enabled: bool = True
@@ -25,6 +28,11 @@ class MultiAttemptConfig:
     
     # Advantage computation parameters
     epsilon: float = 1e-6
+    # Number of random groupings for rollout-based advantages
+    num_groupings: int = 128
+    # Multiplier base for group reward based on earliest solving attempt id
+    # Effective group reward becomes (attempt_id_reward_ratio ** min_solve_attempt_id)
+    attempt_id_reward_ratio: float = 1.0
 
     # COMA-lite credit assignment hyperparameters
     # Smoothing for per-attempt success rate p_hat
@@ -47,8 +55,19 @@ class MultiAttemptConfig:
         assert self.num_samples_per_attempt > 0, "num_samples_per_attempt must be positive"
         assert self.val_max_attempts > 0, "val_max_attempts must be positive"
         assert self.val_num_samples_per_attempt > 0, "val_num_samples_per_attempt must be positive"
+        assert self.num_groupings > 0, "num_groupings must be positive"
+        assert self.attempt_id_reward_ratio > 0, "attempt_id_reward_ratio must be > 0"
         # Require {attempt_id} placeholder; {max_attempts} is optional but supported.
         assert "{attempt_id}" in self.attempt_template, "attempt_template must contain {attempt_id} placeholder"
+        allowed_positions = {
+            "user_message_end",
+            "user_message_begin",
+            "system_message_end",
+            "system_message_begin",
+        }
+        assert self.attempt_insertion_position in allowed_positions, (
+            f"attempt_insertion_position must be one of {sorted(list(allowed_positions))}"
+        )
     
     @property
     def total_rollouts_per_prompt(self) -> int:
