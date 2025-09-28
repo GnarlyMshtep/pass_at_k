@@ -679,15 +679,15 @@ def generate_node_labels():
         length += 1
 
 
-def generate_graph_data(level: int, num_extra_nodes: int, main_paths: int, extra_edges: float, num_sink_nodes: int = 0, sink_edges: float = 0) -> dict:
+def generate_graph_data(level: int, main_paths: int, num_source_nodes: int,  source_edges: float, num_sink_nodes: int = 0, sink_edges: float = 0) -> dict:
     """
     Generates a single graph problem with a guaranteed shortest path length.
 
     Args:
         level: The number of nodes in the shortest path (difficulty).
-        num_extra_nodes: Number of distractor nodes to add (have edges among themselves and TO main path nodes).
         main_paths: Number of main paths starting from node a
-        extra_edges: distractor edges from extra_nodes to the main_path nodes
+        num_source_nodes: Number of distractor nodes to add (have edges among themselves and TO main path nodes).
+        source_edges: distractor edges from extra_nodes to the main_path nodes
         num_sink_nodes: Number of sink nodes to add (have edges among themselves and FROM main path nodes).
         sink_edges: distractor edges from main path nodes to sink_nodes
 
@@ -696,6 +696,10 @@ def generate_graph_data(level: int, num_extra_nodes: int, main_paths: int, extra
     """
     if level < 2:
         raise ValueError("Level must be at least 2.")
+    if sink_edges>0:
+        assert num_sink_nodes>0
+    if source_edges>0:
+        assert num_source_nodes>0
 
     # Create the main paths
     # starting node is node 1, and ending node is node level
@@ -707,44 +711,42 @@ def generate_graph_data(level: int, num_extra_nodes: int, main_paths: int, extra
         for j in range(level-2):
             edges.append((path_start+j,path_start+j+1))
 
-    first_extra_node = main_paths*(level-1)+2
-    last_extra_node = first_extra_node + num_extra_nodes -1
+    first_source_node = main_paths*(level-1)+2
+    last_source_node = first_source_node + num_source_nodes -1
 
-    def get_random_edge_in_extra_nodes(first_extra_node, last_extra_node, edges):
+
+    def get_random_edge_in_source_nodes(first_source_node, last_source_node, edges):
         while True:
-            v=random.randint(first_extra_node, last_extra_node)
-            u=random.randint(first_extra_node, last_extra_node)
+            v=random.randint(first_source_node, last_source_node)
+            u=random.randint(first_source_node, last_source_node)
             if u==v:
                 u+=1
-            if u>last_extra_node:
-                u=first_extra_node
+            if u>last_source_node:
+                u=first_source_node
             if (v,u) in edges: # ignore edge if it is duplicate
                 continue
             return (v,u)
     
-    def get_random_edge_from_extra_nodes(first_extra_node, last_extra_node, edges):
+    def get_random_edge_from_source_nodes(first_source_node, last_source_node, edges):
         while True:
-            u=random.randint(2, first_extra_node-1)
-            v=random.randint(first_extra_node, last_extra_node)
+            u=random.randint(2, first_source_node-1)
+            v=random.randint(first_source_node, last_source_node)
             if (v,u) in edges: # ignore edge if it is duplicate
                 continue
             return (v,u)
 
-    # Add the distraction nodes (half of the additional edges are between them self)
-    for i in range(extra_edges//2):
-        edges.append(get_random_edge_in_extra_nodes(first_extra_node, last_extra_node, edges))
+    if num_source_nodes>0 and source_edges>0:
+        # Add the distraction nodes (half of the additional edges are between them self)
+        for i in range(source_edges//2):
+            edges.append(get_random_edge_in_source_nodes(first_source_node, last_source_node, edges))
 
-    # Add the distraction edges from extra_node to main_nodes
-    for i in range(extra_edges- (extra_edges//2)):
-        edges.append(get_random_edge_from_extra_nodes(first_extra_node, last_extra_node, edges))
+        # Add the distraction edges from source_node to main_nodes
+        for i in range(source_edges- (source_edges//2)):
+            edges.append(get_random_edge_from_source_nodes(first_source_node, last_source_node, edges))
 
     # Add sink nodes (second group) - nodes that receive edges FROM main path nodes
-    if num_sink_nodes > 0:
-        first_sink_node = last_extra_node + 1
-        last_sink_node = first_sink_node + num_sink_nodes - 1
-    else:
-        first_sink_node = last_extra_node
-        last_sink_node = last_extra_node -1
+    first_sink_node = last_source_node + 1
+    last_sink_node = first_sink_node + num_sink_nodes - 1
 
     def get_random_edge_in_sink_nodes(first_sink_node, last_sink_node, edges):
         while True:
@@ -773,7 +775,7 @@ def generate_graph_data(level: int, num_extra_nodes: int, main_paths: int, extra
             edges.append(get_random_edge_in_sink_nodes(first_sink_node, last_sink_node, edges))
         
         # Add edges from main path nodes to sink nodes
-        main_path_end_node = first_extra_node - 1  # last node in main paths
+        main_path_end_node = first_source_node - 1  # last node in main paths
         for i in range(int(sink_edges - (sink_edges // 2))):
             edges.append(get_random_edge_to_sink_nodes(first_sink_node, last_sink_node, edges, main_path_end_node))
 
@@ -785,6 +787,12 @@ def generate_graph_data(level: int, num_extra_nodes: int, main_paths: int, extra
     node_labels[3:] = sub_list_to_shuffle
     #Since in our question destination is node b we need to swap label of second node (currently 'b') with the label of level node. 
     node_labels[2], node_labels[level]=node_labels[level], node_labels[2]
+
+    # print(f"num_sink_nodes: {num_sink_nodes}, num_source_nodes: {num_source_nodes}, "
+    #       f"last_sink_node: {last_sink_node}, last_source_node: {last_source_node}, "
+    #       f"first_sink_node: {first_sink_node}, first_source_node: {first_source_node}, "
+    #       f"total_nodes (including dummy 0): {len(node_labels)}")
+    # print(f"All edges (using integer node indices): {edges}")
     # changing the labels to its string form
     for i in range(len(edges)):
         v, u = edges[i]
@@ -818,12 +826,12 @@ if __name__ == "__main__":
     random.seed(0)
     for level in range(args.min_level, args.max_level + 1):
         parameters = [
-            {"num_extra_nodes": 0, "main_paths": 4, "extra_edges": 0, "num_sink_nodes": 0, "sink_edges": 0},
-            {"num_extra_nodes": 4, "main_paths": 4, "extra_edges": 8, "num_sink_nodes": 2, "sink_edges": 4},
-            {"num_extra_nodes": 8, "main_paths": 4, "extra_edges": 16, "num_sink_nodes": 4, "sink_edges": 8},
-            {"num_extra_nodes": 16, "main_paths": 4, "extra_edges": 32, "num_sink_nodes": 8, "sink_edges": 16},
-            {"num_extra_nodes": 32, "main_paths": 4, "extra_edges": 64, "num_sink_nodes": 16, "sink_edges": 32},
-            {"num_extra_nodes": 64, "main_paths": 4, "extra_edges": 128, "num_sink_nodes": 32, "sink_edges": 64},
+            {"num_source_nodes": 0, "main_paths": 4, "source_edges": 0, "num_sink_nodes": 0, "sink_edges": 0},
+            {"num_source_nodes": 4, "main_paths": 4, "source_edges": 8, "num_sink_nodes": 2, "sink_edges": 4},
+            {"num_source_nodes": 8, "main_paths": 4, "source_edges": 16, "num_sink_nodes": 4, "sink_edges": 8},
+            {"num_source_nodes": 16, "main_paths": 4, "source_edges": 32, "num_sink_nodes": 8, "sink_edges": 16},
+            {"num_source_nodes": 32, "main_paths": 4, "source_edges": 64, "num_sink_nodes": 16, "sink_edges": 32},
+            {"num_source_nodes": 64, "main_paths": 4, "source_edges": 128, "num_sink_nodes": 32, "sink_edges": 64},
         ]
         for parameter in parameters:
             for _ in range(1000): # Generate 5000 examples per level for the training pool

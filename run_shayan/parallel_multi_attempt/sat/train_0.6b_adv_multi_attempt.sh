@@ -11,10 +11,10 @@ export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
 export RAY_DISABLE_IMPORT_WARNING=1
 
 PROJECT_DIR=$(pwd)
-project_name='verl_grpo_full_pathfinder_multi_attempt'
+project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen3-0.6B'
-dataset_name='pathfinder_3to7'
-max_response_length=1024
+dataset_name='sat_2to3'
+max_response_length=2048
 exp_name="${model_name}_${dataset_name}_adv_multi_attempt_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Multi-attempt parameters
@@ -43,7 +43,7 @@ val_batch_size=512
 
 num_workers=3
 
-max_model_len=$((2048 + max_response_length))
+max_model_len=$((1024 + max_response_length))
 max_batched_tokens=$((max_model_len + 1024))
 
 # Best checkpoint settings: monitor multi_attempt aggregated val metric
@@ -58,7 +58,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
     data.train_batch_size=$train_batch_size \
     data.val_batch_size=$val_batch_size \
-    data.max_prompt_length=2048 \
+    data.max_prompt_length=1024 \
     data.max_response_length=${max_response_length} \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
@@ -91,8 +91,8 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     actor_rollout_ref.ref.fsdp_config.param_offload=False \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
-    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/pathfinder/pathfinder_verifier.py" \
-    custom_reward_function.name="pathfinder_compute_score" \
+    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/sat/sat_verifier.py" \
+    custom_reward_function.name="sat_compute_score" \
     reward_model.reward_manager=multi_attempt_adv_reward_manager \
     +reward_model.base_reward_manager=dapo \
     +reward_model.enabled=True \
@@ -107,8 +107,8 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.test_freq=20 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
-    trainer.rollout_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/train" \
-    trainer.validation_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/val" \
+    trainer.rollout_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/train" \
+    trainer.validation_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
     +trainer.best_checkpoint.monitor=${monitor_metric} \
     +trainer.best_checkpoint.mode=max \

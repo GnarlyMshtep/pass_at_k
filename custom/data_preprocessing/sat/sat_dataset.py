@@ -24,6 +24,7 @@ import argparse
 import os
 from re import L
 from typing import Any, Dict, List, Tuple
+import json
 
 import datasets
 import math
@@ -34,15 +35,15 @@ def build_single_attempt_prompt(sat: List[List[str]]) -> List[Dict[str, str]]:
 
     Requires a single final expression inside <answer>...</answer> and thinking in <think>...</think>.
     """
-    sat = ""
-    for clause in sat:
-        sat += f"({' or '.join(clause)}) and \n"
+    assert len(sat)>0
 
+    sat_str = "&".join([f"({'|'.join(clause)})" for clause in sat])
+    
     content = (
-        "Consider the sat problem defined by the following term: \n{sat}. Given this sat, find an assigment for all variables that makes the whole term true."
+        f"Consider the sat problem defined by the following term: {sat_str}. Given this sat, find an assigment for all variables that makes the whole term true. "
         "Think through the task step by step, and verify your proposed path within <think> </think> tags. "
         "Then, provide the final path within <answer> </answer> tags, for example, <answer>a:true,b:false,c:true,d:true</answer>."
-    ).format(sat=sat)
+    )
     return [{"content": content, "role": "user"}]
 
 
@@ -65,7 +66,7 @@ def parse_args():
     parser.add_argument(
         "--min_level",
         type=int,
-        default=32
+        default=2,
         help="Minimum difficulty level 2-8. Keep rows that are k-sat where k >= min_level.",
     )
     parser.add_argument(
@@ -633,28 +634,28 @@ def map_row_to_output(
 ) -> Dict[str, Any]:
     """Map a single task row to the output format."""
     sat = example.get("sat", [])
-    solution = example.get("solution", None)
+    raw_sat = example.get("raw_sat", "[]")
+    variable_labels = example.get("variable_labels", "[]")
+    solution = example.get("solution", "")
     
     messages = build_single_attempt_prompt(sat)
     
     data_source = f"sat-{len(sat[0])}"
     ability = "math"
-    solution_str =""
-    for k,v in solution.items():
-        solution_str+=f"{k}:{v}, "
-
     extra_info = {
         "split": split_label,
         "index": idx,
+        "variable_labels": variable_labels,
+        "raw_sat":raw_sat,
         "num_clauses": len(sat),
-        "num_variables": len(solution),
-        "solution": solution_str,
+        "num_variables": len(solution.split(",")),
+        "solution": solution,
         "num_attempts": 1,
         "max_allowed_attempts": 1,
         "prompt_style": "single",
     }
     
-    reward_model = {"style": "rule", "ground_truth": solution_str, "target": solution_str}
+    reward_model = {"style": "rule", "ground_truth": solution, "target": solution}
     
     return {
         "data_source": data_source,
@@ -670,17 +671,9 @@ from itertools import product, chain
 
 def generate_variable_labels():
     """Generates an infinite sequence of short, unique variable labels."""
-    # Stage 1: Single upper letters (A-Z)
+    # Single upper letters (A-Z)
     for char in string.ascii_uppercase:
         yield char
-    
-        
-    # Stage 2 & beyond: Multi-character labels (AA, AB, ..., ...)
-    length = 2
-    while True:
-        for p in product(string.ascii_uppercase, repeat=length):
-            yield "".join(p)
-        length += 1
 
 
 def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
@@ -705,10 +698,11 @@ def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
     # Create a guaranteed solution by assigning a random boolean value to each variable.
     solution = {i: random.choice([True, False]) for i in range(1, num_variables + 1)}
 
-    clauses = []
+    raw_clauses = []
     variable_pool = list(range(1, num_variables + 1))
 
-    while len(clauses)<num_clauses:
+    duplicate_count=0
+    while len(raw_clauses)<num_clauses:
         # Randomly select 'level' unique variables for the current clause
         chosen_variables = random.sample(variable_pool, level)
 
@@ -732,23 +726,38 @@ def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
         if not is_satisfied:
             # Pick one literal at random from the clause to flip.
             index_to_flip = random.randrange(level)
-            literal_to_flip = current_clause[index_to_flip]
-            variable = abs(literal_to_flip)
-
-            # Flip its sign to make it true under the solution.
-            if solution[variable]: # The solution requires this variable to be True
-                current_clause[index_to_flip] = variable # Make it a positive literal
-            else: # The solution requires this variable to be False
-                current_clause[index_to_flip] = -variable # Make it a negative literal
-        
-        # Ensure the clause is not already added (optional, but good practice)
+            current_clause[index_to_flip] = -current_clause[index_to_flip] 
+            
+        # Ensure the clause is not already added 
         # A set is used for efficient checking of duplicates
-        if tuple(sorted(current_clause)) not in {tuple(sorted(c)) for c in clauses}:
-            clauses.append(current_clause)
+        if tuple(sorted(current_clause)) not in {tuple(sorted(c)) for c in raw_clauses}:
+            raw_clauses.append(current_clause)
+            duplicate_count = 0
+        else:
+            duplicate_count += 1
+            if duplicate_count >= 10:
+                break
+
+    label_generator = generate_variable_labels()
+    variable_labels = [None]+[next(label_generator) for _ in range(num_variables)]
+
+    clauses = []
+    for clause in raw_clauses:
+        new_clause = []
+        for i in range(level):
+            if clause[i]>0:
+                new_clause.append(variable_labels[clause[i]])
+            else:
+                new_clause.append(f"~{variable_labels[-clause[i]]}")
+        clauses.append(new_clause)
+
+    solution_str = ",".join([f"{variable_labels[i]}:{solution[i]}" for i in range(1, num_variables + 1)])
 
     return {
+        "variable_labels": json.dumps(variable_labels, indent=2),
+        "raw_sat": json.dumps(raw_clauses, indent=2),
         "sat": clauses,
-        "solution": solution 
+        "solution": solution_str 
     }
 
 
@@ -782,7 +791,7 @@ if __name__ == "__main__":
         9: 354.0
     }
     for level in range(args.min_level, args.max_level + 1):
-        all_num_variables=[3,3,3,3,3,3,5,5,5,5,5,7,7,7,7,9,9,9,11,11,13,15]
+        all_num_variables=[3,3,5,5,5,7,7,7,9,9,9]
         all_num_variables = [x for x in all_num_variables if x>level ]
 
         for num_variables in all_num_variables:
@@ -791,6 +800,7 @@ if __name__ == "__main__":
             for _ in range(200): # Generate 200 examples per level for the test pool
                 test_samples.append(generate_sat_data(level, num_variables, int(num_variables*(clause_to_variable_ratio[level]+1))))
 
+    print(train_samples[0])
     # Convert the lists of dictionaries into Hugging Face Dataset objects
     train_filtered = datasets.Dataset.from_list(train_samples)
     test_filtered = datasets.Dataset.from_list(test_samples)

@@ -15,7 +15,11 @@ project_name='verl_grpo_full_pathfinder_multi_attempt'
 model_name='Qwen3-0.6B'
 dataset_name='pathfinder_3to7'
 max_response_length=1024
-exp_name="${model_name}_${dataset_name}_adv_multi_attempt_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+exp_name="${model_name}_${dataset_name}_group_based_adv_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+
+# Resume configuration
+resume_mode="disable" # one of: disable, auto, resume_path
+# resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_pathfinder_multi_attempt/Qwen3-0.6B_pathfinder_3to7_group_based_adv_1024_20250101_000000/global_step_200"
 
 # Multi-attempt parameters
 enable_multi_attempt=True
@@ -28,13 +32,8 @@ val_max_attempts=4
 val_num_samples_per_attempt=1
 val_total_rollouts_per_prompt=$((val_max_attempts * val_num_samples_per_attempt))
 
-# Advantage-mixing hyperparameters
-alpha=1.0
-w_max=5.0
-epsilon=1e-6
-w1=1.0
-w2=0.5
-a_max=3.0
+# Rollout-based advantages
+num_groupings=200
 
 num_gpus=4
 mini_batch_size=32
@@ -93,7 +92,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.critic_warmup=0 \
     custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/pathfinder/pathfinder_verifier.py" \
     custom_reward_function.name="pathfinder_compute_score" \
-    reward_model.reward_manager=multi_attempt_adv_reward_manager \
+    reward_model.reward_manager=multiattemptgroupbasedadvrewardmanager \
     +reward_model.base_reward_manager=dapo \
     +reward_model.enabled=True \
     reward_model.reward_kwargs.num_workers=${num_workers} \
@@ -110,34 +109,18 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.rollout_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/train" \
     trainer.validation_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
+    trainer.resume_mode="${resume_mode}" \
     +trainer.best_checkpoint.monitor=${monitor_metric} \
     +trainer.best_checkpoint.mode=max \
     +trainer.best_checkpoint.keep_top_k=1 \
     +multi_attempt.max_attempts=$max_attempts \
     '+multi_attempt.attempt_template="\n You will be asked this question multiple times, and you will win if you get the score right in at least one of your attempts. This is your attempt {attempt_id} out of {max_attempts} attempts. Try to think of {max_attempts} different high-potential strategies and implement the {attempt_id}-th strategy. Make sure to verify your answer before submitting it."' \
+    +multi_attempt.attempt_insertion_position=user_message_end \
     +multi_attempt.num_samples_per_attempt=$num_samples_per_attempt \
     +multi_attempt.enabled=$enable_multi_attempt \
     +multi_attempt.val_max_attempts=$val_max_attempts \
     +multi_attempt.val_num_samples_per_attempt=$val_num_samples_per_attempt \
-    +multi_attempt.alpha=$alpha \
-    +multi_attempt.w_max=$w_max \
-    +multi_attempt.epsilon=$epsilon \
-    +multi_attempt.w1=$w1 \
-    +multi_attempt.w2=$w2 \
-    +multi_attempt.a_max=$a_max \
+    +multi_attempt.num_groupings=$num_groupings \
     actor_rollout_ref.rollout.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True
-
-
-# Remove the curriculum
-# maybe 1.5 model size
-# 4096 tokens
-# Base GRPO
-# Maybe more data Fresh data
-# Actor Max token to 20000, dynamic bsz, vllm config: in Slack, max token length per GPU
-# max_token_len_per_gpu=20000
-# actor_rollout_ref.actor.use_dynamic_bsz=True \
-# actor_rollout_ref.actor.ppo_max_token_len_per_gpu=$max_token_len_per_gpu \
-#     actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=$max_token_len_per_gpu \
-#     actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=$max_token_len_per_gpu \
