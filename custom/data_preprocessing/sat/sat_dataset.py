@@ -671,8 +671,8 @@ from itertools import product, chain
 
 def generate_variable_labels():
     """Generates an infinite sequence of short, unique variable labels."""
-    # Single upper letters (A-Z)
-    for char in string.ascii_uppercase:
+    # Single lower letters (a-z)
+    for char in string.ascii_lowercase:
         yield char
 
 

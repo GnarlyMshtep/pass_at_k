@@ -182,7 +182,8 @@ def sat_compute_score(
                     reason += f"{idx}: clause {clause_idx} has invalid variable index {var_idx}\n"
                     all_satisfied = False
                     break
-                    
+
+                
                 var_name = variable_labels[var_idx]
                 if var_name not in assignment:
                     reason += f"{idx}: clause {clause_idx} references undefined variable '{var_name}'\n"
@@ -196,11 +197,16 @@ def sat_compute_score(
                 if literal_value:
                     clause_satisfied = True
                     break
-                    
-            if not clause_satisfied:
+
+            if not all_satisfied:
+                break
+
+            if all_satisfied and not clause_satisfied:
                 reason += f"{idx}: clause {clause_idx} is not satisfied\n"
                 all_satisfied = False
                 break
+
+            
                 
         exact = 1 if all_satisfied else 0
         
