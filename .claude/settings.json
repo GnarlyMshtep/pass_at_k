@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Update(custom/scratch/monitor_prompt_test.py)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -43,25 +43,24 @@ from verl import DataProto
 from verl.experimental.dataset.sampler import AbstractCurriculumSampler
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from verl.single_controller.base import Worker
-from verl.single_controller.ray import (RayClassWithInitArgs, RayResourcePool,
-                                        RayWorkerGroup)
+from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
 from verl.single_controller.ray.base import create_colocated_worker_cls
 from verl.trainer.config import AlgoConfig
 from verl.trainer.ppo import core_algos
 from verl.trainer.ppo.core_algos import AdvantageEstimator, agg_loss
-from verl.trainer.ppo.metric_utils import (compute_data_metrics,
-                                           compute_throughout_metrics,
-                                           compute_timing_metrics,
-                                           process_validation_metrics)
+from verl.trainer.ppo.metric_utils import (
+    compute_data_metrics,
+    compute_throughout_metrics,
+    compute_timing_metrics,
+    process_validation_metrics,
+)
 from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-from verl.utils.checkpoint.checkpoint_manager import (find_latest_ckpt_path,
-                                                      should_save_ckpt_esi)
+from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path, should_save_ckpt_esi
 from verl.utils.config import omega_conf_to_dataclass
 from verl.utils.debug import marked_timer
 from verl.utils.metric import reduce_metrics
 from verl.utils.rollout_skip import RolloutSkip
-from verl.utils.seqlen_balancing import (get_seqlen_balanced_partitions,
-                                         log_seqlen_unbalance)
+from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
 from verl.utils.torch_functional import masked_mean
 from verl.utils.tracking import ValidationGenerationsLogger
 
@@ -284,6 +283,26 @@ def compute_advantage(
             response_mask=grpo_calculation_mask,
             index=data.non_tensor_batch["uid"],
             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
+        )
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
+    elif adv_estimator == AdvantageEstimator.GRPO_MONITORABILITY:
+        # breakpoint()
+        # Initialize the mask for GRPO calculation
+        grpo_calculation_mask = data.batch["response_mask"]
+        # Call compute_grpo_outcome_advantage with parameters matching its definition
+        advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_monitorability_outcome_advantage(
+            token_level_rewards=data.batch["token_level_rewards"],
+            response_mask=grpo_calculation_mask,
+            index=data.non_tensor_batch["uid"],
+            norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
+            # M: 2 new data fields required for the computation.
+            monitor_scores=data.non_tensor_batch["reward_extra_info/monitor_score"],
+            did_sel_hint=data.non_tensor_batch["reward_extra_info/did_sel_hint"],
+            is_correct=data.non_tensor_batch["reward_extra_info/is_correct"],
+            # format_score=data.non_tensor_batch.get["reward_extra_info/format_score"],
+            monitor_index=data.non_tensor_batch["monitor_index"],
+            config=config,
         )
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
@@ -537,8 +556,7 @@ class RayPPOTrainer:
         if train_sampler is None:
             train_sampler = create_rl_sampler(self.config.data, self.train_dataset)
         if collate_fn is None:
-            from verl.utils.dataset.rl_dataset import \
-                collate_fn as default_collate_fn
+            from verl.utils.dataset.rl_dataset import collate_fn as default_collate_fn
 
             collate_fn = default_collate_fn
 
@@ -1167,22 +1185,25 @@ class RayPPOTrainer:
                 # breakpoint()
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
 
+                if not dataset_w_builtin_attempts:
+                    batch.non_tensor_batch["uid"] = [str(uuid.uuid4()) for _ in range(len(batch.batch))]
+                else:
+                    # print(f"DEBUG:")
+                    assert False, "M: not expecting tobe running builtinattempts rn"
+                    assert self.config.data.train_batch_size * self.config.actor_rollout_ref.rollout.n == len(batch)
+                    batch.non_tensor_batch["uid"] = self.get_uids("train")
 
-                if not dataset_w_builtin_attempts:     
-                    batch.non_tensor_batch["uid"] = np.array(
-                        [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
-                    )
-                else: 
-                    #print(f"DEBUG:")
-                    assert self.config.data.train_batch_size * self.config.actor_rollout_ref.rollout.n == len(batch)  
-                    batch.non_tensor_batch["uid"] = self.get_uids("train")  
+                # M: add tags that can be used for the monitorability advantage
+                batch.non_tensor_batch["monitor_index"] = np.array(
+                    [i for i in range(len(batch))]
+                )  # M: do I need to torch tensor this?
 
                 gen_batch = self._get_gen_batch(batch)
 
                 # pass global_steps to trace
                 gen_batch.meta_info["global_steps"] = self.global_steps
-                
-                if  not dataset_w_builtin_attempts:
+
+                if not dataset_w_builtin_attempts:
                     gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                 is_last_step = self.global_steps >= self.total_training_steps
 
@@ -1276,8 +1297,7 @@ class RayPPOTrainer:
 
                         if "rollout_log_probs" in batch.batch.keys():
                             # TODO: we may want to add diff of probs too.
-                            from verl.utils.debug.metrics import \
-                                calculate_debug_metrics
+                            from verl.utils.debug.metrics import calculate_debug_metrics
 
                             metrics.update(calculate_debug_metrics(batch))
 
