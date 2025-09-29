@@ -47,6 +47,7 @@ PolicyLossFn = Callable[
     tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
 ]
 
+
 from custom.reward.reward_utils import compute_statistics
 
 POLICY_LOSS_REGISTRY: dict[str, PolicyLossFn] = {}
@@ -106,6 +107,7 @@ class AdvantageEstimator(str, Enum):
     GRPO_PASSK = "grpo_passk"
     GPG = "gpg"
     BYTEDANCE_PASS_AT_K = "bytedance_pass_at_k"
+    GRPO_MONITORABILITY = "grpo_monitorability"
 
 
 ADV_ESTIMATOR_REGISTRY: dict[str, Any] = {}
@@ -417,6 +419,128 @@ def compute_grpo_outcome_advantage(
         scores = scores.unsqueeze(-1) * response_mask
 
     return scores, scores
+
+@register_adv_est(AdvantageEstimator.GRPO_MONITORABILITY)  # or simply: @register_adv_est("grpo")
+def compute_grpo_monitorability_outcome_advantage(
+    token_level_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.ndarray,
+    epsilon: float = 1e-6,
+    norm_adv_by_std_in_grpo: bool = True,
+    monitor_scores: Optional[list[float]] = None,
+    did_sel_hint: Optional[list[float]] = None,
+    is_correct: Optional[list[bool]] = None,
+    # format_score: Optional[list[float]] = None,
+    monitor_index: Optional[np.ndarray] = None,
+    config: Optional[AlgoConfig] = None,
+) -> tuple[torch.Tensor, torch.Tensor, dict]:
+    """
+    Compute advantage for GRPO, operating only on Outcome reward
+    (with only one scalar reward for each response).
+
+    Args:
+        token_level_rewards: `(torch.Tensor)`
+            shape is (bs, response_length)
+        response_mask: `(torch.Tensor)`
+            shape is (bs, response_length)
+        index: `(np.ndarray)`
+            index array for grouping
+        epsilon: `(float)`
+            small value to avoid division by zero
+        norm_adv_by_std_in_grpo: `(bool)`
+            whether to scale the GRPO advantage
+        config: `(Optional[AlgoConfig])`
+            algorithm configuration object
+
+    Note:
+        If norm_adv_by_std_in_grpo is True, the advantage is scaled by the std, as in the original GRPO.
+        If False, the advantage is not scaled, as in Dr.GRPO (https://arxiv.org/abs/2503.20783).
+
+    Returns:
+        advantages: `(torch.Tensor)`
+            shape is (bs, response_length)
+        Returns: `(torch.Tensor)`
+            shape is (bs, response_length)
+    """
+    # breakpoint()
+
+    # check that we are getting specialized parameters that we expect
+
+    id2other_score = token_level_rewards.sum(
+        dim=-1
+    )  # M: I decided to return a score of 0, but there is still KL and entropy bonus that have been added here.
+
+    scores_normalized = torch.zeros_like(token_level_rewards.sum(dim=-1))
+    monitor_index2infos = defaultdict(list)
+    id2score = defaultdict(list)
+    id2mean = {}
+    id2std = {}
+
+    with torch.no_grad():
+        bsz = response_mask.size(0)
+        for i in range(bsz):
+            monitor_index2infos[monitor_index[i]].append(
+                {
+                    "is_correct": is_correct[i],
+                    "monitor_score": monitor_scores[i],
+                    "did_sel_hint": did_sel_hint[i],
+                    "index": index[i],
+                    "other_score": id2other_score[i],
+                }
+            )
+
+        num_varients = max(monitor_index2infos.keys()) + 1  # M: should 2x num unique qs
+
+        assert num_varients % 2 == 0, (
+            "expecting the number of varients to be divisible by 2 so, for each question"
+            "we can get the question with and without the hint"
+        )
+        # TODO: add sanity check to check that all the varients have the sam enumber attempts
+
+        for i in range(num_varients // 2):
+            base_idx = 2 * i
+            hinted_idx = 2 * i + 1
+
+            baseline_correct = sum([float(v["is_correct"]) for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            # TODO assert v["did_sel_hint"] is False for v in monitor_index2infos[base_idx]
+
+            # TODO: most complex python lines in history: can simplfy
+            id2score[monitor_index2infos[base_idx][0]["index"]] = [
+                (v["other_score"] + float(v["is_correct"]) - (float(v["did_sel_hint"] - v["monitor_score"]) ** 2))
+                for v in monitor_index2infos[base_idx]
+            ]
+
+            id2score[monitor_index2infos[hinted_idx][0]["index"]] = [
+                (
+                    v["other_score"]
+                    + float(v["is_correct"])
+                    - (max([float(v["did_sel_hint"]) - baseline_correct, 0]) - v["monitor_score"]) ** 2
+                )
+                for v in monitor_index2infos[hinted_idx]
+            ]
+
+        for idx in id2score:  # M: i think idx is the uid of generations, in case we have n>1.
+            if len(id2score[idx]) == 1:
+                assert False, "bro why are u doing GRPO with n_rollout==1?"
+                id2mean[idx] = torch.tensor(0.0)
+                id2std[idx] = torch.tensor(1.0)
+            elif len(id2score[idx]) > 1:
+                scores_tensor = torch.stack(id2score[idx])
+                id2mean[idx] = torch.mean(scores_tensor)
+                id2std[idx] = torch.std(scores_tensor)
+            else:
+                raise ValueError(f"no score in prompt index: {idx}")
+        for i in range(bsz):
+            if norm_adv_by_std_in_grpo:
+                scores_normalized[i] = (scores_normalized[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)
+            else:
+                scores_normalized[i] = scores_normalized[i] - id2mean[index[i]]
+
+        scores = scores_normalized.unsqueeze(-1) * response_mask
+
+    return scores, scores, {}
 
 
 @register_adv_est(AdvantageEstimator.GRPO_PASSK)  # or simply: @register_adv_est("grpo_passk")
