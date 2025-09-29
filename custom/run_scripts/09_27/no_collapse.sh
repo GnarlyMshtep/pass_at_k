@@ -2,7 +2,7 @@
 set -x
 
 export OVERRIDE_DATASET_NAME="bigmath_digits"
-export OVERRIDE_REWARD_FUNCTION="math_singlatt_correct_minus_leg_NOTRANSLATE"
+export OVERRIDE_REWARD_FUNCTION="compute_score_math"
 # export OVERRIDE_CUDA_DEVICES="4,5,6,7" # Use the other 4 GPUs
 
 # Source the mult_att_dapo script from the same directory
@@ -38,22 +38,22 @@ reward_function_name="${OVERRIDE_REWARD_FUNCTION:-compute_score_multi_attempt_pe
 #         ;;
 # esac
 
-n_gpus=8
+n_gpus=4
 
 #https://verl.readthedocs.io/en/latest/algo/dapo.html#overlong-reward-shaping suggests that 
 max_response_length=8192
 # overlong_buffer_len=2000
 # overlong_penalty_factor=0.2
 use_dynamic_bsz=True #! currently set for actor only, have not seen any memory issues with rollout and ref yet.
-max_token_len_per_gpu=20000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
+max_token_len_per_gpu=15000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
 max_model_len=$((512 + max_response_length)) #VLLM uses this
 # max_batched_tokens=$((max_model_len * 2)) #! if our sys breaks bring this back
 
-exp_name="Q2.5-7b_illeg_bigmathdigits_notranslate_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+exp_name="Q2.5-7b_bigmathdigits_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 
 
-python3 -m verl.trainer.main_ppo \
+CUDA_VISIBLE_DEVICES=4,5,6,7 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     data.train_files=$DATASET_DIR/$dataset_name/train.parquet \
     data.val_files=$DATASET_DIR/$dataset_name/test.parquet \
