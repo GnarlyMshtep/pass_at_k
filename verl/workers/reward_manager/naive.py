@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
-from typing import Any
-import torch
 import asyncio
 import inspect
 import time
+from collections import defaultdict
+from typing import Any
+
+import torch
 
 import custom.reward.reward_utils as reward_utils
 from verl import DataProto
@@ -47,7 +48,7 @@ class NaiveRewardManager(AbstractRewardManager):
         self.reward_fn_key = reward_fn_key  # Store the key for accessing the data source
 
     def __call__(self, data: DataProto, return_dict: bool = False) -> torch.Tensor | dict[str, Any]:
-        async def subfunction(data: DataProto, return_dict: bool = False): 
+        async def subfunction(data: DataProto, return_dict: bool = False):
             """We will expand this function gradually based on the available datasets"""
 
             # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
@@ -64,7 +65,7 @@ class NaiveRewardManager(AbstractRewardManager):
 
             already_print_data_sources = {}
 
-            async def compute_one(i:int): 
+            async def compute_one(i: int):
                 data_item = data[i]  # DataProtoItem
 
                 prompt_ids = data_item.batch["prompts"]
@@ -95,10 +96,24 @@ class NaiveRewardManager(AbstractRewardManager):
                     extra_info=extra_info,
                 )
                 score = await result if inspect.isawaitable(result) else result
-                return (score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i) 
-            
+                return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
 
-            rets = await asyncio.gather(*[compute_one(i) for i in range(len(data))])
+            max_retries = 10
+            base_delay = 1.0
+
+            for attempt in range(max_retries + 1):
+                try:
+                    rets = await asyncio.wait_for(
+                        asyncio.gather(*[compute_one(i) for i in range(len(data))]), timeout=(40.0) * (attempt + 1)
+                    )
+                    break
+                except (asyncio.TimeoutError, Exception) as e:
+                    if attempt == max_retries:
+                        raise RuntimeError(f"OpenAI unresponsive error: Max retries exceeded {e=}") from e
+
+                    delay = base_delay * (2**attempt)
+                    print(f"DEBUG: QUERIES TO OA FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds...")
+
             for ret in rets:
                 score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i = ret 
                 if isinstance(score, dict):

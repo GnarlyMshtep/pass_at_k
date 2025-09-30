@@ -462,7 +462,7 @@ def compute_grpo_monitorability_outcome_advantage(
         Returns: `(torch.Tensor)`
             shape is (bs, response_length)
     """
-    # breakpoint()
+    breakpoint()
 
     # check that we are getting specialized parameters that we expect
 
