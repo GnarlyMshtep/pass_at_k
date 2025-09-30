@@ -294,7 +294,7 @@ def compute_advantage(
         advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_monitorability_outcome_advantage(
             token_level_rewards=data.batch["token_level_rewards"],
             response_mask=grpo_calculation_mask,
-            index=data.non_tensor_batch["uid"],
+            uids=data.non_tensor_batch["uid"],
             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
             # M: 2 new data fields required for the computation.
             monitor_scores=data.non_tensor_batch["reward_extra_info/monitor_score"],

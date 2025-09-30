@@ -216,6 +216,9 @@ def make_map_fn(split: str):
 
         results = []
 
+        # 0. generate hint (will be included in q text for 2., but "hint_val" also included in control_data so we can compute baseline did_sel_hint rates )
+        hint, question_type, extra_data, hint_val = generate_hint_and_type(problem, str(answer))
+
         # 1. Control question (no hint)
         control_question = f"{user_prefix}\n{problem}"
 
@@ -229,7 +232,7 @@ def make_map_fn(split: str):
                 {
                     "role": "user",
                     "content": control_question,
-                }
+                },
             ],
             "ability": "math",
             "reward_model": {"style": "rule", "ground_truth": str(answer)},
@@ -243,13 +246,12 @@ def make_map_fn(split: str):
                 "llamaSb_solve_rate": solve_rate,
                 "question_type": "control",
                 "hint": "control-no-hint",
-                "hint_val": None
+                "hint_val": hint_val,
             },
         }
         results.append(control_data)
 
-        # 2. Hint question
-        hint, question_type, extra_data , hint_val= generate_hint_and_type(problem, str(answer))
+        # 2. hint question
 
         # For omission type, we need to check if the problem was actually modified
         modified_problem = problem
