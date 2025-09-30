@@ -418,7 +418,56 @@ def compute_grpo_outcome_advantage(
                 scores[i] = scores[i] - id2mean[index[i]]
         scores = scores.unsqueeze(-1) * response_mask
 
-    return scores, scores
+        # Compute metrics
+        metrics = {}
+
+        # Collect per-group statistics
+        all_group_means = []
+        all_group_stds = []
+        all_group_sizes = []
+        all_raw_scores = []
+
+        for idx in id2score:
+            all_group_means.append(id2mean[idx].item())
+            all_group_stds.append(id2std[idx].item())
+            all_group_sizes.append(len(id2score[idx]))
+            all_raw_scores.extend([s.item() for s in id2score[idx]])
+
+        # Diagnostic: Check for unequal group sizes
+        unique_sizes = set(all_group_sizes)
+        if len(unique_sizes) > 1:
+            from collections import Counter
+            size_counts = Counter(all_group_sizes)
+            print(f"WARNING: Unequal GRPO group sizes detected: {dict(size_counts)}")
+
+        # Summary statistics under advantages/
+        metrics["advantages/group_mean_mean"] = float(np.mean(all_group_means))
+        metrics["advantages/group_mean_std"] = float(np.std(all_group_means))
+        metrics["advantages/group_mean_min"] = float(np.min(all_group_means))
+        metrics["advantages/group_mean_max"] = float(np.max(all_group_means))
+
+        metrics["advantages/group_std_mean"] = float(np.mean(all_group_stds))
+        metrics["advantages/group_std_std"] = float(np.std(all_group_stds))
+        metrics["advantages/group_std_min"] = float(np.min(all_group_stds))
+        metrics["advantages/group_std_max"] = float(np.max(all_group_stds))
+
+        metrics["advantages/group_size_mean"] = float(np.mean(all_group_sizes))
+        metrics["advantages/num_groups"] = float(len(id2score))
+
+        # Raw score distribution (before whitening)
+        metrics["advantages/raw_score_mean"] = float(np.mean(all_raw_scores))
+        metrics["advantages/raw_score_std"] = float(np.std(all_raw_scores))
+        metrics["advantages/raw_score_min"] = float(np.min(all_raw_scores))
+        metrics["advantages/raw_score_max"] = float(np.max(all_raw_scores))
+
+        # Advantage distribution (after whitening)
+        advantages_flat = scores[:, 0].cpu().numpy()  # Take first token since all are same
+        metrics["advantages/advantage_mean"] = float(np.mean(advantages_flat))
+        metrics["advantages/advantage_std"] = float(np.std(advantages_flat))
+        metrics["advantages/advantage_min"] = float(np.min(advantages_flat))
+        metrics["advantages/advantage_max"] = float(np.max(advantages_flat))
+
+    return scores, scores, metrics
 
 @register_adv_est(AdvantageEstimator.GRPO_MONITORABILITY)  # or simply: @register_adv_est("grpo")
 def compute_grpo_monitorability_outcome_advantage(
@@ -543,23 +592,23 @@ def compute_grpo_monitorability_outcome_advantage(
                 score_unwhitened = correctness_plus_other - calibration
                 monitor_index2infos[hinted_idx][j]["score_unwhitened"] = score_unwhitened
 
-            # 3. whiten scores per monitor_index
-            id2score_normalized = torch.zeros_like(token_level_rewards.sum(dim=-1))
-            for mntr_idx in range(num_varients):
-                assert len(monitor_index2infos[mntr_idx]) > 1, f"{adv_inputs}"
-                scores_unwhitened_tensor = torch.tensor([v["score_unwhitened"] for v in monitor_index2infos[mntr_idx]])
-                mean = torch.mean(scores_unwhitened_tensor)
-                std = torch.std(scores_unwhitened_tensor)
-                for j in range(len(monitor_index2infos[mntr_idx])):
-                    infos = monitor_index2infos[mntr_idx][j]
-                    id = infos["id"]
-                    assert id2score_normalized[id] == 0, f"{mntr_idx=}, {j=} \n{adv_inputs=}"
+        # 3. whiten scores per monitor_index
+        id2score_normalized = torch.zeros_like(token_level_rewards.sum(dim=-1))
+        for mntr_idx in range(num_varients):
+            assert len(monitor_index2infos[mntr_idx]) > 1, f"{adv_inputs}"
+            scores_unwhitened_tensor = torch.tensor([v["score_unwhitened"] for v in monitor_index2infos[mntr_idx]])
+            mean = torch.mean(scores_unwhitened_tensor)
+            std = torch.std(scores_unwhitened_tensor)
+            for j in range(len(monitor_index2infos[mntr_idx])):
+                infos = monitor_index2infos[mntr_idx][j]
+                id = infos["id"]
+                assert id2score_normalized[id] == 0, f"{mntr_idx=}, {j=} \n{adv_inputs=}"
 
-                    score_unwhitened = infos["score_unwhitened"]
-                    if norm_adv_by_std_in_grpo:
-                        id2score_normalized[id] = (score_unwhitened - mean) / (std + epsilon)
-                    else:
-                        id2score_normalized[id] = score_unwhitened - mean
+                score_unwhitened = infos["score_unwhitened"]
+                if norm_adv_by_std_in_grpo:
+                    id2score_normalized[id] = (score_unwhitened - mean) / (std + epsilon)
+                else:
+                    id2score_normalized[id] = score_unwhitened - mean
 
         #     # TODO: most complex python lines in history: can simplfy
         #     id2score[monitor_index2infos[base_idx][0]["index"]] = [

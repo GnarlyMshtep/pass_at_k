@@ -15,18 +15,18 @@
 Metrics related to the PPO trainer.
 """
 
+import math
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, List, Dict, Literal
+from typing import Any, Callable, Dict, List, Literal
 
 import numpy as np
-from numpy.typing import NDArray 
-import math
 import torch
+from numpy.typing import NDArray
 
+import custom.reward.reward_utils as reward_utils
 from verl import DataProto
 from verl.utils.import_utils import deprecated
-import custom.reward.reward_utils as reward_utils
 
 
 @deprecated("verl.utils.metric.reduce_metrics")
@@ -169,9 +169,9 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "critic/rewards/max": reward_max,
         "critic/rewards/min": reward_min,
         # adv
-        "critic/advantages/mean": torch.mean(valid_adv).detach().item(),
-        "critic/advantages/max": torch.max(valid_adv).detach().item(),
-        "critic/advantages/min": torch.min(valid_adv).detach().item(),
+        "critic/advantages-len-unadj/mean": torch.mean(valid_adv).detach().item(),
+        "critic/advantages-len-unadj/max": torch.max(valid_adv).detach().item(),
+        "critic/advantages-len-unadj/min": torch.min(valid_adv).detach().item(),
         # returns
         "critic/returns/mean": torch.mean(valid_returns).detach().item(),
         "critic/returns/max": torch.max(valid_returns).detach().item(),

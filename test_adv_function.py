@@ -24,7 +24,7 @@ print("\n" + "="*80 + "\n")
 # Extract the inputs
 token_level_rewards = adv_inputs['token_level_rewards']
 response_mask = adv_inputs['response_mask']
-uids = adv_inputs['index']  # The pkl has 'index' not 'uids'
+uids = adv_inputs['uids']
 epsilon = adv_inputs['epsilon']
 norm_adv_by_std_in_grpo = adv_inputs['norm_adv_by_std_in_grpo']
 monitor_scores = adv_inputs['monitor_scores']

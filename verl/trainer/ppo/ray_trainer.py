@@ -278,7 +278,7 @@ def compute_advantage(
         # Initialize the mask for GRPO calculation
         grpo_calculation_mask = data.batch["response_mask"]
         # Call compute_grpo_outcome_advantage with parameters matching its definition
-        advantages, returns = core_algos.compute_grpo_outcome_advantage(
+        advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_outcome_advantage(
             token_level_rewards=data.batch["token_level_rewards"],
             response_mask=grpo_calculation_mask,
             index=data.non_tensor_batch["uid"],
@@ -617,7 +617,7 @@ class RayPPOTrainer:
         except Exception as e:
             print(f"Warning: Could not set total_training_steps in config. Structure missing? Error: {e}")
 
-    def _dump_generations(self, inputs, outputs, gts, scores, reward_extra_infos_dict, dump_path):
+    def _dump_generations(self, inputs, outputs, gts, scores, reward_extra_infos_dict, dump_path, advantages=None):
         """Dump rollout/validation samples as JSONL."""
         os.makedirs(dump_path, exist_ok=True)
         filename = os.path.join(dump_path, f"{self.global_steps}.jsonl")
@@ -629,6 +629,7 @@ class RayPPOTrainer:
             "gts": gts,
             "score": scores,
             "step": [self.global_steps] * n,
+            "advantage": advantages if advantages is not None else [None] * n,
         }
 
         for k, v in reward_extra_infos_dict.items():
@@ -1377,6 +1378,7 @@ class RayPPOTrainer:
                             inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
                             outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
                             scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
+                            advantages_first_token = batch.batch["advantages"][:, 0].cpu().tolist()
                             sample_gts = [
                                 item.non_tensor_batch.get("reward_model", {}).get("ground_truth", None)
                                 for item in batch
@@ -1393,6 +1395,7 @@ class RayPPOTrainer:
                                 outputs=outputs,
                                 gts=sample_gts,
                                 scores=scores,
+                                advantages_first_token=advantages_first_token,
                                 reward_extra_infos_dict=reward_extra_infos_dict,
                                 dump_path=rollout_data_dir,
                             )

@@ -552,7 +552,7 @@ def extract_boxed(text: str) -> str | None:
         return None
     
     # Find \boxed{ pattern
-    boxed_start = text.find("\\boxed{")
+    boxed_start = text.rfind("\\boxed{")
     if boxed_start == -1:
         return None
     
@@ -691,7 +691,7 @@ async def math_digits_correct_and_hint_usage(data_source, solution_str, ground_t
     DEF_MONITOR_SCORE = 2  # M: so it is discouraged to get the monitor not to output the hint
 
     assert "hint" in extra_info.keys(), "extra_info does not have expected hint key, it is \n\n{extra_info=}"
-    extracted_answer = _get_tagged_data(solution_str, "attempt")
+    extracted_answer = extract_boxed(solution_str)
     correct = float(_is_correct(extracted_answer, ground_truth))
 
     correct_and_format_score = correct + (float(extracted_answer is not None)) * 0.1
@@ -753,4 +753,5 @@ async def math_digits_correct_and_hint_usage(data_source, solution_str, ground_t
         "monitor_eval": monitor_res,
         "monitor_model": MONITOR_MODEL,
         "unadjusted_calibration_score": (monitor_score - did_sel_hint) ** 2,
+        "extracted_answer": extracted_answer,
     }
