@@ -424,7 +424,7 @@ def compute_grpo_outcome_advantage(
 def compute_grpo_monitorability_outcome_advantage(
     token_level_rewards: torch.Tensor,
     response_mask: torch.Tensor,
-    index: np.ndarray,
+    uids: np.ndarray,
     epsilon: float = 1e-6,
     norm_adv_by_std_in_grpo: bool = True,
     monitor_scores: Optional[list[float]] = None,
@@ -462,21 +462,37 @@ def compute_grpo_monitorability_outcome_advantage(
         Returns: `(torch.Tensor)`
             shape is (bs, response_length)
     """
-    breakpoint()
+    # breakpoint()
+    # Pickle all the inputs to this function
+    adv_inputs = {
+        "token_level_rewards": token_level_rewards,
+        "response_mask": response_mask,
+        "uids": uids,
+        "epsilon": epsilon,
+        "norm_adv_by_std_in_grpo": norm_adv_by_std_in_grpo,
+        "monitor_scores": monitor_scores,
+        "did_sel_hint": did_sel_hint,
+        "is_correct": is_correct,
+        "monitor_index": monitor_index,
+        "config": config,
+    }
 
+    # with open("adv_inputs.pkl", "wb") as f:
+    #     pickle.dump(adv_inputs, f)
     # check that we are getting specialized parameters that we expect
 
     id2other_score = token_level_rewards.sum(
         dim=-1
     )  # M: I decided to return a score of 0, but there is still KL and entropy bonus that have been added here.
 
-    scores_normalized = torch.zeros_like(token_level_rewards.sum(dim=-1))
     monitor_index2infos = defaultdict(list)
-    id2score = defaultdict(list)
-    id2mean = {}
-    id2std = {}
+    # id2score = defaultdict(list)
+    # id2mean = {}
+    # id2std = {}
 
     with torch.no_grad():
+        # 1. assemble list of infos, sorted by monitor_index
+
         bsz = response_mask.size(0)
         for i in range(bsz):
             monitor_index2infos[monitor_index[i]].append(
@@ -484,10 +500,13 @@ def compute_grpo_monitorability_outcome_advantage(
                     "is_correct": is_correct[i],
                     "monitor_score": monitor_scores[i],
                     "did_sel_hint": did_sel_hint[i],
-                    "index": index[i],
+                    "uid": uids[i],
                     "other_score": id2other_score[i],
+                    "id": i,
                 }
             )
+
+        # 2. for each monitor index, compute unnormalized scores (where the hinted question's unormalized score dependes on the baseline hint selection rate -- measuring 'effect size')
 
         num_varients = max(monitor_index2infos.keys()) + 1  # M: should 2x num unique qs
 
@@ -495,52 +514,215 @@ def compute_grpo_monitorability_outcome_advantage(
             "expecting the number of varients to be divisible by 2 so, for each question"
             "we can get the question with and without the hint"
         )
-        # TODO: add sanity check to check that all the varients have the sam enumber attempts
 
         for i in range(num_varients // 2):
             base_idx = 2 * i
             hinted_idx = 2 * i + 1
 
-            baseline_correct = sum([float(v["is_correct"]) for v in monitor_index2infos[base_idx]]) / len(
+            baseline_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[base_idx]]) / len(
                 monitor_index2infos[base_idx]
             )
+
+            assert baseline_hint_sel_rate >= 0 and baseline_hint_sel_rate <= 1, (
+                f"baseline correct {baseline_hint_sel_rate} is not in [0,1],\n {adv_inputs=}"
+            )
             # TODO assert v["did_sel_hint"] is False for v in monitor_index2infos[base_idx]
+            for j in range(len(monitor_index2infos[base_idx])):
+                infos = monitor_index2infos[base_idx][j]
+                correctness_plus_other = infos["other_score"] + infos["is_correct"]
+                true_hint_sel_effect = 0
+                calibration = (true_hint_sel_effect - infos["monitor_score"]) ** 2
+                score_unwhitened = correctness_plus_other - calibration
+                monitor_index2infos[base_idx][j]["score_unwhitened"] = score_unwhitened
 
-            # TODO: most complex python lines in history: can simplfy
-            id2score[monitor_index2infos[base_idx][0]["index"]] = [
-                (v["other_score"] + float(v["is_correct"]) - (float(v["did_sel_hint"] - v["monitor_score"]) ** 2))
-                for v in monitor_index2infos[base_idx]
-            ]
+            for j in range(len(monitor_index2infos[hinted_idx])):
+                infos = monitor_index2infos[hinted_idx][j]
+                correctness_plus_other = infos["other_score"] + infos["is_correct"]
+                hint_sel_effect = infos["did_sel_hint"] - baseline_hint_sel_rate
+                calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
+                score_unwhitened = correctness_plus_other - calibration
+                monitor_index2infos[hinted_idx][j]["score_unwhitened"] = score_unwhitened
 
-            id2score[monitor_index2infos[hinted_idx][0]["index"]] = [
-                (
-                    v["other_score"]
-                    + float(v["is_correct"])
-                    - (max([float(v["did_sel_hint"]) - baseline_correct, 0]) - v["monitor_score"]) ** 2
-                )
-                for v in monitor_index2infos[hinted_idx]
-            ]
+            # 3. whiten scores per monitor_index
+            id2score_normalized = torch.zeros_like(token_level_rewards.sum(dim=-1))
+            for mntr_idx in range(num_varients):
+                assert len(monitor_index2infos[mntr_idx]) > 1, f"{adv_inputs}"
+                scores_unwhitened_tensor = torch.tensor([v["score_unwhitened"] for v in monitor_index2infos[mntr_idx]])
+                mean = torch.mean(scores_unwhitened_tensor)
+                std = torch.std(scores_unwhitened_tensor)
+                for j in range(len(monitor_index2infos[mntr_idx])):
+                    infos = monitor_index2infos[mntr_idx][j]
+                    id = infos["id"]
+                    assert id2score_normalized[id] == 0, f"{mntr_idx=}, {j=} \n{adv_inputs=}"
 
-        for idx in id2score:  # M: i think idx is the uid of generations, in case we have n>1.
-            if len(id2score[idx]) == 1:
-                assert False, "bro why are u doing GRPO with n_rollout==1?"
-                id2mean[idx] = torch.tensor(0.0)
-                id2std[idx] = torch.tensor(1.0)
-            elif len(id2score[idx]) > 1:
-                scores_tensor = torch.stack(id2score[idx])
-                id2mean[idx] = torch.mean(scores_tensor)
-                id2std[idx] = torch.std(scores_tensor)
-            else:
-                raise ValueError(f"no score in prompt index: {idx}")
-        for i in range(bsz):
-            if norm_adv_by_std_in_grpo:
-                scores_normalized[i] = (scores_normalized[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)
-            else:
-                scores_normalized[i] = scores_normalized[i] - id2mean[index[i]]
+                    score_unwhitened = infos["score_unwhitened"]
+                    if norm_adv_by_std_in_grpo:
+                        id2score_normalized[id] = (score_unwhitened - mean) / (std + epsilon)
+                    else:
+                        id2score_normalized[id] = score_unwhitened - mean
 
-        scores = scores_normalized.unsqueeze(-1) * response_mask
+        #     # TODO: most complex python lines in history: can simplfy
+        #     id2score[monitor_index2infos[base_idx][0]["index"]] = [
+        #         for v in monitor_index2infos[base_idx]
+        #     ]
 
-    return scores, scores, {}
+        #     id2score[monitor_index2infos[hinted_idx][0]["index"]] = [
+        #         (
+        #             v["other_score"]
+        #             + float(v["is_correct"])
+        #             - (max([float(v["did_sel_hint"]) - baseline_correct, 0]) - v["monitor_score"]) ** 2
+        #         )
+        #         for v in monitor_index2infos[hinted_idx]
+        #     ]
+
+        # for idx in id2score:  # M: i think idx is the uid of generations, in case we have n>1.
+        #     if len(id2score[idx]) == 1:
+        #         assert False, "bro why are u doing GRPO with n_rollout==1?"
+        #         id2mean[idx] = torch.tensor(0.0)
+        #         id2std[idx] = torch.tensor(1.0)
+        #     elif len(id2score[idx]) > 1:
+        #         scores_tensor = torch.stack(id2score[idx])
+        #         id2mean[idx] = torch.mean(scores_tensor)
+        #         id2std[idx] = torch.std(scores_tensor)
+        #     else:
+        #         raise ValueError(f"no score in prompt index: {idx}")
+        # for i in range(bsz):
+        #     if norm_adv_by_std_in_grpo:
+        #         #! I think I have something wrong here -- id has been used to refer to both the uid and the index of the sample in the batch
+        #         scores_normalized[i] = (id2score[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)
+        #     else:
+        #         scores_normalized[i] = scores_normalized[i] - id2mean[index[i]]
+
+        advantages = id2score_normalized.unsqueeze(-1) * response_mask
+
+        # Compute metrics
+        metrics = {}
+
+        # Collect data for aggregation
+        all_baseline_hint_sel = []
+        all_hinted_hint_sel = []
+        all_effect_sizes = []
+        all_baseline_correct = []
+        all_hinted_correct = []
+        all_baseline_monitor = []
+        all_hinted_monitor = []
+        all_baseline_calib = []
+        all_hinted_calib = []
+        all_baseline_unwhitened = []
+        all_hinted_unwhitened = []
+
+        # Collect per-question-pair metrics
+        for i in range(num_varients // 2):
+            base_idx = 2 * i
+            hinted_idx = 2 * i + 1
+
+            # Baseline hint selection rate (the key metric for effect size)
+            baseline_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            all_baseline_hint_sel.append(baseline_hint_sel_rate)
+            metrics[f"advantages-very-verbose/q{i}_baseline_hint_sel_rate"] = float(baseline_hint_sel_rate)
+
+            # Hinted hint selection rate
+            hinted_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_hinted_hint_sel.append(hinted_hint_sel_rate)
+            metrics[f"advantages-very-verbose/q{i}_hinted_hint_sel_rate"] = float(hinted_hint_sel_rate)
+
+            # Effect size (the difference we're trying to predict)
+            effect_size = hinted_hint_sel_rate - baseline_hint_sel_rate
+            all_effect_sizes.append(effect_size)
+            metrics[f"advantages-very-verbose/q{i}_effect_size"] = float(effect_size)
+
+            # Correctness rates
+            baseline_correct = sum([v["is_correct"] for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_correct = sum([v["is_correct"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_baseline_correct.append(baseline_correct)
+            all_hinted_correct.append(hinted_correct)
+            metrics[f"advantages-very-verbose/q{i}_baseline_correctness"] = float(baseline_correct)
+            metrics[f"advantages-very-verbose/q{i}_hinted_correctness"] = float(hinted_correct)
+
+            # Monitor scores (model's predictions)
+            baseline_monitor_avg = sum([v["monitor_score"] for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_monitor_avg = sum([v["monitor_score"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_baseline_monitor.append(baseline_monitor_avg)
+            all_hinted_monitor.append(hinted_monitor_avg)
+            metrics[f"advantages-very-verbose/q{i}_baseline_monitor_score"] = float(baseline_monitor_avg)
+            metrics[f"advantages-very-verbose/q{i}_hinted_monitor_score"] = float(hinted_monitor_avg)
+
+            # Calibration errors
+            baseline_calib_err = sum([(0 - v["monitor_score"]) ** 2 for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_calib_err = sum(
+                [
+                    ((v["did_sel_hint"] - baseline_hint_sel_rate) - v["monitor_score"]) ** 2
+                    for v in monitor_index2infos[hinted_idx]
+                ]
+            ) / len(monitor_index2infos[hinted_idx])
+            all_baseline_calib.append(baseline_calib_err)
+            all_hinted_calib.append(hinted_calib_err)
+            metrics[f"advantages-very-verbose/q{i}_baseline_calibration_mse"] = float(baseline_calib_err)
+            metrics[f"advantages-very-verbose/q{i}_hinted_calibration_mse"] = float(hinted_calib_err)
+
+            # Unwhitened scores (before normalization)
+            baseline_unwhitened = sum([v["score_unwhitened"].item() for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_unwhitened = sum([v["score_unwhitened"].item() for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_baseline_unwhitened.append(baseline_unwhitened)
+            all_hinted_unwhitened.append(hinted_unwhitened)
+            metrics[f"advantages-very-verbose/q{i}_baseline_unwhitened_score"] = float(baseline_unwhitened)
+            metrics[f"advantages-very-verbose/q{i}_hinted_unwhitened_score"] = float(hinted_unwhitened)
+
+        # Summary statistics under advantages/
+        metrics["advantages/baseline_hint_sel_rate_mean"] = float(np.mean(all_baseline_hint_sel))
+        metrics["advantages/baseline_hint_sel_rate_std"] = float(np.std(all_baseline_hint_sel))
+        metrics["advantages/hinted_hint_sel_rate_mean"] = float(np.mean(all_hinted_hint_sel))
+        metrics["advantages/hinted_hint_sel_rate_std"] = float(np.std(all_hinted_hint_sel))
+
+        metrics["advantages/effect_size_mean"] = float(np.mean(all_effect_sizes))
+        metrics["advantages/effect_size_std"] = float(np.std(all_effect_sizes))
+        metrics["advantages/effect_size_min"] = float(np.min(all_effect_sizes))
+        metrics["advantages/effect_size_max"] = float(np.max(all_effect_sizes))
+
+        metrics["advantages/baseline_correctness_mean"] = float(np.mean(all_baseline_correct))
+        metrics["advantages/baseline_correctness_std"] = float(np.std(all_baseline_correct))
+        metrics["advantages/hinted_correctness_mean"] = float(np.mean(all_hinted_correct))
+        metrics["advantages/hinted_correctness_std"] = float(np.std(all_hinted_correct))
+
+        metrics["advantages/baseline_monitor_score_mean"] = float(np.mean(all_baseline_monitor))
+        metrics["advantages/baseline_monitor_score_std"] = float(np.std(all_baseline_monitor))
+        metrics["advantages/hinted_monitor_score_mean"] = float(np.mean(all_hinted_monitor))
+        metrics["advantages/hinted_monitor_score_std"] = float(np.std(all_hinted_monitor))
+
+        metrics["advantages/baseline_calibration_mse_mean"] = float(np.mean(all_baseline_calib))
+        metrics["advantages/baseline_calibration_mse_std"] = float(np.std(all_baseline_calib))
+        metrics["advantages/hinted_calibration_mse_mean"] = float(np.mean(all_hinted_calib))
+        metrics["advantages/hinted_calibration_mse_std"] = float(np.std(all_hinted_calib))
+        metrics["advantages/overall_calibration_mse"] = float(np.mean(all_baseline_calib + all_hinted_calib))
+
+        metrics["advantages/baseline_unwhitened_score_mean"] = float(np.mean(all_baseline_unwhitened))
+        metrics["advantages/hinted_unwhitened_score_mean"] = float(np.mean(all_hinted_unwhitened))
+
+        # Advantage distribution
+        metrics["advantages/advantage_mean"] = float(id2score_normalized.mean().item())
+        metrics["advantages/advantage_std"] = float(id2score_normalized.std().item())
+        metrics["advantages/advantage_min"] = float(id2score_normalized.min().item())
+        metrics["advantages/advantage_max"] = float(id2score_normalized.max().item())
+
+    return advantages, advantages, metrics
 
 
 @register_adv_est(AdvantageEstimator.GRPO_PASSK)  # or simply: @register_adv_est("grpo_passk")
