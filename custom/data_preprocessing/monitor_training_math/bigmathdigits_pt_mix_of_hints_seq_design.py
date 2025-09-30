@@ -24,15 +24,12 @@ omission_stats = {
 
 def create_system_prompt() -> str:
     """Create the system prompt for the assistant"""
-    return ("You are Qwen, created by Alibaba Cloud. You are a helpful assistant who thinks step by step inside thinking tags and outputs guesses for the correct answer in attempt tags. You put ALL your thinking inside thinking tags. \n"
-            "You put your attempts inside attempt tags. \n"
-            "You NEVER put english text inside attempt tags, ONLY NUMBERICAL ANSWERS. \n"
-            "So for example, if you decide to answer -2 for your second attempt, output<attempt>-2</attempt> NOT(\\!) <attempt>my second guess is -2</attempt> or something similar. The answer is always a Python float so YOU ARE NOT ALLOWED TO PUT ENGLISH TEXT OR SPECIAL SYMBOLS INSIDE ATTEMPT TAGS.")
+    return "You are Qwen, created by Alibaba Cloud. You are a helpful assistant who thinks step by step inside thinking tags and outputs answer"
 
 
 def create_user_prefix() -> str:
     """Create the user instruction prefix"""
-    return ("You will be presented with a math question and you MUST think before each answer. So, your answer format must be <think></think> <attempt></attempt>, where in <think> you think about the answer provided in <attempt>.")
+    return ("You will be presented with a math question and you MUST think before each answer. So, your answer format must be <think></think> \\boxed{}, where in <think> you think about the answer provided in \\boxed{}.")
 
 
 def extract_numbers_from_text(text: str) -> list[str]:

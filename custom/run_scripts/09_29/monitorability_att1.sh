@@ -21,7 +21,7 @@ project_name='cot-monitor'
 model_name='Qwen2.5-7B-Instruct'
 
 # Allow override of dataset_name and reward function via environment variables
-dataset_name="${OVERRIDE_DATASET_NAME:-dmath_e3_multatt}"
+dataset_name="${OVERRIDE_DATASET_NAME}"
 reward_function_name="${OVERRIDE_REWARD_FUNCTION:-compute_score_multi_attempt_per_rollout_math}" 
 # Allow override of CUDA devices (default to those used for multi-att)
 # def_cuda_devices="0,1,2,3"
@@ -45,7 +45,7 @@ max_response_length=2048
 # overlong_buffer_len=2000
 # overlong_penalty_factor=0.2
 use_dynamic_bsz=True #! currently set for actor only, have not seen any memory issues with rollout and ref yet.
-max_token_len_per_gpu=20000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
+max_token_len_per_gpu=13000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
 max_model_len=$((512 + max_response_length)) #VLLM uses this
 # max_batched_tokens=$((max_model_len * 2)) #! if our sys breaks bring this back
 
@@ -103,11 +103,11 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
     trainer.test_freq=50 \
     actor_rollout_ref.actor.clip_ratio_low=0.2\
     actor_rollout_ref.actor.clip_ratio_high=0.2\
-    trainer.rollout_data_dir="rollouts/${exp_name}/train" \
+    trainer.rollout_data_dir="rollouts/${dataset_name}/${exp_name}/train" \
     trainer.validation_data_dir="rollouts/${exp_name}/val" \
     trainer.default_local_dir="$MODELS_DIR/ckpts/${project_name}/${exp_name}"\
     +trainer.rollout_dump_freq=1 \
-    trainer.total_epochs=10 $@
+    trainer.total_epochs=10 $@ 2>&1 | tee logs/out.txt
 
 
 ################## CHANGELOG
