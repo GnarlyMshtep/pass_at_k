@@ -147,7 +147,12 @@ def remove_random_number_from_text(text: str) -> tuple[str, bool, str]:
         return modified_text.strip(), True, letter_to_remove
 
     # If no numbers, words, operators, or single letters found, raise the error
-    raise ValueError(f"No numbers found to remove in {text}")
+    return (
+        "",
+        True,
+        "all",
+    )  # M: I changed this to avoid crashing the whole preprocessing run -- it happens a very small fraction oif the time
+    # raise ValueError(f"No numbers found to remove in {text}")
     return text, False, ""
 
 
@@ -320,8 +325,9 @@ def main():
                        help="Local directory to save processed data")
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
-    parser.add_argument("--ntrain", type=int, default=5000,
-                       help="Number of training examples (will be doubled with hints)")
+    parser.add_argument(
+        "--ntrain", type=int, default=5000000, help="Number of training examples (will be doubled with hints)"
+    )  # M: this will just select dataset by default
     parser.add_argument("--nval", type=int, default=25,
                        help="Number of validation examples (will be doubled with hints)")
     parser.add_argument("--seed", type=int, default=42,
@@ -343,6 +349,12 @@ def main():
         dataset = load_dataset("mehuldamani/big-math-digits")
         print(f"Dataset loaded successfully!")
         print(f"Available splits: {list(dataset.keys())}")
+
+        # Shuffle all splits of the dataset
+        print("Shuffling all splits...")
+        for split_name in dataset.keys():
+            dataset[split_name] = dataset[split_name].shuffle(seed=args.seed)
+        print(f"All splits shuffled with seed {args.seed}")
 
         # Use the train split if available, otherwise use the first available split
         if 'train' in dataset:
