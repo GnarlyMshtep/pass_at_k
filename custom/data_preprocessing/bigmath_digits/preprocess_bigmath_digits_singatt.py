@@ -6,7 +6,7 @@ Preprocess the bigmath_digits dataset to parquet format
 import argparse
 import os
 import random
-from typing import Dict, Any
+from typing import Any, Dict
 
 import datasets
 from datasets import load_dataset
@@ -74,8 +74,7 @@ def main():
                        help="Local directory to save processed data")
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
-    parser.add_argument("--ntrain", type=int, default=10000,
-                       help="Number of training examples")
+    parser.add_argument("--ntrain", type=int, default=1000000, help="Number of training examples")
     parser.add_argument("--nval", type=int, default=50,
                        help="Number of validation examples")
     parser.add_argument("--seed", type=int, default=42,

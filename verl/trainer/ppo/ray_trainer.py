@@ -617,7 +617,9 @@ class RayPPOTrainer:
         except Exception as e:
             print(f"Warning: Could not set total_training_steps in config. Structure missing? Error: {e}")
 
-    def _dump_generations(self, inputs, outputs, gts, scores, reward_extra_infos_dict, dump_path, advantages=None):
+    def _dump_generations(
+        self, inputs, outputs, gts, scores, reward_extra_infos_dict, dump_path, advantages_first_token=None
+    ):
         """Dump rollout/validation samples as JSONL."""
         os.makedirs(dump_path, exist_ok=True)
         filename = os.path.join(dump_path, f"{self.global_steps}.jsonl")
@@ -629,7 +631,7 @@ class RayPPOTrainer:
             "gts": gts,
             "score": scores,
             "step": [self.global_steps] * n,
-            "advantage": advantages if advantages is not None else [None] * n,
+            "advantage": advantages_first_token if advantages_first_token is not None else [None] * n,
         }
 
         for k, v in reward_extra_infos_dict.items():
