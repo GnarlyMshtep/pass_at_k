@@ -27,7 +27,6 @@ import datasets
 
 from verl.utils.hdfs_io import copy, makedirs
 
-
 PROMPT_TEMPLATE = (
     "Using the numbers {numbers}, create an expression that equals {target}. "
     "You can use basic arithmetic operations (+, -, *, /) one or multiple times but each number can only be used once. "
@@ -65,7 +64,7 @@ def parse_args():
     parser.add_argument(
         "--test_size",
         type=int,
-        default=-1,
+        default=10,
         help="Number of test rows to include after filtering (use -1 for all)",
     )
     parser.add_argument(

@@ -71,7 +71,7 @@ def run_ppo(config) -> None:
             runtime_env = OmegaConf.merge(default_runtime_env, runtime_env_kwargs)
             ray_init_kwargs = OmegaConf.create({**ray_init_kwargs, "runtime_env": runtime_env})
             print(f"ray init kwargs: {ray_init_kwargs}")
-            ray_init_kwargs['num_cpus'] = 100 #https://github.com/Jiayi-Pan/TinyZero/issues/7
+            # ray_init_kwargs['num_cpus'] = 100 #https://github.com/Jiayi-Pan/TinyZero/issues/7
             ray.init(**OmegaConf.to_container(ray_init_kwargs))
 
     # Create a remote instance of the TaskRunner class, and
@@ -121,8 +121,7 @@ class TaskRunner:
         from verl.single_controller.ray import RayWorkerGroup
 
         if config.actor_rollout_ref.actor.strategy in {"fsdp", "fsdp2"}:
-            from verl.workers.fsdp_workers import (ActorRolloutRefWorker,
-                                                   AsyncActorRolloutRefWorker)
+            from verl.workers.fsdp_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker
 
             actor_rollout_cls = (
                 AsyncActorRolloutRefWorker
@@ -132,8 +131,7 @@ class TaskRunner:
             ray_worker_group_cls = RayWorkerGroup
 
         elif config.actor_rollout_ref.actor.strategy == "megatron":
-            from verl.workers.megatron_workers import (
-                ActorRolloutRefWorker, AsyncActorRolloutRefWorker)
+            from verl.workers.megatron_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker
 
             actor_rollout_cls = (
                 AsyncActorRolloutRefWorker
