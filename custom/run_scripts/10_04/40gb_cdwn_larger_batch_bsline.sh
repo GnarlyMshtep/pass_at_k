@@ -1,8 +1,10 @@
 #!/bin/bash
 set -x
 
-export OVERRIDE_DATASET_NAME="bigmath_digits"
-export OVERRIDE_REWARD_FUNCTION="compute_score_math"
+export TORCHDYNAMO_SUPPRESS_ERRORS=1 #! only on a100=40Gb
+
+export OVERRIDE_DATASET_NAME="countdown3to9"
+export OVERRIDE_REWARD_FUNCTION="countdown_compute_score"
 # export OVERRIDE_CUDA_DEVICES="4,5,6,7" # Use the other 4 GPUs
 
 # Source the mult_att_dapo script from the same directory
@@ -17,7 +19,7 @@ export HYDRA_FULL_ERROR=1
 PROJECT_DIR=$(pwd)
 DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
 MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
-project_name='stable_baseline'
+project_name='stable_baseline/cdwn'
 model_name="Qwen2_5-7B"
 
 # Allow override of dataset_name and reward function via environment variables
@@ -38,24 +40,25 @@ reward_function_name="${OVERRIDE_REWARD_FUNCTION:-compute_score_multi_attempt_pe
 #         ;;
 # esac
 
-n_gpus=4
+n_gpus=8
+
 
 #https://verl.readthedocs.io/en/latest/algo/dapo.html#overlong-reward-shaping suggests that 
 max_response_length=8192
 # overlong_buffer_len=2000
 # overlong_penalty_factor=0.2
 use_dynamic_bsz=True #! currently set for actor only, have not seen any memory issues with rollout and ref yet.
-max_token_len_per_gpu=12000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
+max_token_len_per_gpu=8000 #M: lowered from my usual 20000 to be a bit more conservative, since I don't plan to run on GPU for a couple more days afaik (and was getting v high util with 20000 on 1_7B model)
 max_model_len=$((512 + max_response_length)) #VLLM uses this
 # max_batched_tokens=$((max_model_len * 2)) #! if our sys breaks bring this back
 
-exp_name="stable_bsline/larger_bsize_Q2.5-7b_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+exp_name="stable_bsline_cdwn/larger_bsize_Q2.5-7b_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 
 #! the difference between use_kl_loss (outside advantage) and use_kl_in_reward (within advantage) https://github.com/volcengine/verl/issues/3276#issuecomment-3243528237 
 # I think always prefer use_kl_in_loss over use_kl_in_reward, especially when norming by GRPO std -- maybe that was my issue? 
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
+python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     data.train_files=$DATASET_DIR/$dataset_name/train.parquet \
     data.val_files=$DATASET_DIR/$dataset_name/test.parquet \
@@ -79,7 +82,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
     actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.7 \
@@ -91,7 +94,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.enforce_eager=False \
     actor_rollout_ref.rollout.free_cache_engine=False \
     reward_model.reward_manager=naive \
-    custom_reward_function.path="${PROJECT_DIR}/custom/reward/reward_utils.py" \
+    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/countdown/countdown_verifier.py" \
     custom_reward_function.name="$reward_function_name" \
     trainer.critic_warmup=0 \
     trainer.logger=['console','wandb'] \

@@ -3,6 +3,7 @@ import operator
 import typing as _t
 from collections import Counter
 
+
 def _extract_answer(s: str) -> str:
     if ("<answer>" in s and "</answer>" in s):
         return s.split("<answer>")[-1].split("</answer>")[0].strip()
@@ -72,7 +73,7 @@ def countdown_compute_score(
     format_score = 0 #0.1
     score = 1.0
     expr = _extract_answer(solution_str)
-    print(expr)
+    # print(expr)
     if expr is None:
         return 0.0
     

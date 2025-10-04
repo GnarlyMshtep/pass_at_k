@@ -1,8 +1,8 @@
 #!/bin/bash
 set -x
 
-export OVERRIDE_DATASET_NAME="bigmath_digits"
-export OVERRIDE_REWARD_FUNCTION="compute_score_math"
+export OVERRIDE_DATASET_NAME="countdown3to9"
+export OVERRIDE_REWARD_FUNCTION="countdown_compute_score"
 # export OVERRIDE_CUDA_DEVICES="4,5,6,7" # Use the other 4 GPUs
 
 # Source the mult_att_dapo script from the same directory
@@ -17,7 +17,7 @@ export HYDRA_FULL_ERROR=1
 PROJECT_DIR=$(pwd)
 DATASET_DIR="/mnt/xfs/home/aiilyas/rl-exploration/data"
 MODELS_DIR="/mnt/xfs/home/aiilyas/rl-exploration/models"
-project_name='stable_baseline'
+project_name='stable_baseline_cdwn'
 model_name="Qwen2_5-7B"
 
 # Allow override of dataset_name and reward function via environment variables
@@ -38,7 +38,7 @@ reward_function_name="${OVERRIDE_REWARD_FUNCTION:-compute_score_multi_attempt_pe
 #         ;;
 # esac
 
-n_gpus=4
+n_gpus=8
 
 #https://verl.readthedocs.io/en/latest/algo/dapo.html#overlong-reward-shaping suggests that 
 max_response_length=8192
@@ -49,13 +49,13 @@ max_token_len_per_gpu=12000 #M: lowered from my usual 20000 to be a bit more con
 max_model_len=$((512 + max_response_length)) #VLLM uses this
 # max_batched_tokens=$((max_model_len * 2)) #! if our sys breaks bring this back
 
-exp_name="stable_bsline/larger_bsize_Q2.5-7b_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+exp_name="stable_bsline_cdwn/larger_bsize_Q2.5-7b_${dataset_name}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 
 #! the difference between use_kl_loss (outside advantage) and use_kl_in_reward (within advantage) https://github.com/volcengine/verl/issues/3276#issuecomment-3243528237 
 # I think always prefer use_kl_in_loss over use_kl_in_reward, especially when norming by GRPO std -- maybe that was my issue? 
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
+python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     data.train_files=$DATASET_DIR/$dataset_name/train.parquet \
     data.val_files=$DATASET_DIR/$dataset_name/test.parquet \
@@ -91,7 +91,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.enforce_eager=False \
     actor_rollout_ref.rollout.free_cache_engine=False \
     reward_model.reward_manager=naive \
-    custom_reward_function.path="${PROJECT_DIR}/custom/reward/reward_utils.py" \
+    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/countdown/countdown_verifier.py" \
     custom_reward_function.name="$reward_function_name" \
     trainer.critic_warmup=0 \
     trainer.logger=['console','wandb'] \
