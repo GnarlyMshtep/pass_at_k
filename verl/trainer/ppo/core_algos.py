@@ -306,9 +306,10 @@ def _calc_adv(pass_flags: torch.Tensor, k_opt: int, epsilon: float = 1e-6) -> to
     return new_val.to(torch.float32), adv_p, adv_n
 
 
-@register_adv_est(AdvantageEstimator.BYTEDANCE_PASS_AT_K)  # or simply: @register_adv_est("grpo")
+@register_adv_est(AdvantageEstimator.BYTEDANCE_PASS_AT_K)  # or simply: @register_adv_est("bytedance_pass_at_k")
 def compute_bytedance_pass_at_k_outcome_advantages(
     token_level_rewards: torch.Tensor,
+    is_correct: torch.Tensor,
     response_mask: torch.Tensor,
     index: np.ndarray,
     k_opt: int = 2,
@@ -334,7 +335,7 @@ def compute_bytedance_pass_at_k_outcome_advantages(
             assert n >= k_opt, f"pass@k requires at least k responses per uid; got {n} < {k_opt}"
 
             group_scores = scores[inds]
-            pass_flags = (group_scores >= 1).to(dtype=torch.float32)
+            pass_flags = torch.tensor(is_correct[inds], dtype=torch.float32)
             adv_vals, adv_p, adv_n = _calc_adv(pass_flags, k_opt=k_opt, epsilon=epsilon)
             advs_ps.append(adv_p)
             advs_ns.append(adv_n)
@@ -344,7 +345,6 @@ def compute_bytedance_pass_at_k_outcome_advantages(
     
     extra_advanatge_metrics.update(compute_statistics(advs_ps, ""))
     extra_advanatge_metrics.update(compute_statistics(advs_ns, ""))
-
     return advantages, advantages, extra_advanatge_metrics
 
 
