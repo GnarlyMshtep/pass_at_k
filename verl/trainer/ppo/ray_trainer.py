@@ -972,21 +972,15 @@ class RayPPOTrainer:
                 test_batch = test_batch.repeat(
                     repeat_times=self.config.actor_rollout_ref.rollout.val_kwargs.n, interleave=True
                 )
+            # Do not pre-extend per-sample identifiers here; reward managers will provide them
             # we only do validation on rule-based rm
             if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
                 return {}
 
             # Store inputs for logging/metrics
-            # In multi-attempt mode, keep the original prompt text and repeat it to match the expanded batch
-            if self._is_multi_attempt_enabled():
-                repeat_factor = val_max_attempts * val_num_samples_per_attempt
-                input_texts = []
-                for txt in orig_input_texts:
-                    input_texts.extend([txt] * repeat_factor)
-            else:
-                input_ids = test_batch.batch["input_ids"]
-                # TODO: Can we keep special tokens except for padding tokens?
-                input_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in input_ids]
+            # Always decode the actual input_ids after any multi-attempt processing so dumped inputs match model prompts
+            input_ids = test_batch.batch["input_ids"]
+            input_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in input_ids]
             sample_inputs.extend(input_texts)
 
             ground_truths = [
@@ -1053,6 +1047,20 @@ class RayPPOTrainer:
                     reward_extra_infos_dict[key].extend(lst)
                     print(f"len reward_extra_infos_dict['{key}']: {len(reward_extra_infos_dict[key])}")
 
+            # per-sample fields already propagated before _get_gen_batch; avoid duplicating here
+
+            # include dataset-provided extra_info in validation dump (mirrors training behavior)
+            if "extra_info" in test_batch.non_tensor_batch:
+                try:
+                    extra_vals = test_batch.non_tensor_batch["extra_info"].tolist()
+                except Exception:
+                    try:
+                        extra_vals = list(test_batch.non_tensor_batch["extra_info"])
+                    except Exception:
+                        extra_vals = []
+                if len(extra_vals) > 0:
+                    reward_extra_infos_dict["extra_info"].extend(extra_vals)
+
             # collect num_turns of each prompt
             if "__num_turns__" in test_batch.non_tensor_batch:
                 sample_turns.append(test_batch.non_tensor_batch["__num_turns__"])
@@ -1071,6 +1079,7 @@ class RayPPOTrainer:
                 scores=sample_scores,
                 reward_extra_infos_dict=reward_extra_infos_dict,
                 dump_path=val_data_dir,
+                non_tensor_fields=test_batch.non_tensor_batch,
             )
 
         for key_info, lst in reward_extra_infos_dict.items():

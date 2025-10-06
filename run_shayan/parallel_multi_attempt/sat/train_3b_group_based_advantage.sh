@@ -12,14 +12,14 @@ export RAY_DISABLE_IMPORT_WARNING=1
 
 PROJECT_DIR=$(pwd)
 project_name='verl_grpo_full_sat_multi_attempt'
-model_name='Qwen3-0.6B'
+model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat_2to3'
 max_response_length=2048
 exp_name="${model_name}_${dataset_name}_group_based_adv_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Resume configuration
-resume_mode="resume_path" # one of: disable, auto, resume_path
-resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen3-0.6B_sat_2to3_grpo_2048_20250928_233652/global_step_300"
+resume_mode="disable" # one of: disable, auto, resume_path
+# resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen3-0.6B_sat_3to7_group_based_adv_1024_20250101_000000/global_step_200"
 
 # Multi-attempt parameters
 enable_multi_attempt=True
@@ -34,8 +34,9 @@ val_total_rollouts_per_prompt=$((val_max_attempts * val_num_samples_per_attempt)
 
 # Rollout-based advantages
 num_groupings=200
+pass_at_k_weight=0.5  # Weight for pass@k (1-w for pass@1)
 
-num_gpus=4
+num_gpus=8
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
@@ -65,7 +66,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     data.return_raw_chat=True \
     data.return_full_prompt=True \
     actor_rollout_ref.model.path=$HF_HOME/models/${model_name} \
-    actor_rollout_ref.actor.optim.lr=3e-6 \
+    actor_rollout_ref.actor.optim.lr=6e-6 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=16 \
@@ -101,15 +102,14 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.experiment_name="${exp_name}" \
     trainer.n_gpus_per_node=$num_gpus \
     trainer.nnodes=1 \
-    trainer.save_freq=100 \
-    trainer.test_freq=20 \
+    trainer.save_freq=50 \
+    trainer.test_freq=50 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
     trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_sat/${exp_name}/train" \
     trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_sat/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
     trainer.resume_mode="${resume_mode}" \
-    trainer.resume_from_path="${resume_from_path}" \
     +trainer.best_checkpoint.monitor=${monitor_metric} \
     +trainer.best_checkpoint.mode=max \
     +trainer.best_checkpoint.keep_top_k=1 \
@@ -121,6 +121,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     +multi_attempt.val_max_attempts=$val_max_attempts \
     +multi_attempt.val_num_samples_per_attempt=$val_num_samples_per_attempt \
     +multi_attempt.num_groupings=$num_groupings \
+    +multi_attempt.pass_at_k_weight=$pass_at_k_weight \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True

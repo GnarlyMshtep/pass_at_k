@@ -49,6 +49,11 @@ class MultiAttemptConfig:
     # Clipping bound for mixed advantage placed on last token
     a_max: float = 3.0
     
+    # Weight for combining pass@k and pass@1 advantages
+    # final_advantage = pass_at_k_weight * pass@k + (1 - pass_at_k_weight) * pass@1
+    # Default 0.5 gives equal weight to both terms
+    pass_at_k_weight: float = 0.5
+    
     def __post_init__(self):
         """Validate configuration parameters."""
         assert self.max_attempts > 0, "max_attempts must be positive"
