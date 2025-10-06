@@ -37,10 +37,10 @@ num_groupings=200
 
 num_gpus=4
 mini_batch_size=32
-train_batch_size=64
+train_batch_size=128
 val_batch_size=512
 
-num_workers=3
+num_workers=8
 
 max_model_len=$((2048 + max_response_length))
 max_batched_tokens=$((max_model_len + 1024))
@@ -68,7 +68,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     actor_rollout_ref.actor.optim.lr=3e-6 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
-    actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2 \
+    actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=16 \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
     actor_rollout_ref.actor.use_kl_loss=True \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
@@ -78,15 +78,15 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
     +actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
-    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2 \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=16 \
     actor_rollout_ref.ref.log_prob_use_dynamic_bsz=True \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.75 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.85 \
     actor_rollout_ref.rollout.max_num_batched_tokens=$max_batched_tokens \
     actor_rollout_ref.rollout.load_format=safetensors \
     actor_rollout_ref.rollout.layered_summon=False \
-    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2 \
+    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=16 \
     actor_rollout_ref.ref.fsdp_config.param_offload=False \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
@@ -102,12 +102,12 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.experiment_name="${exp_name}" \
     trainer.n_gpus_per_node=$num_gpus \
     trainer.nnodes=1 \
-    trainer.save_freq=100 \
-    trainer.test_freq=20 \
+    trainer.save_freq=50 \
+    trainer.test_freq=50 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
-    trainer.rollout_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/train" \
-    trainer.validation_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/val" \
+    trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/train" \
+    trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_pathfinder/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
     trainer.resume_mode="${resume_mode}" \
     +trainer.best_checkpoint.monitor=${monitor_metric} \
@@ -121,6 +121,6 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     +multi_attempt.val_max_attempts=$val_max_attempts \
     +multi_attempt.val_num_samples_per_attempt=$val_num_samples_per_attempt \
     +multi_attempt.num_groupings=$num_groupings \
-    actor_rollout_ref.rollout.temperature=0.5 \
+    actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True
