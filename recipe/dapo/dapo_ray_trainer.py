@@ -325,8 +325,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                         filtered_prompts = total_prompts_before_filter - kept_prompts
                         
                         num_prompt_in_batch += len(kept_prompt_uids)
-                        print(f"[DEBUG] After filtering: {len(kept_prompt_uids)=}, {num_prompt_in_batch=}, {num_gen_batches=}, train_batch_size={self.config.data.train_batch_size}")
-
+                       
                         kept_traj_idxs = []
                         for idx, traj_from_prompt_uid in enumerate(new_batch.non_tensor_batch["uid"]):
                             if traj_from_prompt_uid in kept_prompt_uids:
@@ -370,7 +369,6 @@ class RayDAPOTrainer(RayPPOTrainer):
                                 )
                         else:
                             # Align the batch
-                            print(f"[DEBUG] ENOUGH PROMPTS! Proceeding to update. {num_prompt_in_batch=}, {prompt_bsz=}, {num_gen_batches=}")
                             traj_bsz = self.config.data.train_batch_size * self.config.actor_rollout_ref.rollout.n
                             batch = batch[:traj_bsz]
 
@@ -540,13 +538,14 @@ class RayDAPOTrainer(RayPPOTrainer):
 
 
                 metrics["train/num_gen_batches"] = num_gen_batches
-                print(f"[DEBUG] LOGGING METRICS at global_step={self.global_steps}, gen_steps={self.gen_steps}, num_gen_batches={num_gen_batches}")
+                metrics["train/gen_steps"] = self.gen_steps
+                metrics["train/global_steps"] = self.global_steps
                 batch = None
                 num_prompt_in_batch = 0
                 num_gen_batches = 0
                 # breakpoint()
                 # TODO: make a canonical logger that supports various backend
-                logger.log(data=metrics, step=self.global_steps)
+                logger.log(data=metrics, step=self.gen_steps)
 
 
                 

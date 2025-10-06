@@ -15,9 +15,9 @@ project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat_2to3'
 max_response_length=2048
-enable_overlong_buffer=True
-overlong_buffer_len=64
-overlong_penalty_factor=0.5
+enable_overlong_buffer=False
+overlong_buffer_len=10
+overlong_penalty_factor=0
 
 
 # Advantage estimator settings
@@ -32,14 +32,14 @@ val_total_rollouts_per_prompt=$((val_max_attempts * val_num_samples_per_attempt)
 exp_name="${model_name}_${dataset_name}_dapo_pass_at_${pass_k}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Format reward settings
-add_format_advantage=True
+add_format_advantage=False
 
-num_gpus=8
+num_gpus=2
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
 
-num_workers=3
+num_workers=30
 
 max_model_len=$((1024 + max_response_length))
 max_batched_tokens=$((max_model_len + 1024))
@@ -59,12 +59,12 @@ clip_ratio_high=0.28
 
 loss_agg_mode="token-mean"
 
-enable_filter_groups=True
+enable_filter_groups=False
 filter_groups_metric=is_correct
 
 
 # Algorithm
-temperature=0.7
+temperature=1.0
 top_p=0.95
 top_k=-1 # 0 for HF rollout, -1 for vLLM rollout
 
@@ -100,9 +100,9 @@ python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.clip_ratio_low=${clip_ratio_low} \
     actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
     actor_rollout_ref.actor.clip_ratio_c=10.0 \
-    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1 \
-    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 \
-    actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1 \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=4 \
+    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4 \
+    actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=4 \
     algorithm.use_kl_in_reward=${use_kl_in_reward} \
     algorithm.kl_ctrl.kl_coef=${kl_coef} \
     algorithm.filter_groups.enable=${enable_filter_groups} \
@@ -153,8 +153,8 @@ python3 -m recipe.dapo.main_dapo \
     trainer.nnodes=1 \
     trainer.total_epochs=1 \
     +trainer.rollout_dump_freq=5 \
-    trainer.rollout_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/train" \
-    trainer.validation_data_dir="/cmlscratch/asoltan3/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/val" \
+    trainer.rollout_data_dir="${PROJECT_DIR}/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/train" \
+    trainer.validation_data_dir="${PROJECT_DIR}/logs/rollouts/full_satfinder/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
     custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/sat/sat_verifier.py" \
     custom_reward_function.name="sat_compute_score" \
