@@ -314,9 +314,15 @@ def more_reward_util_func(batch):
         elif "reward" in batch.non_tensor_batch:
             labels_np = (np.asarray(batch.non_tensor_batch["reward"], dtype=float) > 0.5).astype(int)
         if labels_np is not None and len(labels_np) == len(uid_list):
-            uid_to_indices: dict[Any, list[int]] = defaultdict(list)
-            for idx, uid in enumerate(uid_list):
-                uid_to_indices[uid].append(idx)
+            # Get data sources for grouping
+            data_sources = batch.non_tensor_batch.get("data_source", ["unknown"] * len(uid_list))
+            if isinstance(data_sources, np.ndarray):
+                data_sources = data_sources.tolist()
+            
+            # Build groups: (data_source, uid) -> indices
+            ds_uid_to_indices: dict[tuple[str, Any], list[int]] = defaultdict(list)
+            for idx, (uid, data_source) in enumerate(zip(uid_list, data_sources)):
+                ds_uid_to_indices[(data_source, uid)].append(idx)
         else:
             raise ValueError
             # if "token_level_rewards" in batch.batch:
@@ -347,8 +353,27 @@ def more_reward_util_func(batch):
                 f"pass@8" : expected_pass_at_k(rewards, 8),    
             }            
 
-        metrics_per_qs:List[dict]= [compute_reward_metrics(labels_np[indices]) for indices in uid_to_indices.values()]
-        metrics_update = {k : sum([metrics_per_q[k] for metrics_per_q in metrics_per_qs]) / len(metrics_per_qs) for k in metrics_per_qs[0].keys()} #average across all qs
-        # Prefix with train/ so they appear grouped under training metrics in loggers
-        prefixed_metrics_update = {f"train/{k}": v for k, v in metrics_update.items()}
+        # ORIGINAL: Compute aggregated metrics across all data sources
+        # Build groups: uid -> indices (for original aggregated metrics)
+        uid_to_indices: dict[Any, list[int]] = defaultdict(list)
+        for idx, uid in enumerate(uid_list):
+            uid_to_indices[uid].append(idx)
+        
+        metrics_per_qs: List[dict] = [compute_reward_metrics(labels_np[indices]) for indices in uid_to_indices.values()]
+        if len(metrics_per_qs) > 0:
+            metrics_update = {k: sum([metrics_per_q[k] for metrics_per_q in metrics_per_qs]) / len(metrics_per_qs) for k in metrics_per_qs[0].keys()}
+            # Prefix with train/ so they appear grouped under training metrics in loggers
+            prefixed_metrics_update = {f"train/{k}": v for k, v in metrics_update.items()}
+        else:
+            prefixed_metrics_update = {}
+
+        # NEW: Compute metrics per data source
+        for (data_source, _), indices in ds_uid_to_indices.items():
+            metrics_per_qs_ds: List[dict] = [compute_reward_metrics(labels_np[indices]) for indices in [indices]]
+            if len(metrics_per_qs_ds) > 0:
+                metrics_update_ds = {k: sum([metrics_per_q[k] for metrics_per_q in metrics_per_qs_ds]) / len(metrics_per_qs_ds) for k in metrics_per_qs_ds[0].keys()}
+                # Prefix with train/ and data source so they appear grouped under training metrics in loggers
+                for k, v in metrics_update_ds.items():
+                    prefixed_metrics_update[f"trainWithDataSources/{k}/{data_source}"] = v
+        
         return prefixed_metrics_update

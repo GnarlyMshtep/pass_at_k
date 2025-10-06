@@ -115,7 +115,7 @@ class DAPORewardManager(AbstractRewardManager):
 
     def __call__(self, data: DataProto, return_dict: bool = False):
         """We will expand this function gradually based on the available datasets"""
-
+        global _GLOBAL_COMPUTE_SCORE
         _t0 = time.perf_counter()
         # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
         if "rm_scores" in data.batch.keys():
@@ -172,7 +172,7 @@ class DAPORewardManager(AbstractRewardManager):
 
             if self.mp_start_method == "fork":
                 # Inherit compute function via fork
-                global _GLOBAL_COMPUTE_SCORE
+                # global _GLOBAL_COMPUTE_SCORE
                 _GLOBAL_COMPUTE_SCORE = self.compute_score
                 initializer = None
                 initargs = ()
@@ -202,6 +202,14 @@ class DAPORewardManager(AbstractRewardManager):
             print(f"[DAPO] Pool cleanup took {_t_pool_exit - _t_map_end:.6f}s")
         else:
             reason = "too few items" if len(prepared_items) <= min_items_for_mp else "single worker"
+            
+            if self.mp_start_method == "fork":
+                # Inherit compute function via fork
+                # global _GLOBAL_COMPUTE_SCORE
+                _GLOBAL_COMPUTE_SCORE = self.compute_score
+                initializer = None
+                initargs = ()
+
             print(f"[DAPO] Using single-threaded processing ({reason}: workers={self.num_workers}, items={len(prepared_items)}, threshold={min_items_for_mp})")
             _t_map_start = time.perf_counter()
             results = list(map(_dapo_compute_one, prepared_items))
@@ -229,8 +237,9 @@ class DAPORewardManager(AbstractRewardManager):
                 overlong_penalty_factor = self.overlong_buffer_cfg.penalty_factor
                 overlong_reward = min(-exceed_len / overlong_buffer_len * overlong_penalty_factor, 0)
                 reward += overlong_reward
+                # Always add overlong_reward to reward_extra_info for advantage computation
+                reward_extra_info["overlong_reward"].append(overlong_reward)
                 if self.overlong_buffer_cfg.log:
-                    reward_extra_info["overlong_reward"].append(overlong_reward)
                     reward_extra_info["overlong"].append(overlong_reward < 0)
 
             reward_tensor[i, valid_response_length - 1] = reward

@@ -251,12 +251,79 @@ def compute_advantage(
     if adv_estimator == AdvantageEstimator.BYTEDANCE_PASS_AT_K: 
         k_opt = 2 if config is None else config.get("pass_at_k_k", 2)
         # breakpoint()
+
+        # Check if is_correct exists in non_tensor_batch
+        if config.filter_groups.metric not in data.non_tensor_batch:
+            raise KeyError(
+                f"'{config.filter_groups.metric}' not found in data.non_tensor_batch. Available keys: {list(data.non_tensor_batch.keys())}. "
+                f"Make sure your reward function returns '{config.filter_groups.metric}' in the reward_extra_info dict. and you set algorithm.filter_groups.metric correctly"
+            )
+        
         advantages, returns, extra_advantage_metrics = core_algos.compute_bytedance_pass_at_k_outcome_advantages(
             token_level_rewards=data.batch["token_level_rewards"],
+            is_correct=data.non_tensor_batch[config.filter_groups.metric],
             response_mask=data.batch["response_mask"],
             index=data.non_tensor_batch["uid"],
             k_opt=k_opt,
         )
+        
+        # Helper function to normalize rewards per group
+        def normalize_rewards_per_group(rewards, uids):
+            """Normalize rewards to have mean=0 and std=max per group."""
+            rewards = rewards.clone()
+            reward_max = rewards.max()
+            id2indexes = defaultdict(list)
+            
+            # Build index mapping efficiently
+            for i in range(len(uids)):
+                id2indexes[uids[i]].append(i)
+            
+            # Normalize each group
+            for uid, inds in id2indexes.items():
+                assert len(inds) == 16
+                # Get rewards for this group
+                group_rewards = rewards[inds]
+                
+                # Compute statistics
+                group_mean = group_rewards.mean()
+                group_std = group_rewards.std()
+                
+                
+                # Normalize: mean=0, then scale so std=max
+                group_rewards_normalized = group_rewards - group_mean
+                if group_std > 1e-8:  # Avoid division by zero
+                    group_rewards_normalized = group_rewards_normalized * (reward_max / group_std)
+                
+                # Update the rewards for this group
+                rewards[inds] = group_rewards_normalized
+            
+            return rewards
+        
+        # Add overlong penalty if enabled
+        if hasattr(config, 'overlong_buffer') and config.overlong_buffer.enable:
+            if "overlong_reward" in data.non_tensor_batch:
+                overlong_rewards = torch.tensor(data.non_tensor_batch["overlong_reward"], dtype=torch.float32, device=advantages.device)
+                # Normalize per group
+                overlong_rewards = normalize_rewards_per_group(overlong_rewards, data.non_tensor_batch["uid"])
+                # Expand to match advantages shape (add dimension for sequence length)
+                overlong_rewards_expanded = overlong_rewards.unsqueeze(-1) * data.batch["response_mask"]
+                advantages += overlong_rewards_expanded
+                print(f"[ADVANTAGE] Added normalized overlong_reward to advantages")
+
+    
+
+        # Add format reward if enabled
+        if config.get("add_format_advantage", False):
+            if "format_score" in data.non_tensor_batch:
+                format_rewards = torch.tensor(data.non_tensor_batch["format_score"], dtype=torch.float32, device=advantages.device)
+                # Normalize per group
+                format_rewards = normalize_rewards_per_group(format_rewards, data.non_tensor_batch["uid"])
+                # Expand to match advantages shape (add dimension for sequence length)
+                format_rewards_expanded = format_rewards.unsqueeze(-1) * data.batch["response_mask"]
+                advantages += format_rewards_expanded
+                print(f"[ADVANTAGE] Added normalized format_score to advantages")
+           
+
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
     elif adv_estimator == AdvantageEstimator.GAE:

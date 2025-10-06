@@ -25,24 +25,28 @@ import os
 from re import L
 from typing import Any, Dict, List, Tuple
 import json
+from uu import Error
 
 import datasets
 import math
 
 
 def build_single_attempt_prompt(sat: List[List[str]]) -> List[Dict[str, str]]:
-    """Build messages for single-attempt full sat task.
+    """Constructs a user prompt for a single-attempt SAT task.
 
-    Requires a single final expression inside <answer>...</answer> and thinking in <think>...</think>.
+    The prompt requires the reasoning process to be enclosed in <think>...</think> tags,
+    and the final answer to be provided within <answer>...</answer> tags.
     """
-    assert len(sat)>0
+    assert len(sat) > 0
 
-    sat_str = "&".join([f"({'|'.join(clause)})" for clause in sat])
+    sat_str = "+".join([f"({'|'.join(clause)})" for clause in sat])
     
     content = (
-        f"Consider the sat problem defined by the following term: {sat_str}. Given this sat, find an assigment for all variables that makes the whole term true. "
-        "Think through the task step by step, and verify your proposed path within <think> </think> tags. "
-        "Then, provide the final path within <answer> </answer> tags, for example, <answer>a:true,b:false,c:true,d:true</answer>."
+        f"You are given a logical problem composed of several OR-clauses, combined as a sum. In this sum, a true value is considered as 1 and a false value as 0. "
+        f"Your goal is to maximize the value of the following expression: {sat_str} "
+        "by determining an assignment for all variables that yields the highest possible total value. "
+        "Carefully reason through the problem step by step, enclosing your thought process within <think> </think> tags. "
+        "Finally, present your answer in the format <answer>a:true,b:false,...</answer>."
     )
     return [{"content": content, "role": "user"}]
 
@@ -74,19 +78,6 @@ def parse_args():
         type=int,
         default=8,
         help="Maximum difficulty level 2-8. Keep rows that are k-sat where k  <= max_level.",
-    )
-    parser.add_argument(
-        "--num_variables",
-        type=int,
-        nargs="+",
-        default=[3, 3, 5, 5, 5, 7, 7, 7, 9, 9, 9],
-        help="Array of numbers of variables to generate. Example: --num_variables 3 3 5 5 5 7 7 7 9 9 9. We filter out any value lower than the level.",
-    )
-    parser.add_argument(
-        "--added_to_critical_ratio",
-        type=float,
-        default=0.0,
-        help="number of clauses is equal to the number of variables * (critical_ratio(level)+this value).",
     )
     parser.add_argument(
         "--n_print",
@@ -653,7 +644,7 @@ def map_row_to_output(
     
     messages = build_single_attempt_prompt(sat)
     
-    data_source = f"sat-{len(sat[0])}-{len(solution.split(','))}"
+    data_source = f"sat-{len(sat[0])}"
     ability = "math"
     extra_info = {
         "split": split_label,
@@ -661,7 +652,6 @@ def map_row_to_output(
         "variable_labels": variable_labels,
         "raw_sat":raw_sat,
         "num_clauses": len(sat),
-        "num_variables": len(solution.split(",")),
         "solution": solution,
         "num_attempts": 1,
         "max_allowed_attempts": 1,
@@ -708,13 +698,9 @@ def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
     if num_variables < level:
         raise ValueError("Number of variables must be at least equal to the level.")
 
-    # Create a guaranteed solution by assigning a random boolean value to each variable.
-    solution = {i: random.choice([True, False]) for i in range(1, num_variables + 1)}
-
     raw_clauses = []
     variable_pool = list(range(1, num_variables + 1))
 
-    duplicate_count=0
     while len(raw_clauses)<num_clauses:
         # Randomly select 'level' unique variables for the current clause
         chosen_variables = random.sample(variable_pool, level)
@@ -727,30 +713,9 @@ def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
             else:
                 current_clause.append(var)
         
-        # Check if the generated clause is satisfied by the solution.
-        # A clause is satisfied if at least one of its literals is true.
-        is_satisfied = any(
-            (literal > 0 and solution[abs(literal)]) or \
-            (literal < 0 and not solution[abs(literal)]) \
-            for literal in current_clause
-        )
-
-        # If the clause is not satisfied by the solution, we must alter it to make it true.
-        if not is_satisfied:
-            # Pick one literal at random from the clause to flip.
-            index_to_flip = random.randrange(level)
-            current_clause[index_to_flip] = -current_clause[index_to_flip] 
             
-        # Ensure the clause is not already added 
-        # A set is used for efficient checking of duplicates
-        if tuple(sorted(current_clause)) not in {tuple(sorted(c)) for c in raw_clauses}:
-            raw_clauses.append(current_clause)
-            duplicate_count = 0
-        else:
-            duplicate_count += 1
-            if duplicate_count >= 10:
-                break
-
+        raw_clauses.append(current_clause)
+        
     label_generator = generate_variable_labels()
     variable_labels = [None]+[next(label_generator) for _ in range(num_variables)]
 
@@ -764,7 +729,20 @@ def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
                 new_clause.append(f"~{variable_labels[-clause[i]]}")
         clauses.append(new_clause)
 
-    solution_str = ",".join([f"{variable_labels[i]}:{solution[i]}" for i in range(1, num_variables + 1)])
+    # Use C++ solver to find maximum satisfiable clauses
+    try:
+        import sat_max_solver
+        result_json = sat_max_solver.solve(str(raw_clauses))
+        import json
+        result = json.loads(result_json)
+        if "error" in result:
+            print(f"Warning: C++ solver error: {result['error']}")
+            raise Error
+        else:
+            solution_str = str(result["max_satisfiable_clauses"])
+    except ImportError:
+        print("Warning: sat_max_solver module not found. Using fallback solution.")
+        raise Exception("Warning: sat_max_solver module not found. Using fallback solution.")
 
     return {
         "variable_labels": json.dumps(variable_labels, indent=2),
@@ -804,14 +782,14 @@ if __name__ == "__main__":
         9: 354.0
     }
     for level in range(args.min_level, args.max_level + 1):
-        all_num_variables=args.num_variables
+        all_num_variables=[3,3,5,5,5,7,7,7,9,9,9]
         all_num_variables = [x for x in all_num_variables if x>level ]
 
         for num_variables in all_num_variables:
             for _ in range(1000): # Generate 5000 examples per level for the training pool
-                train_samples.append(generate_sat_data(level, num_variables, int(num_variables*(clause_to_variable_ratio[level]+args.added_to_critical_ratio))))
+                train_samples.append(generate_sat_data(level, num_variables, int(num_variables*(clause_to_variable_ratio[level]+1))))
             for _ in range(200): # Generate 200 examples per level for the test pool
-                test_samples.append(generate_sat_data(level, num_variables, int(num_variables*(clause_to_variable_ratio[level]+args.added_to_critical_ratio))))
+                test_samples.append(generate_sat_data(level, num_variables, int(num_variables*(clause_to_variable_ratio[level]+1))))
 
     print(train_samples[0])
     # Convert the lists of dictionaries into Hugging Face Dataset objects
@@ -936,6 +914,3 @@ if __name__ == "__main__":
 # PYTHONPATH=. python custom/data_preprocessing/sat/sat_dataset.py \
 #   --local_dir $HF_HOME/data/full_sat --train_size 1000 --test_size 100 \
 #   --min_level 3 --max_level 9
-
-
-# PYTHONPATH=. python custom/data_preprocessing/sat/sat_dataset.py --local_dir $HF_HOME/data/sat_3_easy_to_hard --train_size 23040 --test_size 1024 --min_level 3 --max_level 3 --num_variables 4 5 6 7 8 9 10 11

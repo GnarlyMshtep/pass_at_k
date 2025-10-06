@@ -224,13 +224,23 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
             is_correct_np = np.asarray(non_tensor["is_correct"], dtype=float)
             successes = (is_correct_np == 1.0).astype(int)
             uids = np.asarray(non_tensor["uid"])  # dtype object ok
+            
+            # Get data sources for grouping
+            data_sources = non_tensor.get("data_source", ["unknown"] * len(successes))
+            if isinstance(data_sources, np.ndarray):
+                data_sources = data_sources.tolist()
 
-            # Build groups: uid -> indices
+            # Build groups: uid -> indices (for original aggregated metrics)
             uid2idxs: dict[Any, list[int]] = defaultdict(list)
             for i in range(len(successes)):
                 uid2idxs[uids[i]].append(i)
 
-            # Aggregate iid pass@k across prompt groups
+            # Build groups: (data_source, uid) -> indices (for data source-specific metrics)
+            ds_uid2idxs: dict[tuple[str, Any], list[int]] = defaultdict(list)
+            for i in range(len(successes)):
+                ds_uid2idxs[(data_sources[i], uids[i])].append(i)
+
+            # ORIGINAL: Aggregate iid pass@k across all prompt groups (aggregated)
             k2vals: dict[int, list[float]] = defaultdict(list)
             for _, idxs in uid2idxs.items():
                 grp_success = successes[idxs]
@@ -250,11 +260,38 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
                     denom = math.comb(n_total, k)
                     k2vals[k].append(1.0 - (numer / denom))
 
+            # Add original aggregated metrics
             for k, vals in k2vals.items():
                 if len(vals) > 0:
                     metrics[f"train/pass/iid@{k}"] = float(np.mean(vals))
 
-            # Non-iid pass@K per prompt if attempt_id is present
+            # NEW: Aggregate iid pass@k across prompt groups, separated by data source
+            ds_k2vals: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+            for (data_source, _), idxs in ds_uid2idxs.items():
+                grp_success = successes[idxs]
+                n_total = int(len(grp_success))
+                if n_total <= 0:
+                    continue
+                c = int(grp_success.sum())
+                # powers of two up to n_total, plus n_total; ensure k=1 present
+                ks: list[int] = []
+                k_val = 1
+                while k_val < n_total:
+                    ks.append(k_val)
+                    k_val *= 2
+                ks.append(n_total)
+                for k in ks:
+                    numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
+                    denom = math.comb(n_total, k)
+                    ds_k2vals[data_source][k].append(1.0 - (numer / denom))
+
+            # Add data source-specific metrics
+            for data_source, k2vals in ds_k2vals.items():
+                for k, vals in k2vals.items():
+                    if len(vals) > 0:
+                        metrics[f"trainWithDataSources/pass/iid@{k}/{data_source}"] = float(np.mean(vals))
+
+            # ORIGINAL: Non-iid pass@K per prompt if attempt_id is present (aggregated)
             if "attempt_id" in non_tensor:
                 attempt_ids = np.asarray(non_tensor["attempt_id"])  # expected aligned with samples
                 K2vals: dict[int, list[float]] = defaultdict(list)
@@ -283,9 +320,43 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
                     non_iid = 1.0 - float(np.prod([1.0 - p for p in p_rs]))
                     K2vals[K].append(non_iid)
 
+                # Add original aggregated non-iid metrics
                 for K, vals in K2vals.items():
                     if len(vals) > 0:
                         metrics[f"train/pass/non-iid@{K}"] = float(np.mean(vals))
+
+                # NEW: Non-iid pass@K per prompt if attempt_id is present, separated by data source
+                ds_K2vals: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+                for (data_source, _), idxs in ds_uid2idxs.items():
+                    att_grp = attempt_ids[idxs]
+                    suc_grp = successes[idxs]
+                    try:
+                        att_grp = att_grp.astype(int)
+                    except Exception:
+                        continue
+                    unique_ids = np.unique(att_grp)
+                    if unique_ids.size == 0:
+                        continue
+                    p_rs = []
+                    for r in unique_ids:
+                        mask = att_grp == r
+                        denom = int(mask.sum())
+                        if denom == 0:
+                            continue
+                        num = int(suc_grp[mask].sum())
+                        p_r = num / denom
+                        p_rs.append(p_r)
+                    if len(p_rs) == 0:
+                        continue
+                    K = int(len(p_rs))
+                    non_iid = 1.0 - float(np.prod([1.0 - p for p in p_rs]))
+                    ds_K2vals[data_source][K].append(non_iid)
+
+                # Add data source-specific non-iid metrics
+                for data_source, K2vals in ds_K2vals.items():
+                    for K, vals in K2vals.items():
+                        if len(vals) > 0:
+                            metrics[f"trainWithDataSources/pass/non-iid@{K}/{data_source}"] = float(np.mean(vals))
     except Exception:
         # Best-effort: skip train-time pass@k if any inconsistency
         pass
