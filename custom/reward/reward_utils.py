@@ -16,7 +16,7 @@ import wandb
 
 load_dotenv()
 
-remote_model = AsyncOpenAI()
+#remote_model = AsyncOpenAI()
 
 def is_float(a: Optional[str]) -> bool:
     try:
