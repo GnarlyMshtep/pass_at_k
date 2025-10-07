@@ -9,6 +9,16 @@ math_test_path=~/data/math/test.parquet
 train_files="['$gsm8k_train_path', '$math_train_path']"
 test_files="['$gsm8k_test_path', '$math_test_path']"
 
+max_token_len_per_gpu=25000
+# BREAKS:
+# tensor(762, device='cuda:0')
+# [sum(v.batch["attention_mask"]).item() for v in micro_batch]
+# [762, 1127, 929, 1593, 1055, 738, 769, 1342, 1020, 1417, 1031, 916, 433, 878, 982, 137, 748, 1353, 940, 1207, 1278, 646, 879, 927, 963, 1139, 1847, 936, 2390, 796, 1557, 974, 1459, 1099, 872, 1080, 1088, 990, 670, 458]
+# sum([sum(v.batch["attention_mask"]).item() for v in micro_batch])
+# 41425
+# len(micro_batch)
+# 40
+
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     data.train_files="$train_files" \
@@ -24,6 +34,9 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=256 \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=40 \
+    ppo_max_token_len_per_gpu=$max_token_len_per_gpu \
+    actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=$max_token_len_per_gpu \
+    actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=$max_token_len_per_gpu \
     actor_rollout_ref.actor.use_kl_loss=True \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
@@ -45,6 +58,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name='qwen2.5_7b_math_4096res_512bat_shuf' \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=40 \
+    trainer.save_freq=20 \
+    trainer.remove_previous_ckpt_in_save=True
     trainer.test_freq=20 \
     trainer.total_epochs=15 $@
