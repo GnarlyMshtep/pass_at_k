@@ -515,11 +515,11 @@ def more_reward_util_func(batch):
 
         
         def compute_reward_metrics(rewards: NDArray[float])->Dict[str, float]:
-            def expected_pass_at_k(rewards, k)-> float: 
-                rewards=rewards.astype(int) 
-                c = sum(rewards)
-                n = len(rewards)
-                return 1 -  (math.comb(n - c, k) / math.comb(n, k))
+#            def expected_pass_at_k(rewards, k)-> float: 
+#                rewards=rewards.astype(int) 
+#                c = sum(rewards)
+#               n = len(rewards)
+#                return 1 -  (math.comb(n - c, k) / math.comb(n, k))
             
             rewards = (rewards >=1).astype(float) # we binarized our reward, we only care about whether you are greater or less than 1 to avoid format confounding and complicating pass@k metric
             return {
@@ -528,9 +528,9 @@ def more_reward_util_func(batch):
                 f"reward/min@{len(rewards)}" : min(rewards),
                 f"reward/p25@{len(rewards)}" : np.percentile(rewards, 25),
                 f"p75@{len(rewards)}" : np.percentile(rewards, 75),
-                f"reward/pass@2" : expected_pass_at_k(rewards, 2),    
-                f"reward/pass@4" : expected_pass_at_k(rewards, 4),    
-                f"reward/pass@8" : expected_pass_at_k(rewards, 8),    
+#                f"reward/pass@2" : expected_pass_at_k(rewards, 2),    
+#               f"reward/pass@4" : expected_pass_at_k(rewards, 4),    
+#              f"reward/pass@8" : expected_pass_at_k(rewards, 8),    
             }            
 
         metrics_per_qs:List[dict]= [compute_reward_metrics(labels_np[indices]) for indices in uid_to_indices.values()]
