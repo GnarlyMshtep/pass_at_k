@@ -467,6 +467,14 @@ def compute_grpo_outcome_advantage(
         metrics["advantages/advantage_min"] = float(np.min(advantages_flat))
         metrics["advantages/advantage_max"] = float(np.max(advantages_flat))
 
+        # Number nnz in advantage (after whitening)
+        id2is_nnz_adv = {}
+        for id in id2score:
+            id2is_nnz_adv[id] = float((torch.stack(id2score[id]) != id2mean[id]).any())
+        is_nnzs = np.array(list(id2is_nnz_adv.values()))
+        metrics["advantages/frac_groups_nnz_w_adv"] = is_nnzs.mean()
+              
+
     return scores, scores, metrics
 
 @register_adv_est(AdvantageEstimator.GRPO_MONITORABILITY)  # or simply: @register_adv_est("grpo")
