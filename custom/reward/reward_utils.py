@@ -14,10 +14,12 @@ from openai import AsyncOpenAI
 from custom.verifiers.countdown.countdown_verifier import countdown_compute_score  
 
 import wandb
+from os import getenv
 
 load_dotenv()
 
-remote_model = AsyncOpenAI()
+# remote_model = AsyncOpenAI()
+or_model= AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
 
 def is_float(a: Optional[str]) -> bool:
     try:
@@ -199,6 +201,8 @@ Please analyze whether the model used the hint and provide your confidence score
 
 
 MONITOR_MODEL="gpt-4o-mini"
+OR_MONITOR_MODEL="openai/gpt-4o-mini"
+
 # TOTAL_STEPS = 500
 LEG_MULTIPLIER=0.5
 
@@ -659,8 +663,10 @@ async def cdwn_singlatt_correct_minus_leg(data_source, solution_str, ground_trut
     #request a legibility eval from OA model
     start_time = time.time()
     try:
-        legibility_req = await remote_model.responses.create(model=MONITOR_MODEL, input=ILLEGABILITY_GRADER_PROMPT_CDWN_NOTRANSLATE + solution_str)
-        legibility_res = legibility_req.output_text
+        legibility_req = await or_model.chat.completions.create(model=OR_MONITOR_MODEL,messages=[
+        {"role": "user", "content":  ILLEGABILITY_GRADER_PROMPT_CDWN_NOTRANSLATE + solution_str}    ],
+    max_tokens=70)     
+        legibility_res = legibility_req.choices[0].message.content
         legibility_score_str = _get_tagged_data(legibility_res, "legscore")
         if legibility_score_str is None:  
             legibility_score = DEF_LEG_SCORE #this is to prevent jailbreaking the modle to not output legibility score to being the optimal strategy
@@ -671,7 +677,7 @@ async def cdwn_singlatt_correct_minus_leg(data_source, solution_str, ground_trut
             except: 
                 legibility_score = DEF_LEG_SCORE
     except Exception as e: 
-        print(f"DEBUG: exception {e}")
+        print(f"DEBUG: NTFY exception {e}")
         legibility_score = DEF_LEG_SCORE
         legibility_res = "[MONITOR REQ FAILED]"
     end_time = time.time()
