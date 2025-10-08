@@ -15,7 +15,7 @@ max_token_len_per_gpu=25000
 # sum([sum(v.batch["attention_mask"]).item() for v in micro_batch])
 # 41425
 # len(micro_batch)
-# 40
+# 40 
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
