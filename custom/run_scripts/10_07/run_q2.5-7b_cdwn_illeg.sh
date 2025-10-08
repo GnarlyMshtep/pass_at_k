@@ -17,7 +17,8 @@ max_token_len_per_gpu=25000
 # len(micro_batch)
 # 40
 
-exp_name="qwen2.5_7b_cwdn-illeg-notranslate_4096res_512bat_shuf"
+export proj_name="illeg_reasoning"
+export exp_name="qwen2.5_7b_cwdn-illeg-notranslate_4096res_512bat_shuf"
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -55,18 +56,19 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=40 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \
-    custom_reward_function.name="math_singlatt_correct_minus_leg_NOTRANSLATE" \
+    custom_reward_function.name="cdwn_singlatt_correct_minus_leg" \
     custom_reward_function.path="custom/reward/reward_utils.py" \
     trainer.val_before_train=False
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
     trainer.project_name='verl_grpo_example_gsm8k_math' \
+    trainer.project_name=$proj_name
     trainer.experiment_name=$exp_name \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
     +trainer.remove_previous_ckpt_in_save=True \
-    trainer.resume_mode=auto
+    trainer.resume_mode=auto \
     trainer.test_freq=20 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="rollouts/${exp_name}/train" \

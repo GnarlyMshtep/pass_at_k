@@ -18,6 +18,7 @@ import time
 from collections import defaultdict
 from typing import Any
 import math
+from openai import OpenAIError
 
 import torch
 
@@ -101,24 +102,24 @@ class NaiveRewardManager(AbstractRewardManager):
 
             max_retries = 10
             base_delay = 1.0
+            bucket_size = 1000
 
-
-            print(f"DEBUG: reward chunking into {math.ceil(len(data) / 500)} pieces")
-            for chunk_idx in range(math.ceil(len(data) / 500)): 
+            print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
+            for chunk_idx in range(math.ceil(len(data) / bucket_size)): 
                 start = time.time()
                 print("DEBUG: starting chunk {chunk_idx}")
-                chunk = data[chunk_idx * 500: (chunk_idx + 1) * 500]
+                chunk = data[chunk_idx * bucket_size: (chunk_idx + 1) *bucket_size]
                 for attempt in range(max_retries + 1):
                     try:
                         rets = await asyncio.wait_for(
-                            asyncio.gather(*[compute_one(i) for i in range(chunk_idx * 500, chunk_idx * 500+ len(chunk))]), timeout=(40.0) * (attempt + 1)
+                            asyncio.gather(*[compute_one(i) for i in range(chunk_idx *bucket_size, chunk_idx *bucket_size+ len(chunk))]), timeout=(50.0) * (attempt + 1)
                         )
                         break
-                    except (asyncio.TimeoutError, Exception) as e:
+                    except (asyncio.TimeoutError, OpenAIError) as e:
                         if attempt == max_retries:
                             raise RuntimeError(f"OpenAI unresponsive error: Max retries exceeded {e=}") from e
 
-                        delay = base_delay * (2**attempt)
+                        delay = base_delay * 1 # don't change the delay -- I don't think it matters
                         print(f"DEBUG: QUERIES TO OA FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds...")
 
                 for ret in rets:

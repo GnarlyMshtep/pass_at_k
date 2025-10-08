@@ -106,7 +106,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.clip_ratio_high=0.2\
     trainer.rollout_data_dir="rollouts/${exp_name}/train" \
     trainer.validation_data_dir="rollouts/${exp_name}/val" \
-    trainer.default_local_dir="$MODELS_DIR/ckpts/${project_name}/${exp_name}"\
+    # trainer.default_local_dir="$MODELS_DIR/ckpts/${project_name}/${exp_name}"\
     +trainer.rollout_dump_freq=1 \
     trainer.total_epochs=10 $@
 
