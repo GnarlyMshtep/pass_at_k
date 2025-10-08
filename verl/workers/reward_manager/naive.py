@@ -17,6 +17,7 @@ import inspect
 import time
 from collections import defaultdict
 from typing import Any
+import math
 
 import torch
 
@@ -101,46 +102,53 @@ class NaiveRewardManager(AbstractRewardManager):
             max_retries = 10
             base_delay = 1.0
 
-            for attempt in range(max_retries + 1):
-                try:
-                    rets = await asyncio.wait_for(
-                        asyncio.gather(*[compute_one(i) for i in range(len(data))]), timeout=(40.0) * (attempt + 1)
-                    )
-                    break
-                except (asyncio.TimeoutError, Exception) as e:
-                    if attempt == max_retries:
-                        raise RuntimeError(f"OpenAI unresponsive error: Max retries exceeded {e=}") from e
 
-                    delay = base_delay * (2**attempt)
-                    print(f"DEBUG: QUERIES TO OA FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds...")
+            print(f"DEBUG: reward chunking into {math.ceil(len(data) / 500)} pieces")
+            for chunk_idx in range(math.ceil(len(data) / 500)): 
+                start = time.time()
+                print("DEBUG: starting chunk {chunk_idx}")
+                chunk = data[chunk_idx * 500: (chunk_idx + 1) * 500]
+                for attempt in range(max_retries + 1):
+                    try:
+                        rets = await asyncio.wait_for(
+                            asyncio.gather(*[compute_one(i) for i in range(chunk_idx * 500, chunk_idx * 500+ len(chunk))]), timeout=(40.0) * (attempt + 1)
+                        )
+                        break
+                    except (asyncio.TimeoutError, Exception) as e:
+                        if attempt == max_retries:
+                            raise RuntimeError(f"OpenAI unresponsive error: Max retries exceeded {e=}") from e
 
-            for ret in rets:
-                score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i = ret 
-                if isinstance(score, dict):
-                    reward = score["score"]
-                    # Store the information including original reward
-                    for key, value in score.items():
-                        reward_extra_info["reward_extra_info/" + key].append(value)
-                else:
-                    reward = score
+                        delay = base_delay * (2**attempt)
+                        print(f"DEBUG: QUERIES TO OA FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds...")
 
-                reward_tensor[i, valid_response_length - 1] = reward
-
-                if data_source not in already_print_data_sources:
-                    already_print_data_sources[data_source] = 0
-
-                if already_print_data_sources[data_source] < self.num_examine:
-                    already_print_data_sources[data_source] += 1
-                    print("[prompt]", prompt_str)
-                    print("[response]", response_str)
-                    print("[ground_truth]", ground_truth)
+                for ret in rets:
+                    score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i = ret 
                     if isinstance(score, dict):
+                        reward = score["score"]
+                        # Store the information including original reward
                         for key, value in score.items():
-                            print(f"[{key}]", value)
+                            reward_extra_info["reward_extra_info/" + key].append(value)
                     else:
-                        print("[score]", score)
+                        reward = score
 
-                
+                    reward_tensor[i, valid_response_length - 1] = reward
+
+                    if data_source not in already_print_data_sources:
+                        already_print_data_sources[data_source] = 0
+
+                    if already_print_data_sources[data_source] < self.num_examine:
+                        already_print_data_sources[data_source] += 1
+                        print("[prompt]", prompt_str)
+                        print("[response]", response_str)
+                        print("[ground_truth]", ground_truth)
+                        if isinstance(score, dict):
+                            for key, value in score.items():
+                                print(f"[{key}]", value)
+                        else:
+                            print("[score]", score)
+
+                end = time.time()
+                print(f"DEBUG: chunk {chunk_idx} took {end - start:.2f} time") 
             if return_dict:
                 return {
                     "reward_tensor": reward_tensor,
