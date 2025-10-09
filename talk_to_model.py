@@ -2,172 +2,127 @@
 import argparse
 import json
 import sys
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
 
-import torch
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+# Load environment variables
+load_dotenv()
 
 
-def detect_chat_template(tokenizer, model_path):
-    """Try to detect if this is an instruct/chat model"""
-    # Check for common instruct indicators
-    if hasattr(tokenizer, 'chat_template') and tokenizer.chat_template is not None:
-        return True
-    
-    # Check model name for instruct indicators
-    model_name = model_path.lower()
-    instruct_indicators = ['instruct', 'chat', 'assistant', 'alpaca', 'vicuna', 'llama-2-chat']
-    return any(indicator in model_name for indicator in instruct_indicators)
+def generate_response_vllm(client, messages, max_tokens=512, temperature=0.7):
+    """Generate response using VLLM API"""
+    response = client.chat.completions.create(
+        model="Qwen2_5-7B",  # VLLM uses model name from serving
+        messages=messages,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+    return response.choices[0].message.content.strip()
 
-def format_chat_message(tokenizer, messages):
-    """Format messages using the tokenizer's chat template"""
-    if hasattr(tokenizer, 'apply_chat_template') and tokenizer.chat_template:
-        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    else:
-        # Fallback: simple format
-        formatted = ""
-        for msg in messages:
-            if msg["role"] == "system":
-                formatted += f"System: {msg['content']}\n"
-            elif msg["role"] == "user":
-                formatted += f"Human: {msg['content']}\n"
-            elif msg["role"] == "assistant":
-                formatted += f"Assistant: {msg['content']}\n"
-        formatted += "Assistant: "
-        return formatted
+def translate_if_needed(text, openai_api_key):
+    """Use GPT-4o to detect and translate non-English content"""
+    if not openai_api_key:
+        return None
 
-def generate_response(model, tokenizer, prompt, max_new_tokens=512, temperature=0.7, do_sample=True):
-    """Generate response from the model"""
-    # Tokenize input
-    inputs = tokenizer(prompt, return_tensors="pt")
-    
-    if torch.cuda.is_available():
-        inputs = {k: v.to('cuda') for k, v in inputs.items()}
-    
-    # Generate
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            do_sample=do_sample,
-            pad_token_id=tokenizer.eos_token_id,
-            repetition_penalty=1.1
+    try:
+        client = OpenAI(api_key=openai_api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a translator. If the user's text contains any non-English content, translate it to English. If the text is already fully in English, respond with 'NO_TRANSLATION_NEEDED'. Otherwise, provide only the English translation without any preamble."},
+                {"role": "user", "content": text}
+            ],
+            temperature=0.3,
         )
-    
-    # Decode only the new tokens
-    new_tokens = outputs[0][inputs['input_ids'].shape[1]:]
-    response = tokenizer.decode(new_tokens, skip_special_tokens=True)
-    return response.strip()
+        translation = response.choices[0].message.content.strip()
+        return None if translation == "NO_TRANSLATION_NEEDED" else translation
+    except Exception as e:
+        print(f"Translation error: {e}")
+        return None
 
 def main():
-    parser = argparse.ArgumentParser(description='Chat with or complete text using local HF models')
-    parser.add_argument('--model-path', default="/scratch/m000122/stalaei/huggingface/models/Qwen2_5-7B-Instruct", help='Path to HF model directory')
-    parser.add_argument('--completion', default=False,  action='store_true', help='Single completion mode instead of chat')
+    parser = argparse.ArgumentParser(description='Chat with VLLM-served models')
+    parser.add_argument('--api-url', default="http://localhost:8000/v1", help='VLLM API base URL')
     parser.add_argument('--max-tokens', type=int, default=2048, help='Max new tokens to generate')
     parser.add_argument('--temperature', type=float, default=0.7, help='Sampling temperature')
-    parser.add_argument('--quantize', action='store_true', default=False, help='Use 4-bit quantization (requires bitsandbytes)')
-    parser.add_argument('--device', default='cuda', help='Device to use (auto, cpu, cuda)')
-    parser.add_argument('--system', default=None, help='System prompt to use for chat models')
-    
+    parser.add_argument('--system', default=None, help='System prompt to use for chat')
+    parser.add_argument('--translate', action='store_true', default=False, help='Translate non-English responses using GPT-4o')
+
     args = parser.parse_args()
+
+    # Initialize VLLM client
+    vllm_client = OpenAI(
+        api_key="EMPTY",  # VLLM doesn't require API key
+        base_url=args.api_url,
+    )
+
+    # Get OpenAI API key for translation if needed
+    openai_api_key = os.getenv("OPENAI_API_KEY") if args.translate else None
+    if args.translate and not openai_api_key:
+        print("Warning: --translate flag set but OPENAI_API_KEY not found in .env file")
+
+    print(f"Connected to VLLM API at {args.api_url}")
     
-    print(f"Loading model from {args.model_path}...")
-    
-    # Set up quantization if requested
-    quantization_config = None
-    if args.quantize:
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
-        )
-    
-    # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    
-    # Load model
-    model_kwargs = {"quantization_config": quantization_config} if quantization_config else {}
-    if args.device != 'cpu' and torch.cuda.is_available():
-        model_kwargs["torch_dtype"] = torch.float16
-        model_kwargs["device_map"] = "auto"
-    
-    model = AutoModelForCausalLM.from_pretrained(args.model_path, **model_kwargs)
-    
-    # Detect if this is a chat model
-    is_chat_model = detect_chat_template(tokenizer, args.model_path)
-    print(f"Detected {'chat/instruct' if is_chat_model else 'base'} model")
-    
-    if args.completion:
-        # Single completion mode
-        print("\n=== COMPLETION MODE ===")
-        prompt = input("Prompt: ")
-        
-        print(f"\n=== EXACT INPUT TO MODEL ===")
-        print(repr(prompt))
-        print(f"=== END INPUT ({len(tokenizer.encode(prompt))} tokens) ===\n")
-        
-        response = generate_response(model, tokenizer, prompt, args.max_tokens, args.temperature)
-        print(f"Generated: {response}")
-        
-    else:
-        # Interactive chat mode
-        print(f"\n=== {'CHAT' if is_chat_model else 'COMPLETION'} MODE ===")
-        print("Type 'quit' to exit, 'clear' to clear conversation\n")
-        
-        conversation = []
-        
-        # Add system prompt if provided for chat models
-        if args.system and is_chat_model:
-            conversation.append({"role": "system", "content": args.system})
-            print(f"System prompt set: {args.system[:50]}{'...' if len(args.system) > 50 else ''}\n")
-        elif args.system and not is_chat_model:
-            print("Warning: System prompt specified but model is not detected as chat/instruct model. System prompt will be ignored.\n")
-        
-        while True:
-            try:
-                user_input = input("You: ").strip()
-                
-                if user_input.lower() in ['quit', 'exit', 'q']:
-                    break
-                elif user_input.lower() == 'clear':
-                    conversation = []
-                    # Re-add system prompt if it was provided
-                    if args.system and is_chat_model:
-                        conversation.append({"role": "system", "content": args.system})
-                    print("Conversation cleared.\n")
-                    continue
-                elif user_input == '':
-                    continue
-                
-                if is_chat_model:
-                    # Use proper chat formatting
-                    conversation.append({"role": "user", "content": user_input})
-                    full_prompt = format_chat_message(tokenizer, conversation)
-                else:
-                    # Simple back-and-forth for base models
-                    conversation.append(f"Human: {user_input}")
-                    full_prompt = "\n".join(conversation) + "\nAssistant: "
-                
-                print(f"\n=== EXACT INPUT TO MODEL ===")
-                print(repr(full_prompt))
-                print(f"=== END INPUT ({len(tokenizer.encode(full_prompt))} tokens) ===\n")
-                
-                response = generate_response(model, tokenizer, full_prompt, args.max_tokens, args.temperature)
-                print(f"Assistant: {response}\n")
-                
-                if is_chat_model:
-                    conversation.append({"role": "assistant", "content": response})
-                else:
-                    conversation.append(f"Assistant: {response}")
-                
-            except KeyboardInterrupt:
-                print("\nExiting...")
+    # Interactive chat mode
+    print("\n=== CHAT MODE ===")
+    print("Type 'quit' to exit, 'clear' to clear conversation\n")
+
+    conversation = []
+
+    # Add system prompt if provided
+    if args.system:
+        conversation.append({"role": "system", "content": args.system})
+        print(f"System prompt set: {args.system[:50]}{'...' if len(args.system) > 50 else ''}\n")
+
+    while True:
+        try:
+            user_input = input("You: ").strip()
+
+            if user_input.lower() in ['quit', 'exit', 'q']:
                 break
-            except Exception as e:
-                print(f"Error: {e}")
+            elif user_input.lower() == 'clear':
+                conversation = []
+                # Re-add system prompt if it was provided
+                if args.system:
+                    conversation.append({"role": "system", "content": args.system})
+                print("Conversation cleared.\n")
+                continue
+            elif user_input == '':
+                continue
+
+            # Add user message
+            conversation.append({"role": "user", "content": user_input})
+
+            # Generate response
+            response = generate_response_vllm(
+                vllm_client,
+                conversation,
+                args.max_tokens,
+                args.temperature
+            )
+
+            print(f"Assistant: {response}")
+
+            # Translate if needed
+            if args.translate and openai_api_key:
+                translation = translate_if_needed(response, openai_api_key)
+                if translation:
+                    print(f"Translated: {translation}")
+
+            print()  # Extra newline for readability
+
+            # Add assistant response to conversation
+            conversation.append({"role": "assistant", "content": response})
+
+        except KeyboardInterrupt:
+            print("\nExiting...")
+            break
+        except Exception as e:
+            print(f"Error: {e}")
+            # Remove the last user message if there was an error
+            if conversation and conversation[-1]["role"] == "user":
+                conversation.pop()
 
 if __name__ == "__main__":
     main()
