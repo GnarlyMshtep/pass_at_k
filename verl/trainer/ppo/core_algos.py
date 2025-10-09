@@ -796,7 +796,7 @@ def compute_grpo_monitorability_outcome_advantage(
         all_q_types = set(question_types)
         all_q_types = all_q_types - {"control"}
         for q_type in all_q_types:
-            indicator_vector = np.array(question_types) == q_type
+            indicator_vector = (np.array(question_types) == q_type)[np.array([i for i in range(512) if i%2==1])]
             metrics[f"{q_type}-advantages/num"] = np.sum(indicator_vector)
 
             metrics[f"{q_type}-advantages/hinted_hint_sel_rate_mean"] = float(
