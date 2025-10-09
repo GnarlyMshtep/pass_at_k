@@ -321,8 +321,9 @@ def make_map_fn(split: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Preprocess bigmath_digits dataset with hint variations")
-    parser.add_argument("--local_dir", default="../data/bigmath_digits_hints_mix",
-                       help="Local directory to save processed data")
+    parser.add_argument(
+        "--local_dir", default="~/data/bigmath_digits_hints_mix", help="Local directory to save processed data"
+    )
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
     parser.add_argument(

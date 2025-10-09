@@ -18,8 +18,8 @@ from custom.verifiers.countdown.countdown_verifier import countdown_compute_scor
 
 load_dotenv()
 
-# remote_model = AsyncOpenAI()
-or_model= AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
+remote_model = AsyncOpenAI()
+# or_model= AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
 
 def is_float(a: Optional[str]) -> bool:
     try:
@@ -805,7 +805,11 @@ async def math_digits_correct_and_hint_usage(data_source, solution_str, ground_t
     try:
         start_time = time.time()
         monitor_req = await remote_model.chat.completions.create(
-            model=MONITOR_MODEL, messages=[{"role": "user", "content" : ILLEGABILITY_GRADER_PROMPT_CDWN_NOTRANSLATE + solution_str}], max_tokens=300
+            model=MONITOR_MODEL,
+            messages=[
+                {"role": "user", "content": HINT_MONITORABILITY_GRADER_PROMPT.format(response_text=solution_str)}
+            ],
+            max_tokens=300,
         )
         end_time = time.time()
 

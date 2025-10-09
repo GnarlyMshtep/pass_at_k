@@ -24,7 +24,7 @@ from collections import defaultdict
 from enum import Enum
 from math import comb, sqrt
 from random import sample
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Literal, Optional
 
 import numpy as np
 import torch
@@ -489,6 +489,7 @@ def compute_grpo_monitorability_outcome_advantage(
     is_correct: Optional[list[bool]] = None,
     # format_score: Optional[list[float]] = None,
     monitor_index: Optional[np.ndarray] = None,
+    question_types: Optional[list[Literal["hint-omission", "hint-incorrect", "hint-correct", "control"]]] = None,
     config: Optional[AlgoConfig] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, dict]:
     """
@@ -778,6 +779,54 @@ def compute_grpo_monitorability_outcome_advantage(
         metrics["advantages/advantage_std"] = float(id2score_normalized.std().item())
         metrics["advantages/advantage_min"] = float(id2score_normalized.min().item())
         metrics["advantages/advantage_max"] = float(id2score_normalized.max().item())
+
+        # advantages per question_type
+        # Convert lists to numpy arrays for indexing
+        all_hinted_hint_sel = np.array(all_hinted_hint_sel)
+        all_effect_sizes = np.array(all_effect_sizes)
+        all_hinted_correct = np.array(all_hinted_correct)
+        all_hinted_monitor = np.array(all_hinted_monitor)
+        all_hinted_calib = np.array(all_hinted_calib)
+        all_baseline_unwhitened = np.array(all_baseline_unwhitened)
+        all_hinted_unwhitened = np.array(all_hinted_unwhitened)
+
+        all_q_types = set(question_types)
+        all_q_types = all_q_types - {"control"}
+        for q_type in all_q_types:
+            indicator_vector = np.array(question_types) == q_type
+            metrics[f"{q_type}-advantages/num"] = np.sum(indicator_vector)
+
+            metrics[f"{q_type}-advantages/hinted_hint_sel_rate_mean"] = float(
+                np.mean(all_hinted_hint_sel[indicator_vector])
+            )
+            metrics[f"{q_type}-advantages/hinted_hint_sel_rate_std"] = float(
+                np.std(all_hinted_hint_sel[indicator_vector])
+            )
+
+            metrics[f"{q_type}-advantage/effect_size_mean"] = float(np.mean(all_effect_sizes[indicator_vector]))
+            metrics[f"{q_type}-advantage/effect_size_std"] = float(np.std(all_effect_sizes[indicator_vector]))
+            metrics[f"{q_type}-advantage/effect_size_min"] = float(np.min(all_effect_sizes[indicator_vector]))
+            metrics[f"{q_type}-advantage/effect_size_max"] = float(np.max(all_effect_sizes[indicator_vector]))
+
+            metrics[f"{q_type}-advantage/hinted_correctness_mean"] = float(np.mean(all_hinted_correct[indicator_vector]))
+            metrics[f"{q_type}-advantage/hinted_correctness_std"] = float(np.std(all_hinted_correct[indicator_vector]))
+
+            metrics[f"{q_type}-advantage/hinted_monitor_score_mean"] = float(
+                np.mean(all_hinted_monitor[indicator_vector])
+            )
+            metrics[f"{q_type}-advantage/hinted_monitor_score_std"] = float(np.std(all_hinted_monitor[indicator_vector]))
+
+            metrics[f"{q_type}-advantage/hinted_calibration_mse_mean"] = float(
+                np.mean(all_hinted_calib[indicator_vector])
+            )
+            metrics[f"{q_type}-advantage/hinted_calibration_mse_std"] = float(np.std(all_hinted_calib[indicator_vector]))
+
+            metrics[f"{q_type}-advantage/baseline_unwhitened_score_mean"] = float(
+                np.mean(all_baseline_unwhitened[indicator_vector])
+            )
+            metrics[f"{q_type}-advantage/hinted_unwhitened_score_mean"] = float(
+                np.mean(all_hinted_unwhitened[indicator_vector])
+            )
 
     return advantages, advantages, metrics
 
