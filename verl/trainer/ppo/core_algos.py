@@ -561,6 +561,7 @@ def compute_grpo_monitorability_outcome_advantage(
                     "uid": uids[i],
                     "other_score": id2other_score[i],
                     "id": i,
+                    "question_type": question_types[i],
                 }
             )
 
@@ -790,6 +791,8 @@ def compute_grpo_monitorability_outcome_advantage(
         all_baseline_unwhitened = np.array(all_baseline_unwhitened)
         all_hinted_unwhitened = np.array(all_hinted_unwhitened)
 
+        # assume that each monitor index has only one question type and at least 1 question
+        question_types = [monitor_index2infos[i][0]["question_type"] for i in range(len(monitor_index2infos))]
         all_q_types = set(question_types)
         all_q_types = all_q_types - {"control"}
         for q_type in all_q_types:
