@@ -14,13 +14,13 @@
 
 import asyncio
 import inspect
+import math
 import time
 from collections import defaultdict
 from typing import Any
-import math
-from openai import OpenAIError
 
 import torch
+from openai import OpenAIError
 
 import custom.reward.reward_utils as reward_utils
 from verl import DataProto
@@ -102,7 +102,7 @@ class NaiveRewardManager(AbstractRewardManager):
 
             max_retries = 10
             base_delay = 1.0
-            bucket_size = 1000
+            bucket_size = 500
 
             print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
             for chunk_idx in range(math.ceil(len(data) / bucket_size)): 

@@ -33,12 +33,12 @@ from typing import List, Optional
 import numpy as np
 import ray
 import torch
-import wandb
 from omegaconf import OmegaConf, open_dict
 from torch.utils.data import Dataset, Sampler
 from torchdata.stateful_dataloader import StatefulDataLoader
 from tqdm import tqdm
 
+import wandb
 from verl import DataProto
 from verl.experimental.dataset.sampler import AbstractCurriculumSampler
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
@@ -288,7 +288,7 @@ def compute_advantage(
         data.batch["returns"] = returns
     elif adv_estimator == AdvantageEstimator.GRPO_MONITORABILITY:
         # Initialize the mask for GRPO calculation
-        question_types = data.non_tensor_batch["extra_info"]["question_type"]
+        question_types = [v["question_type"] for v in data.non_tensor_batch["extra_info"]]
         grpo_calculation_mask = data.batch["response_mask"]
         # Call compute_grpo_outcome_advantage with parameters matching its definition
         advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_monitorability_outcome_advantage(
