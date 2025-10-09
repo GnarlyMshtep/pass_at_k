@@ -58,11 +58,10 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=False \
     custom_reward_function.name="cdwn_singlatt_correct_minus_leg" \
     custom_reward_function.path="custom/reward/reward_utils.py" \
-    trainer.val_before_train=False
+    trainer.val_before_train=False \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
-    trainer.project_name='verl_grpo_example_gsm8k_math' \
-    trainer.project_name=$proj_name
+    trainer.project_name=$proj_name \
     trainer.experiment_name=$exp_name \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
@@ -73,4 +72,4 @@ python3 -m verl.trainer.main_ppo \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="rollouts/${exp_name}/train" \
     trainer.validation_data_dir="rollouts/${exp_name}/val" \
-    trainer.total_epochs=15 $@
+    trainer.total_epochs=15 $@ 2>&1 | tee logs/out.txt
