@@ -102,7 +102,7 @@ class NaiveRewardManager(AbstractRewardManager):
 
             max_retries = 10
             base_delay = 1.0
-            bucket_size = 500
+            bucket_size = 1000
 
             print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
             for chunk_idx in range(math.ceil(len(data) / bucket_size)): 
