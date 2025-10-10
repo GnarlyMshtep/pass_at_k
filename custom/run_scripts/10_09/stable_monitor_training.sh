@@ -23,6 +23,7 @@ export exp_name="qwen2.5_7b_math_digits_correct_and_hint_usage_4096res_512bat_10
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo_monitorability \
+    algorithm.norm_adv_by_std_in_grpo=False\
     data.train_files="$train_files" \
     data.val_files="$test_files" \
     data.train_batch_size=512 \
