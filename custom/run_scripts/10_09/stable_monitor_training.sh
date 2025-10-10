@@ -19,7 +19,7 @@ max_token_len_per_gpu=25000
 
 export proj_name="cot-monitor"
 x=$(TZ=America/New_York date +"%m_%d_%H:%M")
-export exp_name="qwen2.5_7b_math_digits_correct_and_hint_usage_4096res_512bat_$x"
+export exp_name="qwen2.5_7b_math_digits_correct_and_hint_usage_4096res_512bat_10_09_19_38"
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo_monitorability \
