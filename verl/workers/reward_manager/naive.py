@@ -107,7 +107,7 @@ class NaiveRewardManager(AbstractRewardManager):
             print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
             for chunk_idx in range(math.ceil(len(data) / bucket_size)): 
                 start = time.time()
-                print("DEBUG: starting chunk {chunk_idx}")
+                print(f"DEBUG: starting chunk {chunk_idx}")
                 chunk = data[chunk_idx * bucket_size: (chunk_idx + 1) *bucket_size]
                 for attempt in range(max_retries + 1):
                     try:
