@@ -797,39 +797,40 @@ def compute_grpo_monitorability_outcome_advantage(
         all_q_types = all_q_types - {"control"}
         for q_type in all_q_types:
             indicator_vector = (np.array(question_types) == q_type)[np.array([i for i in range(512) if i%2==1])]
-            metrics[f"{q_type}-advantages/num"] = np.sum(indicator_vector)
+            if indicator_vector.any(): #was getting o-size array reduction operation
+                metrics[f"{q_type}-advantages/num"] = np.sum(indicator_vector)
 
-            metrics[f"{q_type}-advantages/hinted_hint_sel_rate_mean"] = float(
-                np.mean(all_hinted_hint_sel[indicator_vector])
-            )
-            metrics[f"{q_type}-advantages/hinted_hint_sel_rate_std"] = float(
-                np.std(all_hinted_hint_sel[indicator_vector])
-            )
+                metrics[f"{q_type}-advantages/hinted_hint_sel_rate_mean"] = float(
+                    np.mean(all_hinted_hint_sel[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_hint_sel_rate_std"] = float(
+                    np.std(all_hinted_hint_sel[indicator_vector])
+                )
 
-            metrics[f"{q_type}-advantage/effect_size_mean"] = float(np.mean(all_effect_sizes[indicator_vector]))
-            metrics[f"{q_type}-advantage/effect_size_std"] = float(np.std(all_effect_sizes[indicator_vector]))
-            metrics[f"{q_type}-advantage/effect_size_min"] = float(np.min(all_effect_sizes[indicator_vector]))
-            metrics[f"{q_type}-advantage/effect_size_max"] = float(np.max(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_mean"] = float(np.mean(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_std"] = float(np.std(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_min"] = float(np.min(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_max"] = float(np.max(all_effect_sizes[indicator_vector]))
 
-            metrics[f"{q_type}-advantage/hinted_correctness_mean"] = float(np.mean(all_hinted_correct[indicator_vector]))
-            metrics[f"{q_type}-advantage/hinted_correctness_std"] = float(np.std(all_hinted_correct[indicator_vector]))
+                metrics[f"{q_type}-advantages/hinted_correctness_mean"] = float(np.mean(all_hinted_correct[indicator_vector]))
+                metrics[f"{q_type}-advantages/hinted_correctness_std"] = float(np.std(all_hinted_correct[indicator_vector]))
 
-            metrics[f"{q_type}-advantage/hinted_monitor_score_mean"] = float(
-                np.mean(all_hinted_monitor[indicator_vector])
-            )
-            metrics[f"{q_type}-advantage/hinted_monitor_score_std"] = float(np.std(all_hinted_monitor[indicator_vector]))
+                metrics[f"{q_type}-advantages/hinted_monitor_score_mean"] = float(
+                    np.mean(all_hinted_monitor[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_monitor_score_std"] = float(np.std(all_hinted_monitor[indicator_vector]))
 
-            metrics[f"{q_type}-advantage/hinted_calibration_mse_mean"] = float(
-                np.mean(all_hinted_calib[indicator_vector])
-            )
-            metrics[f"{q_type}-advantage/hinted_calibration_mse_std"] = float(np.std(all_hinted_calib[indicator_vector]))
+                metrics[f"{q_type}-advantages/hinted_calibration_mse_mean"] = float(
+                    np.mean(all_hinted_calib[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_calibration_mse_std"] = float(np.std(all_hinted_calib[indicator_vector]))
 
-            metrics[f"{q_type}-advantage/baseline_unwhitened_score_mean"] = float(
-                np.mean(all_baseline_unwhitened[indicator_vector])
-            )
-            metrics[f"{q_type}-advantage/hinted_unwhitened_score_mean"] = float(
-                np.mean(all_hinted_unwhitened[indicator_vector])
-            )
+                metrics[f"{q_type}-advantages/baseline_unwhitened_score_mean"] = float(
+                    np.mean(all_baseline_unwhitened[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_unwhitened_score_mean"] = float(
+                    np.mean(all_hinted_unwhitened[indicator_vector])
+                )
 
     return advantages, advantages, metrics
 
