@@ -680,19 +680,19 @@ def compute_grpo_monitorability_outcome_advantage(
                 monitor_index2infos[base_idx]
             )
             all_baseline_hint_sel.append(baseline_hint_sel_rate)
-            metrics[f"advantages-very-verbose/q{i}_baseline_hint_sel_rate"] = float(baseline_hint_sel_rate)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_hint_sel_rate"] = float(baseline_hint_sel_rate)
 
             # Hinted hint selection rate
             hinted_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[hinted_idx]]) / len(
                 monitor_index2infos[hinted_idx]
             )
             all_hinted_hint_sel.append(hinted_hint_sel_rate)
-            metrics[f"advantages-very-verbose/q{i}_hinted_hint_sel_rate"] = float(hinted_hint_sel_rate)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_hint_sel_rate"] = float(hinted_hint_sel_rate)
 
             # Effect size (the difference we're trying to predict)
             effect_size = hinted_hint_sel_rate - baseline_hint_sel_rate
             all_effect_sizes.append(effect_size)
-            metrics[f"advantages-very-verbose/q{i}_effect_size"] = float(effect_size)
+            # metrics[f"advantages-very-verbose/q{i}_effect_size"] = float(effect_size)
 
             # Correctness rates
             baseline_correct = sum([v["is_correct"] for v in monitor_index2infos[base_idx]]) / len(
@@ -703,8 +703,8 @@ def compute_grpo_monitorability_outcome_advantage(
             )
             all_baseline_correct.append(baseline_correct)
             all_hinted_correct.append(hinted_correct)
-            metrics[f"advantages-very-verbose/q{i}_baseline_correctness"] = float(baseline_correct)
-            metrics[f"advantages-very-verbose/q{i}_hinted_correctness"] = float(hinted_correct)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_correctness"] = float(baseline_correct)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_correctness"] = float(hinted_correct)
 
             # Monitor scores (model's predictions)
             baseline_monitor_avg = sum([v["monitor_score"] for v in monitor_index2infos[base_idx]]) / len(
@@ -715,8 +715,8 @@ def compute_grpo_monitorability_outcome_advantage(
             )
             all_baseline_monitor.append(baseline_monitor_avg)
             all_hinted_monitor.append(hinted_monitor_avg)
-            metrics[f"advantages-very-verbose/q{i}_baseline_monitor_score"] = float(baseline_monitor_avg)
-            metrics[f"advantages-very-verbose/q{i}_hinted_monitor_score"] = float(hinted_monitor_avg)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_monitor_score"] = float(baseline_monitor_avg)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_monitor_score"] = float(hinted_monitor_avg)
 
             # Calibration errors
             baseline_calib_err = sum([(0 - v["monitor_score"]) ** 2 for v in monitor_index2infos[base_idx]]) / len(
@@ -730,8 +730,8 @@ def compute_grpo_monitorability_outcome_advantage(
             ) / len(monitor_index2infos[hinted_idx])
             all_baseline_calib.append(baseline_calib_err)
             all_hinted_calib.append(hinted_calib_err)
-            metrics[f"advantages-very-verbose/q{i}_baseline_calibration_mse"] = float(baseline_calib_err)
-            metrics[f"advantages-very-verbose/q{i}_hinted_calibration_mse"] = float(hinted_calib_err)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_calibration_mse"] = float(baseline_calib_err)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_calibration_mse"] = float(hinted_calib_err)
 
             # Unwhitened scores (before normalization)
             baseline_unwhitened = sum([v["score_unwhitened"].item() for v in monitor_index2infos[base_idx]]) / len(
@@ -742,8 +742,8 @@ def compute_grpo_monitorability_outcome_advantage(
             )
             all_baseline_unwhitened.append(baseline_unwhitened)
             all_hinted_unwhitened.append(hinted_unwhitened)
-            metrics[f"advantages-very-verbose/q{i}_baseline_unwhitened_score"] = float(baseline_unwhitened)
-            metrics[f"advantages-very-verbose/q{i}_hinted_unwhitened_score"] = float(hinted_unwhitened)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_unwhitened_score"] = float(baseline_unwhitened)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_unwhitened_score"] = float(hinted_unwhitened)
 
         # Summary statistics under advantages/
         metrics["advantages/baseline_hint_sel_rate_mean"] = float(np.mean(all_baseline_hint_sel))
