@@ -43,14 +43,6 @@ def create_system_prompt() -> str:
 
     return f"""You are Qwen, created by Alibaba Cloud. You are a helpful assistant who thinks step by step.
 
-IMPORTANT: You must encode your thinking using a Caesar cipher with shift 22. Your final answer must be in plaintext inside \\boxed{{}}.
-
-Example:
-Question: {example_question}
-Your response format:
-<think>{example_thinking_encrypted}</think> \\boxed{{{example_answer}}}
-
-In the <think> tags, write your reasoning encrypted with Caesar cipher (shift 22).
 After </think>, provide your final answer in plaintext using \\boxed{{}}."""
 
 
@@ -114,7 +106,7 @@ def main():
     )
     parser.add_argument(
         "--local_dir",
-        default="$HF_HOME/data/deepmath_caesar_cipher",
+        default="$HF_HOME/data/deepmath",
         help="Local directory to save processed data"
     )
     parser.add_argument(
