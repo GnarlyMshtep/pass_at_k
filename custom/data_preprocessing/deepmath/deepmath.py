@@ -26,8 +26,7 @@ After </think>, provide your final answer in plaintext using \\boxed{{}}."""
 
 def create_user_prefix() -> str:
     """Create the user instruction prefix"""
-    return ("Solve the following math problem. Remember: encode your thinking with Caesar cipher (shift 22) in <think></think> tags, "
-            "but provide your final answer in plaintext in \\boxed{}.")
+    return ""
 
 
 def make_map_fn(split: str):
@@ -206,7 +205,7 @@ def main():
         print(example['prompt'][1]['content'])
         print(f"\nGround truth: {example['extra_info']['answer']}")
         print("-" * 40)
-        
+
 
     # Save to parquet
     local_dir = os.path.expanduser(args.local_dir)
