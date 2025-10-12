@@ -1,8 +1,8 @@
 set -x
 
 
-cdwn_train_path=$HF_HOME/deepmath/train.parquet
-cdwn_test_path=$HF_HOME/deepmath/test.parquet
+cdwn_train_path=~/data/bigmath_digits_hints_mix/train.parquet
+cdwn_test_path=~/data/bigmath_digits_hints_mix/test.parquet
 
 train_files="['$cdwn_train_path']"
 test_files="['$cdwn_test_path']"
@@ -15,19 +15,24 @@ max_token_len_per_gpu=25000
 # sum([sum(v.batch["attention_mask"]).item() for v in micro_batch])
 # 41425
 # len(micro_batch)
-# 40 
+# 40
+
+export proj_name="cot-monitor"
+x=$(TZ=America/New_York date +"%m_%d_%H:%M")
+export exp_name="qwen2.5_7b_deepmath_correct_and_hint_usage_4096res_512bat"
 
 python3 -m verl.trainer.main_ppo \
-    algorithm.adv_estimator=grpo \
+    algorithm.adv_estimator=grpo_monitorability \
+    algorithm.norm_adv_by_std_in_grpo=False\
     data.train_files="$train_files" \
     data.val_files="$test_files" \
     data.train_batch_size=512 \
     data.max_prompt_length=512 \
     data.max_response_length=4096 \
     data.filter_overlong_prompts=True \
-    data.shuffle=True \
+    data.shuffle=False \
     data.truncation='error' \
-    actor_rollout_ref.model.path=$HF_HOME/models/Qwen2_5-7B \
+    actor_rollout_ref.model.path=../../models/Qwen2_5-7B \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=256 \
@@ -53,17 +58,20 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=40 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \
-    custom_reward_function.name="compute_score_math" \
+    custom_reward_function.name="math_digits_correct_and_hint_usage" \
     custom_reward_function.path="custom/reward/reward_utils.py" \
+    trainer.val_before_train=False \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
-    trainer.project_name='stable_baseline' \
-    trainer.experiment_name='qwen2.5_7b_deepmath_baseline_4096res_512bat' \
+    trainer.project_name=$proj_name \
+    trainer.experiment_name=$exp_name \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
     +trainer.remove_previous_ckpt_in_save=True \
-    trainer.resume_mode=auto\
+    trainer.resume_mode=auto \
     trainer.test_freq=20 \
-    trainer.total_epochs=15 $@
-
+    +trainer.rollout_dump_freq=1 \
+    trainer.rollout_data_dir="rollouts/${exp_name}/train" \
+    trainer.validation_data_dir="rollouts/${exp_name}/val" \
+    trainer.total_epochs=15 $@ 2>&1 | tee logs/out.txt
