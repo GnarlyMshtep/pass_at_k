@@ -1,8 +1,8 @@
 set -x
 
 
-cdwn_train_path=$HF_HOME/deepmath/train.parquet
-cdwn_test_path=$HF_HOME/deepmath/test.parquet
+cdwn_train_path=$HF_HOME/data/deepmath/train.parquet
+cdwn_test_path=$HF_HOME/data/deepmath/test.parquet
 
 train_files="['$cdwn_train_path']"
 test_files="['$cdwn_test_path']"
