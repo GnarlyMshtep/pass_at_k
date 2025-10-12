@@ -306,11 +306,11 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
     return None if sol_str.find(f"<attempt-{n_rollout + 1}>") else results
 
 
-async def compute_score_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
+async def compute_score_math_boxed(data_source, solution_str, ground_truth, extra_info=None)-> float:
     # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
     # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
 
-    extracted_attempt = _get_tagged_data(solution_str, "attempt")
+    extracted_attempt = extract_boxed(solution_str)
     
     # If no valid attempts found, return 0
     if not extracted_attempt: 

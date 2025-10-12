@@ -53,7 +53,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=40 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \
-    custom_reward_function.name="compute_score_math" \
+    custom_reward_function.name="compute_score_math_boxed" \
     custom_reward_function.path="custom/reward/reward_utils.py" \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
