@@ -288,7 +288,8 @@ def compute_advantage(
         data.batch["returns"] = returns
     elif adv_estimator == AdvantageEstimator.GRPO_MONITORABILITY:
         # Initialize the mask for GRPO calculation
-        question_types = [v["question_type"] for v in data.non_tensor_batch["extra_info"]]
+        question_types = [getattr(v, "question_type", None) for v in data.non_tensor_batch["extra_info"]]
+        difficulties = [getattr(v, "difficulty", None) for v in data.non_tensor_batch["extra_info"]]
         grpo_calculation_mask = data.batch["response_mask"]
         # Call compute_grpo_outcome_advantage with parameters matching its definition
         advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_monitorability_outcome_advantage(
@@ -303,6 +304,7 @@ def compute_advantage(
             # format_score=data.non_tensor_batch.get["reward_extra_info/format_score"],
             monitor_index=data.non_tensor_batch["monitor_index"],
             question_types=question_types,
+            difficulties=difficulties,
             config=config,
         )
         data.batch["advantages"] = advantages

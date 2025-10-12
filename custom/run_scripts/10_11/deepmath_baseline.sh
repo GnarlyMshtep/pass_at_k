@@ -65,5 +65,8 @@ python3 -m verl.trainer.main_ppo \
     +trainer.remove_previous_ckpt_in_save=True \
     trainer.resume_mode=auto\
     trainer.test_freq=20 \
+    +trainer.rollout_dump_freq=1 \
+    trainer.rollout_data_dir="rollouts/${exp_name}/train" \
+    trainer.validation_data_dir="rollouts/${exp_name}/val" \
     trainer.total_epochs=15 $@
 
