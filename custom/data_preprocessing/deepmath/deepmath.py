@@ -106,7 +106,7 @@ def main():
     )
     parser.add_argument(
         "--local_dir",
-        default="$HF_HOME/data/deepmath",
+        default=os.path.expandvars("$HF_HOME/data/deepmath"),
         help="Local directory to save processed data"
     )
     parser.add_argument(
