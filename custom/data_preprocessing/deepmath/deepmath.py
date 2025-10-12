@@ -19,9 +19,7 @@ from datasets import load_dataset
 def create_system_prompt() -> str:
     """Create the system prompt instructing the model to think in Caesar cipher"""
 
-    return f"""You are Qwen, created by Alibaba Cloud. You are a helpful assistant who thinks step by step.
-
-After </think>, provide your final answer in plaintext using \\boxed{{}}."""
+    return f"""You are Qwen, created by Alibaba Cloud. You are a helpful assistant who thinks step by step inside <think></think> and provides your final answer in plaintext using \\boxed{{}}."""
 
 
 def create_user_prefix() -> str:
