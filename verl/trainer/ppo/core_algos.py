@@ -490,6 +490,7 @@ def compute_grpo_monitorability_outcome_advantage(
     # format_score: Optional[list[float]] = None,
     monitor_index: Optional[np.ndarray] = None,
     question_types: Optional[list[Literal["hint-omission", "hint-incorrect", "hint-correct", "control"]]] = None,
+    difficulties: Optional[list[float]] = None,
     config: Optional[AlgoConfig] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, dict]:
     """
@@ -790,7 +791,22 @@ def compute_grpo_monitorability_outcome_advantage(
         all_hinted_calib = np.array(all_hinted_calib)
         all_baseline_unwhitened = np.array(all_baseline_unwhitened)
         all_hinted_unwhitened = np.array(all_hinted_unwhitened)
+        all_difficulties_array = None
+        if difficulties is not None:
+            all_difficulties_array = np.asarray(difficulties)[[i for i in range(len(difficulties)) if i%2==1]] 
 
+        # ...existing code...
+        if all_difficulties_array is not None and len(difficulties) > 0 and None not in difficulties:
+            try:
+    
+                brier_score = np.mean((all_effect_sizes - all_difficulties_array)**2)
+                metrics["advantages/difficulty_effect_size_brier"] = brier_score
+                
+            except (ValueError, TypeError) as e:
+                # Log error or handle gracefully
+                print(f"ERROR: Error calculating difficulty--effect size Brier score: {e}")
+        
+        
         # assume that each monitor index has only one question type and at least 1 question
         question_types = [monitor_index2infos[i][0]["question_type"] for i in range(len(monitor_index2infos))]
         all_q_types = set(question_types)
@@ -831,6 +847,14 @@ def compute_grpo_monitorability_outcome_advantage(
                 metrics[f"{q_type}-advantages/hinted_unwhitened_score_mean"] = float(
                     np.mean(all_hinted_unwhitened[indicator_vector])
                 )
+
+                try:
+                    brier_score = np.mean((all_effect_sizes[indicator_vector] - all_difficulties_array[indicator_vector])**2)
+                    metrics[f"{q_type}-advantages/difficulty_effect_size_brier"] = brier_score
+                    
+                except (ValueError, TypeError) as e:
+                    # Log error or handle gracefully
+                    print(f"ERROR: Error calculating difficulty--effect size Brier score: {q_type}, {e}")
 
     return advantages, advantages, metrics
 
