@@ -107,6 +107,7 @@ class AdvantageEstimator(str, Enum):
     GPG = "gpg"
     BYTEDANCE_PASS_AT_K = "bytedance_pass_at_k"
     MULTI_ATTEMPT_GRPO = "multi_attempt_grpo"
+    RISKGRPO = "riskgrpo"
 
 
 ADV_ESTIMATOR_REGISTRY: dict[str, Any] = {}
@@ -349,6 +350,72 @@ def compute_bytedance_pass_at_k_outcome_advantages(
 
 
 
+
+@register_adv_est(AdvantageEstimator.RISKGRPO)  # or simply: @register_adv_est("riskgrpo")
+def compute_risk_grpo_outcome_advantage(
+    token_level_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.ndarray,
+    epsilon: float = 1e-6,
+    config: Optional[AlgoConfig] = None,
+    risk_beta: Optional[float] = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Compute advantage for GRPO, operating only on Outcome reward
+    (with only one scalar reward for each response).
+
+    Args:
+        token_level_rewards: `(torch.Tensor)`
+            shape is (bs, response_length)
+        response_mask: `(torch.Tensor)`
+            shape is (bs, response_length)
+        index: `(np.ndarray)`
+            index array for grouping
+        epsilon: `(float)`
+            small value to avoid division by zero
+        config: `(Optional[AlgoConfig])`
+            algorithm configuration object
+        risk_beta: `(Optional[float])`
+            risk beta to use
+
+
+    Returns:
+        advantages: `(torch.Tensor)`
+            shape is (bs, response_length)
+        Returns: `(torch.Tensor)`
+            shape is (bs, response_length)
+    """
+    scores = token_level_rewards.sum(dim=-1)
+
+    id2score = defaultdict(list)
+    id2mean = {}
+    id2std = {}
+
+    with torch.no_grad():
+        bsz = scores.shape[0]
+        for i in range(bsz):
+            id2score[index[i]].append(scores[i])
+        for idx in id2score: #M: i think idx is the uid of generations, in case we have n>1. 
+            if len(id2score[idx]) == 1:
+                assert False, "bro why are u doing GRPO with n_rollout==1?"
+                id2mean[idx] = torch.tensor(0.0)
+                id2std[idx] = torch.tensor(1.0)
+            elif len(id2score[idx]) > 1:
+                scores_tensor = torch.stack(id2score[idx])
+                id2mean[idx] = torch.mean(scores_tensor)
+                id2std[idx] = torch.std(scores_tensor)
+            else:
+                raise ValueError(f"no score in prompt index: {idx}")
+        for i in range(bsz):
+            if abs(id2mean[index[i]]) < epsilon:
+                scores[i] = 0.0
+            elif scores[i] == 0:
+                scores[i] = -1
+            else:
+                scores[i] = (1/id2mean[index[i]]) -1
+        scores = scores.unsqueeze(-1) * response_mask
+
+    return scores, scores
 
 
 

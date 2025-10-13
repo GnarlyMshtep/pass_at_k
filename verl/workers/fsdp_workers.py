@@ -378,6 +378,7 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
                     "bias": "none",
                 }
                 actor_module = get_peft_model(actor_module, LoraConfig(**lora_config))
+                actor_module.print_trainable_parameters()
         torch.distributed.barrier()
 
         if self.rank == 0:
@@ -1105,6 +1106,7 @@ class CriticWorker(Worker, DistProfilerExtension):
                 "bias": "none",
             }
             critic_module = get_peft_model(critic_module, LoraConfig(**lora_config))
+            critic_module.print_trainable_parameters()
 
         if self.rank == 0:
             print_model_size(critic_module)

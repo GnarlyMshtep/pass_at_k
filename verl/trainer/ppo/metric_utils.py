@@ -97,6 +97,8 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
             - critic/score/mean, max, min: Statistics about sequence scores
             - critic/rewards/mean, max, min: Statistics about sequence rewards
             - critic/advantages/mean, max, min: Statistics about advantages
+            - critic/advantages/meanLastToken: Mean of last valid token advantages per sequence
+            - critic/advantages/meanSequenceLevel: Mean of sequence-level advantage means
             - critic/returns/mean, max, min: Statistics about returns
             - critic/values/mean, max, min: Statistics about critic values (if use_critic=True)
             - critic/vf_explained_var: Explained variance of the value function (if use_critic=True)
@@ -137,6 +139,29 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
 
     valid_adv = torch.masked_select(advantages, response_mask)
     valid_returns = torch.masked_select(returns, response_mask)
+    
+    # Calculate mean of last valid token per sequence
+    last_token_advantages = []
+    for i in range(advantages.shape[0]):
+        seq_advantages = advantages[i]
+        seq_mask = response_mask[i]
+        if seq_mask.any():
+            # Find the last valid token in this sequence
+            valid_indices = torch.where(seq_mask)[0]
+            if len(valid_indices) > 0:
+                last_valid_idx = valid_indices[-1]
+                last_token_advantages.append(seq_advantages[last_valid_idx].item())
+    
+    # Calculate sequence-level means (mean of advantages per sequence, then mean of those means)
+    sequence_means = []
+    for i in range(advantages.shape[0]):
+        seq_advantages = advantages[i]
+        seq_mask = response_mask[i]
+        if seq_mask.any():
+            # Get advantages for valid tokens in this sequence
+            valid_seq_advantages = seq_advantages[seq_mask]
+            if len(valid_seq_advantages) > 0:
+                sequence_means.append(torch.mean(valid_seq_advantages).item())
 
     if use_critic:
         values = batch.batch["values"]
@@ -172,6 +197,10 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "critic/advantages/mean": torch.mean(valid_adv).detach().item(),
         "critic/advantages/max": torch.max(valid_adv).detach().item(),
         "critic/advantages/min": torch.min(valid_adv).detach().item(),
+        # adv - last token mean (mean of last valid token per sequence)
+        "critic/advantages/meanLastToken": np.mean(last_token_advantages) if last_token_advantages else 0.0,
+        # adv - sequence-level mean (mean of sequence means)
+        "critic/advantages/meanSequenceLevel": np.mean(sequence_means) if sequence_means else 0.0,
         # returns
         "critic/returns/mean": torch.mean(valid_returns).detach().item(),
         "critic/returns/max": torch.max(valid_returns).detach().item(),

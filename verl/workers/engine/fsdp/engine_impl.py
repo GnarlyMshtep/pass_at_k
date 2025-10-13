@@ -261,6 +261,7 @@ class FSDPEngine(BaseEngine):
                 "bias": "none",
             }
             module = get_peft_model(module, LoraConfig(**lora_config))
+            module.print_trainable_parameters()
 
         if self.rank == 0:
             print_model_size(module)

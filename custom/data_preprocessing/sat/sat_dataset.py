@@ -58,6 +58,7 @@ def parse_args():
     parser.add_argument("--train_size", type=int, default=-1, help="Number of training examples to export (-1 for all filtered)")
     parser.add_argument("--test_size", type=int, default=-1, help="Number of test examples to export (-1 for all filtered)")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--version", type=int, default=1, help="Version of the dataset")
     parser.add_argument(
         "--no_shuffle",
         action="store_true",
@@ -707,6 +708,9 @@ def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
         raise ValueError("Level must be at least 2.")
     if num_variables < level:
         raise ValueError("Number of variables must be at least equal to the level.")
+    
+    if num_variables == level:
+        num_clauses = min(num_clauses, 2**num_variables-1)
 
     # Create a guaranteed solution by assigning a random boolean value to each variable.
     solution = {i: random.choice([True, False]) for i in range(1, num_variables + 1)}
@@ -805,7 +809,10 @@ if __name__ == "__main__":
     }
     for level in range(args.min_level, args.max_level + 1):
         all_num_variables=args.num_variables
-        all_num_variables = [x for x in all_num_variables if x>level ]
+        if args.version > 1:
+            all_num_variables = [x for x in all_num_variables if x >= level ]
+        else:
+            all_num_variables = [x for x in all_num_variables if x > level ]
 
         for num_variables in all_num_variables:
             for _ in range(1000): # Generate 5000 examples per level for the training pool
