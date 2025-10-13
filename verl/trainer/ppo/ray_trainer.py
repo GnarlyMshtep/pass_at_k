@@ -246,9 +246,8 @@ def compute_advantage(
         data.batch["response_mask"] = compute_response_mask(data)
     # prepare response group
 
-    if adv_estimator == AdvantageEstimator.BYTEDANCE_PASS_AT_K: 
+    if adv_estimator == AdvantageEstimator.BYTEDANCE_PASS_AT_K:
         k_opt = 2 if config is None else config.get("pass_at_k_k", 2)
-        # breakpoint()
         advantages, returns, extra_advantage_metrics = core_algos.compute_bytedance_pass_at_k_outcome_advantages(
             token_level_rewards=data.batch["token_level_rewards"],
             response_mask=data.batch["response_mask"],
@@ -288,8 +287,8 @@ def compute_advantage(
         data.batch["returns"] = returns
     elif adv_estimator == AdvantageEstimator.GRPO_MONITORABILITY:
         # Initialize the mask for GRPO calculation
-        question_types = [getattr(v, "question_type", None) for v in data.non_tensor_batch["extra_info"]]
-        difficulties = [getattr(v, "difficulty", None) for v in data.non_tensor_batch["extra_info"]]
+        question_types = [v["question_type"] for v in data.non_tensor_batch["extra_info"]]
+        difficulties = [v.get("difficulty") for v in data.non_tensor_batch["extra_info"]]
         grpo_calculation_mask = data.batch["response_mask"]
         # Call compute_grpo_outcome_advantage with parameters matching its definition
         advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_monitorability_outcome_advantage(
@@ -817,7 +816,6 @@ class RayPPOTrainer:
             assert len(lst) == 0 or len(lst) == len(sample_scores), f"{key_info}: {len(lst)=}, {len(sample_scores)=}"
 
         data_sources = np.concatenate(data_source_lst, axis=0)
-        # breakpoint()
         data_src2var2metric2val = process_validation_metrics(data_sources, sample_inputs, reward_extra_infos_dict)
         metric_dict = {}
         for data_source, var2metric2val in data_src2var2metric2val.items():
@@ -1188,7 +1186,6 @@ class RayPPOTrainer:
                         if self.config.global_profiler.profile_continuous_steps
                         else curr_step_profile
                     )
-                # breakpoint()
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
 
                 if not dataset_w_builtin_attempts:
@@ -1264,8 +1261,7 @@ class RayPPOTrainer:
                     # compute global_valid tokens
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
 
-                    # if self.global_steps == 1: 
-                    #     breakpoint()
+                    # if self.global_steps == 1:
                     
                     with marked_timer("reward", timing_raw, color="yellow"):
                         # compute reward model score
@@ -1347,7 +1343,7 @@ class RayPPOTrainer:
                         norm_adv_by_std_in_grpo = self.config.algorithm.get(
                             "norm_adv_by_std_in_grpo", True
                         )  # GRPO adv normalization factor
-
+                        breakpoint()
                         batch, extra_advantage_metrics = compute_advantage(
                             batch,
                             adv_estimator=self.config.algorithm.adv_estimator,

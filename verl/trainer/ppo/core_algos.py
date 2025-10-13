@@ -315,7 +315,6 @@ def compute_bytedance_pass_at_k_outcome_advantages(
     k_opt: int = 2,
     epsilon: float = 1e-6,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    # breakpoint()
     scores = token_level_rewards.sum(dim=-1)
 
     advantages_flat = torch.zeros_like(scores, dtype=scores.dtype)
@@ -329,7 +328,6 @@ def compute_bytedance_pass_at_k_outcome_advantages(
         bsz = scores.shape[0]
         for i in range(bsz):
             id2indexes[index[i]].append(i)
-        # breakpoint()
         for uid, inds in id2indexes.items():
             n = len(inds)
             assert n >= k_opt, f"pass@k requires at least k responses per uid; got {n} < {k_opt}"
@@ -521,8 +519,8 @@ def compute_grpo_monitorability_outcome_advantage(
         Returns: `(torch.Tensor)`
             shape is (bs, response_length)
     """
-    # breakpoint()
     # Pickle all the inputs to this function
+    breakpoint()
     adv_inputs = {
         "token_level_rewards": token_level_rewards,
         "response_mask": response_mask,
@@ -554,6 +552,13 @@ def compute_grpo_monitorability_outcome_advantage(
 
         bsz = response_mask.size(0)
         for i in range(bsz):
+            if difficulties is None:
+                x = None
+            else:
+                if difficulties[i] > 1:
+                    x = difficulties[i] / 10
+                else:
+                    x = difficulties[i]
             monitor_index2infos[monitor_index[i]].append(
                 {
                     "is_correct": is_correct[i],
@@ -563,6 +568,7 @@ def compute_grpo_monitorability_outcome_advantage(
                     "other_score": id2other_score[i],
                     "id": i,
                     "question_type": question_types[i],
+                    "difficulty": x,
                 }
             )
 
@@ -670,6 +676,7 @@ def compute_grpo_monitorability_outcome_advantage(
         all_hinted_calib = []
         all_baseline_unwhitened = []
         all_hinted_unwhitened = []
+        monitor_idx_intdiv2_to_difficulties = []
 
         # Collect per-question-pair metrics
         for i in range(num_varients // 2):
@@ -746,6 +753,8 @@ def compute_grpo_monitorability_outcome_advantage(
             # metrics[f"advantages-very-verbose/q{i}_baseline_unwhitened_score"] = float(baseline_unwhitened)
             # metrics[f"advantages-very-verbose/q{i}_hinted_unwhitened_score"] = float(hinted_unwhitened)
 
+            monitor_idx_intdiv2_to_difficulties.append(monitor_index2infos[base_idx][0].get("difficulty"))
+
         # Summary statistics under advantages/
         metrics["advantages/baseline_hint_sel_rate_mean"] = float(np.mean(all_baseline_hint_sel))
         metrics["advantages/baseline_hint_sel_rate_std"] = float(np.std(all_baseline_hint_sel))
@@ -791,26 +800,26 @@ def compute_grpo_monitorability_outcome_advantage(
         all_hinted_calib = np.array(all_hinted_calib)
         all_baseline_unwhitened = np.array(all_baseline_unwhitened)
         all_hinted_unwhitened = np.array(all_hinted_unwhitened)
-        all_difficulties_array = None
-        if difficulties is not None:
-            all_difficulties_array = np.asarray(difficulties)[[i for i in range(len(difficulties)) if i%2==1]] 
+        monitor_idx_intdiv2_to_difficulties_array = np.array(monitor_idx_intdiv2_to_difficulties)
 
         # ...existing code...
-        if all_difficulties_array is not None and len(difficulties) > 0 and None not in difficulties:
+        if None not in monitor_idx_intdiv2_to_difficulties_array:
             try:
-    
-                brier_score = np.mean((all_effect_sizes - all_difficulties_array)**2)
+                brier_score = np.mean((all_effect_sizes - monitor_idx_intdiv2_to_difficulties_array) ** 2)
                 metrics["advantages/difficulty_effect_size_brier"] = brier_score
-                
-            except (ValueError, TypeError) as e:
+
+            except Exception as e:
                 # Log error or handle gracefully
-                print(f"ERROR: Error calculating difficulty--effect size Brier score: {e}")
+                print(
+                    f"ERROR: Error calculating difficulty--effect size Brier score: {e=}, {monitor_idx_intdiv2_to_difficulties_array=}"
+                )
         
         
         # assume that each monitor index has only one question type and at least 1 question
         question_types = [monitor_index2infos[i][0]["question_type"] for i in range(len(monitor_index2infos))]
         all_q_types = set(question_types)
         all_q_types = all_q_types - {"control"}
+        breakpoint()
         for q_type in all_q_types:
             indicator_vector = (np.array(question_types) == q_type)[np.array([i for i in range(512) if i%2==1])]
             if indicator_vector.any(): #was getting o-size array reduction operation
@@ -849,7 +858,13 @@ def compute_grpo_monitorability_outcome_advantage(
                 )
 
                 try:
-                    brier_score = np.mean((all_effect_sizes[indicator_vector] - all_difficulties_array[indicator_vector])**2)
+                    brier_score = np.mean(
+                        (
+                            all_effect_sizes[indicator_vector]
+                            - monitor_idx_intdiv2_to_difficulties_array[indicator_vector]
+                        )
+                        ** 2
+                    )
                     metrics[f"{q_type}-advantages/difficulty_effect_size_brier"] = brier_score
                     
                 except (ValueError, TypeError) as e:

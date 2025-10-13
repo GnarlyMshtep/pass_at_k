@@ -1,8 +1,8 @@
 set -x
 
 
-cdwn_train_path=~/data/bigmath_digits_hints_mix/train.parquet
-cdwn_test_path=~/data/bigmath_digits_hints_mix/test.parquet
+cdwn_train_path=$HF_HOME/data/deepmath_hints_mix/train.parquet
+cdwn_test_path=$HF_HOME/data/deepmath_hints_mix/test.parquet
 
 train_files="['$cdwn_train_path']"
 test_files="['$cdwn_test_path']"
@@ -19,7 +19,7 @@ max_token_len_per_gpu=25000
 
 export proj_name="cot-monitor"
 x=$(TZ=America/New_York date +"%m_%d_%H:%M")
-export exp_name="qwen2.5_7b_deepmath_correct_and_hint_usage_4096res_512bat"
+export exp_name="10_13_qwen2.5_7b_deepmath_correct_and_hint_usage_4096res_512bat_.001entr"
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo_monitorability \
@@ -32,7 +32,7 @@ python3 -m verl.trainer.main_ppo \
     data.filter_overlong_prompts=True \
     data.shuffle=False \
     data.truncation='error' \
-    actor_rollout_ref.model.path=../../models/Qwen2_5-7B \
+    actor_rollout_ref.model.path=$HF_HOME/models/Qwen2_5-7B \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=256 \
@@ -46,7 +46,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.use_kl_loss=True \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
-    actor_rollout_ref.actor.entropy_coeff=0 \
+    actor_rollout_ref.actor.entropy_coeff=0.001 \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
