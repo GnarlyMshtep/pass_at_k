@@ -13,9 +13,13 @@ export RAY_DISABLE_IMPORT_WARNING=1
 PROJECT_DIR=$(pwd)
 project_name='number_guessing_parallel_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
-dataset_name='number_guessing_1_100_8_nums_power_1_2_reversed/single_attempt'
+dataset_name='number_guessing_1_100_8_nums_power_1_2_reversed/single_attempt' #'number_guessing_1_200_16_nums_power_1_2_reversed/single_attempt'
 max_response_length=1024
 exp_name="${model_name}_${dataset_name}_group_based_adv_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+
+# Resume configuration
+resume_mode="disable" # one of: disable, auto, resume_path
+resume_from_path="${HF_HOME}/models/ckpts/number_guessing_parallel_multi_attempt/Qwen2.5-3B-Instruct_number_guessing_1_100_8_nums_power_1_2_reversed/single_attempt_group_based_adv_1024_20250926_170156/global_step_500"
 
 # Multi-attempt parameters
 enable_multi_attempt=True
@@ -37,7 +41,7 @@ mini_batch_size=32
 train_batch_size=64
 val_batch_size=256
 
-num_workers=16
+num_workers=2
 
 # Ensure vLLM chunked prefill precondition
 max_model_len=$((512 + max_response_length))
@@ -93,6 +97,7 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     +reward_model.base_reward_manager=dapo \
     +reward_model.enabled=True \
     reward_model.reward_kwargs.num_workers=${num_workers} \
+    ++reward_model.launch_reward_fn_async=False \
     +reward_model.reward_kwargs.mp_start_method=fork \
     trainer.logger='["console","wandb"]' \
     trainer.project_name="${project_name}" \
@@ -106,11 +111,13 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/number_guessing/${exp_name}/train" \
     trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/number_guessing/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
+    trainer.resume_mode="${resume_mode}" \
+    trainer.resume_from_path="${resume_from_path}" \
     +trainer.best_checkpoint.monitor=${monitor_metric} \
     +trainer.best_checkpoint.mode=max \
     +trainer.best_checkpoint.keep_top_k=1 \
     +multi_attempt.max_attempts=$max_attempts \
-    '+multi_attempt.attempt_template="\n You will be asked this question multiple times, and you will win if you get the score right in at least one of your attempts. This is your attempt {attempt_id} out of {max_attempts} attempts. "' \
+    '+multi_attempt.attempt_template="\n This is your attempt {attempt_id} out of {max_attempts} attempts. "' \
     +multi_attempt.attempt_insertion_position=user_message_begin \
     +multi_attempt.num_samples_per_attempt=$num_samples_per_attempt \
     +multi_attempt.enabled=$enable_multi_attempt \
@@ -123,3 +130,4 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True
 
 
+    # trainer.val_only=True \

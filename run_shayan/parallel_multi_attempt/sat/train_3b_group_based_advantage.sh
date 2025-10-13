@@ -36,7 +36,7 @@ val_total_rollouts_per_prompt=$((val_max_attempts * val_num_samples_per_attempt)
 num_groupings=200
 pass_at_k_weight=0.5  # Weight for pass@k (1-w for pass@1)
 
-num_gpus=2
+num_gpus=8
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
@@ -106,8 +106,9 @@ python3 run_shayan/parallel_multi_attempt/parallel_multi_attempt_wrapper.py \
     trainer.test_freq=50 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
-    trainer.rollout_data_dir="${PROJECT_DIR}/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/train" \
-    trainer.validation_data_dir="${PROJECT_DIR}/logs/rollouts/full_satfinder/${exp_name}/val" \
+    trainer.rollout_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_sat/${exp_name}/train" \
+    trainer.validation_data_dir="/scratch/m000122/stalaei/logs/pass_at_k/rollouts/full_sat/${exp_name}/val" \
+    trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
     trainer.resume_mode="${resume_mode}" \
     +trainer.best_checkpoint.monitor=${monitor_metric} \
     +trainer.best_checkpoint.mode=max \

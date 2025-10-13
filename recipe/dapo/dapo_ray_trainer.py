@@ -20,6 +20,7 @@ import os
 import uuid
 from collections import defaultdict
 from copy import deepcopy
+from math import comb
 from pprint import pprint
 
 import numpy as np
@@ -219,6 +220,73 @@ class RayDAPOTrainer(RayPPOTrainer):
                         else:
                             new_batch.batch["token_level_rewards"] = new_batch.batch["token_level_scores"]
 
+                    # Compute and log metrics for the unfiltered generation batch
+                    # This gives true accuracy across all generated samples before filtering
+                    # Log these immediately at gen_steps (not at global_steps)
+                    if self.config.algorithm.filter_groups.enable:
+                        try:
+                            # Add response_mask if not present for metric computation
+                            if "response_mask" not in new_batch.batch.keys():
+                                new_batch.batch["response_mask"] = compute_response_mask(new_batch)
+                            
+                            # Compute generation-level metrics (before filtering)
+                            gen_metrics = {}
+                            non_tensor = new_batch.non_tensor_batch
+                            if "is_correct" in non_tensor and "uid" in non_tensor:
+                                # Get correctness and group by uid
+                                is_correct_np = np.asarray(non_tensor["is_correct"], dtype=float)
+                                successes = (is_correct_np == 1.0).astype(int)
+                                uids = np.asarray(non_tensor["uid"])
+                                data_sources = non_tensor.get("data_source", ["unknown"] * len(successes))
+                                if isinstance(data_sources, np.ndarray):
+                                    data_sources = data_sources.tolist()
+
+                                # Overall accuracy
+                                gen_metrics["train_gen/accuracy"] = float(successes.mean())
+                                
+                                # Accuracy by data source
+                                ds_accs = defaultdict(list)
+                                for i, ds in enumerate(data_sources):
+                                    ds_accs[ds].append(successes[i])
+                                for ds, vals in ds_accs.items():
+                                    gen_metrics[f"train_gen/accuracy/{ds}"] = float(np.mean(vals))
+                                
+                                # Compute iid pass@k for generation batch
+                                uid2idxs = defaultdict(list)
+                                for i in range(len(successes)):
+                                    uid2idxs[uids[i]].append(i)
+                                
+                                k2vals = defaultdict(list)
+                                for _, idxs in uid2idxs.items():
+                                    grp_success = successes[idxs]
+                                    n_total = int(len(grp_success))
+                                    if n_total <= 0:
+                                        continue
+                                    c = int(grp_success.sum())
+                                    # powers of two up to n_total, plus n_total
+                                    ks = []
+                                    k_val = 1
+                                    while k_val < n_total:
+                                        ks.append(k_val)
+                                        k_val *= 2
+                                    for k in ks:
+                                        numer = 0 if k > (n_total - c) else comb(n_total - c, k)
+                                        denom = comb(n_total, k)
+                                        k2vals[k].append(1.0 - (numer / denom))
+                                
+                                for k, vals in k2vals.items():
+                                    if len(vals) > 0:
+                                        gen_metrics[f"train_gen/pass/iid@{k}"] = float(np.mean(vals))
+                            
+                            # Add gen_steps to the generation metrics
+                            gen_metrics["train_gen/gen_steps"] = self.gen_steps
+                            gen_metrics["train_gen/global_steps"] = self.global_steps
+                            
+                            # Log generation metrics immediately at gen_steps
+                            logger.log(data=gen_metrics, step=self.gen_steps)
+                        except Exception as e:
+                            print(f"Warning: Failed to compute generation metrics: {e}")
+
                     if not self.config.algorithm.filter_groups.enable:
                         batch = new_batch
                     else:  # NOTE: When prompts after filtering is less than train batch size,
@@ -250,12 +318,35 @@ class RayDAPOTrainer(RayPPOTrainer):
                             for uid, std in prompt_uid2metric_std.items()
                             if std > 0 or len(prompt_uid2metric_vals[uid]) == 1
                         ]
+                        
+                        # Track filtering statistics
+                        total_prompts_before_filter = len(prompt_uid2metric_vals)
+                        kept_prompts = len(kept_prompt_uids)
+                        filtered_prompts = total_prompts_before_filter - kept_prompts
+                        
                         num_prompt_in_batch += len(kept_prompt_uids)
-
+                       
                         kept_traj_idxs = []
                         for idx, traj_from_prompt_uid in enumerate(new_batch.non_tensor_batch["uid"]):
                             if traj_from_prompt_uid in kept_prompt_uids:
                                 kept_traj_idxs.append(idx)
+
+                        total_traj_before_filter = len(new_batch.non_tensor_batch["uid"])
+                        kept_traj = len(kept_traj_idxs)
+                        
+                        # Log filtering statistics for this generation batch at gen_steps
+                        filter_metrics = {
+                            "train_filter/prompts_filtered": filtered_prompts,
+                            "train_filter/prompts_kept": kept_prompts,
+                            "train_filter/prompts_total": total_prompts_before_filter,
+                            "train_filter/prompts_filtered_ratio": filtered_prompts / max(1, total_prompts_before_filter),
+                            "train_filter/trajectories_kept": kept_traj,
+                            "train_filter/trajectories_total": total_traj_before_filter,
+                            "train_filter/trajectories_kept_ratio": kept_traj / max(1, total_traj_before_filter),
+                            "train_filter/gen_steps": self.gen_steps,
+                            "train_filter/global_steps": self.global_steps,
+                        }
+                        logger.log(data=filter_metrics, step=self.gen_steps)
 
                         new_batch = new_batch[kept_traj_idxs]
                         batch = new_batch if batch is None else DataProto.concat([batch, new_batch])
@@ -447,12 +538,14 @@ class RayDAPOTrainer(RayPPOTrainer):
 
 
                 metrics["train/num_gen_batches"] = num_gen_batches
+                metrics["train/gen_steps"] = self.gen_steps
+                metrics["train/global_steps"] = self.global_steps
                 batch = None
                 num_prompt_in_batch = 0
                 num_gen_batches = 0
                 # breakpoint()
                 # TODO: make a canonical logger that supports various backend
-                logger.log(data=metrics, step=self.global_steps)
+                logger.log(data=metrics, step=self.gen_steps)
 
 
                 
