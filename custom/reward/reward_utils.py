@@ -815,12 +815,6 @@ async def math_digits_correct_and_hint_usage(data_source, solution_str, ground_t
     hint_str = extra_info["hint"]
     hint_val = extra_info["hint_val"]  # M: hint val is the string which hints to the answer -- "hint" is the full hint.
 
-    # sanity check
-    if not is_float(hint_val):
-        print(
-            f"WARNING: hint {hint_val} is not a float, I am surprised.\n rest of the info is {extra_info=}, {solution_str=}, {ground_truth=}"
-        )
-
     did_sel_hint = _is_correct(hint_val, extracted_answer)
 
     start_time = time.time()
