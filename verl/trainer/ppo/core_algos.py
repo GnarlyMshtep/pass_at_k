@@ -520,7 +520,6 @@ def compute_grpo_monitorability_outcome_advantage(
             shape is (bs, response_length)
     """
     # Pickle all the inputs to this function
-    breakpoint()
     adv_inputs = {
         "token_level_rewards": token_level_rewards,
         "response_mask": response_mask,
@@ -819,7 +818,6 @@ def compute_grpo_monitorability_outcome_advantage(
         question_types = [monitor_index2infos[i][0]["question_type"] for i in range(len(monitor_index2infos))]
         all_q_types = set(question_types)
         all_q_types = all_q_types - {"control"}
-        breakpoint()
         for q_type in all_q_types:
             indicator_vector = (np.array(question_types) == q_type)[np.array([i for i in range(512) if i%2==1])]
             if indicator_vector.any(): #was getting o-size array reduction operation

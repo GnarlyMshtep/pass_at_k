@@ -1343,7 +1343,6 @@ class RayPPOTrainer:
                         norm_adv_by_std_in_grpo = self.config.algorithm.get(
                             "norm_adv_by_std_in_grpo", True
                         )  # GRPO adv normalization factor
-                        breakpoint()
                         batch, extra_advantage_metrics = compute_advantage(
                             batch,
                             adv_estimator=self.config.algorithm.adv_estimator,

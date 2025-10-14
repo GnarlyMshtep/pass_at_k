@@ -10,6 +10,7 @@ import re
 from typing import Any, Dict, List, Tuple
 
 import datasets
+import ipdb
 import numpy as np
 from datasets import load_dataset
 
@@ -840,7 +841,7 @@ def main():
 
     print(f"Final train dataset size: {len(train_dataset)}")
     print(f"Final validation dataset size: {len(val_dataset)}")
-
+    ipdb.set_trace()
     # Print first 15 questions for verification
     print("\n" + "="*80)
     print("FIRST 15 QUESTIONS:")
