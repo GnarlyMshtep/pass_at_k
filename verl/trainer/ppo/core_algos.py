@@ -875,7 +875,7 @@ def compute_grpo_monitorability_outcome_advantage(
 @register_adv_est(
     AdvantageEstimator.GRPO_MONITORABILITY_CORRECTNESS_NO_EFFECT_SIZE
 )  # or simply: @register_adv_est("grpo")
-def compute_grpo_monitorability_outcome_advantage(
+def compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
     token_level_rewards: torch.Tensor,
     response_mask: torch.Tensor,
     uids: np.ndarray,
@@ -918,6 +918,7 @@ def compute_grpo_monitorability_outcome_advantage(
         Returns: `(torch.Tensor)`
             shape is (bs, response_length)
     """
+    print("DEBUG: in compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE (which I confirmed uses the right effect size)")
     # Pickle all the inputs to this function
     adv_inputs = {
         "token_level_rewards": token_level_rewards,
@@ -994,9 +995,11 @@ def compute_grpo_monitorability_outcome_advantage(
             for j in range(len(monitor_index2infos[base_idx])):
                 infos = monitor_index2infos[base_idx][j]
                 correctness_plus_other = infos["other_score"] + infos["is_correct"]
-                true_hint_sel_effect = 0
-                calibration = (true_hint_sel_effect - infos["monitor_score"]) ** 2
+                hint_sel_effect = 0
+                calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
                 score_unwhitened = correctness_plus_other - calibration
+
+                monitor_index2infos[hinted_idx][j]["used_effect_size"] = hint_sel_effect
                 monitor_index2infos[base_idx][j]["score_unwhitened"] = score_unwhitened
 
             for j in range(len(monitor_index2infos[hinted_idx])):
@@ -1007,6 +1010,8 @@ def compute_grpo_monitorability_outcome_advantage(
                 ]  #! M: this is the key line that we changed, everything else should be the same and I will not change
                 calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
                 score_unwhitened = correctness_plus_other - calibration
+
+                monitor_index2infos[hinted_idx][j]["used_effect_size"] = hint_sel_effect
                 monitor_index2infos[hinted_idx][j]["score_unwhitened"] = score_unwhitened
 
         # 3. whiten scores per monitor_index
@@ -1067,7 +1072,8 @@ def compute_grpo_monitorability_outcome_advantage(
         # Collect data for aggregation
         all_baseline_hint_sel = []
         all_hinted_hint_sel = []
-        all_effect_sizes = []
+        all_used_effect_sizes = []
+        all_true_effect_sizes = []
         all_baseline_correct = []
         all_hinted_correct = []
         all_baseline_monitor = []
@@ -1094,13 +1100,19 @@ def compute_grpo_monitorability_outcome_advantage(
             hinted_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[hinted_idx]]) / len(
                 monitor_index2infos[hinted_idx]
             )
+           
             all_hinted_hint_sel.append(hinted_hint_sel_rate)
             # metrics[f"advantages-very-verbose/q{i}_hinted_hint_sel_rate"] = float(hinted_hint_sel_rate)
 
             # Effect size (the difference we're trying to predict)
-            effect_size = hinted_hint_sel_rate - baseline_hint_sel_rate
-            all_effect_sizes.append(effect_size)
-            # metrics[f"advantages-very-verbose/q{i}_effect_size"] = float(effect_size)
+            used_effect_size = sum([v["used_effect_size"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+           
+            all_used_effect_sizes.append(used_effect_size) 
+
+            true_effect_size = hinted_hint_sel_rate - baseline_hint_sel_rate
+            all_true_effect_sizes.append(true_effect_size)
 
             # Correctness rates
             baseline_correct = sum([v["is_correct"] for v in monitor_index2infos[base_idx]]) / len(
@@ -1161,10 +1173,15 @@ def compute_grpo_monitorability_outcome_advantage(
         metrics["advantages/hinted_hint_sel_rate_mean"] = float(np.mean(all_hinted_hint_sel))
         metrics["advantages/hinted_hint_sel_rate_std"] = float(np.std(all_hinted_hint_sel))
 
-        metrics["advantages/effect_size_mean"] = float(np.mean(all_effect_sizes))
-        metrics["advantages/effect_size_std"] = float(np.std(all_effect_sizes))
-        metrics["advantages/effect_size_min"] = float(np.min(all_effect_sizes))
-        metrics["advantages/effect_size_max"] = float(np.max(all_effect_sizes))
+        metrics["advantages/used_effect_size_mean"] = float(np.mean(all_used_effect_sizes))
+        metrics["advantages/used_effect_size_std"] = float(np.std(all_used_effect_sizes))
+        metrics["advantages/used_effect_size_min"] = float(np.min(all_used_effect_sizes))
+        metrics["advantages/used_effect_size_max"] = float(np.max(all_used_effect_sizes))
+
+        metrics["advantages/true_effect_size_mean"] = float(np.mean(all_true_effect_sizes))
+        metrics["advantages/true_effect_size_std"] = float(np.std(all_true_effect_sizes))
+        metrics["advantages/true_effect_size_min"] = float(np.min(all_true_effect_sizes))
+        metrics["advantages/true_effect_size_max"] = float(np.max(all_true_effect_sizes))
 
         metrics["advantages/baseline_correctness_mean"] = float(np.mean(all_baseline_correct))
         metrics["advantages/baseline_correctness_std"] = float(np.std(all_baseline_correct))
