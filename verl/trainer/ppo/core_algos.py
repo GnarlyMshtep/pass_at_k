@@ -108,6 +108,7 @@ class AdvantageEstimator(str, Enum):
     GPG = "gpg"
     BYTEDANCE_PASS_AT_K = "bytedance_pass_at_k"
     GRPO_MONITORABILITY = "grpo_monitorability"
+    GRPO_MONITORABILITY_CORRECTNESS_NO_EFFECT_SIZE = "grpo_monitorability_CORRECTNESS_NO_EFFECT_SIZE"
 
 
 ADV_ESTIMATOR_REGISTRY: dict[str, Any] = {}
@@ -865,6 +866,413 @@ def compute_grpo_monitorability_outcome_advantage(
                     )
                     metrics[f"{q_type}-advantages/difficulty_effect_size_brier"] = brier_score
                     
+                except (ValueError, TypeError) as e:
+                    # Log error or handle gracefully
+                    print(f"ERROR: Error calculating difficulty--effect size Brier score: {q_type}, {e}")
+
+    return advantages, advantages, metrics
+
+@register_adv_est(
+    AdvantageEstimator.GRPO_MONITORABILITY_CORRECTNESS_NO_EFFECT_SIZE
+)  # or simply: @register_adv_est("grpo")
+def compute_grpo_monitorability_outcome_advantage(
+    token_level_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    uids: np.ndarray,
+    epsilon: float = 1e-6,
+    norm_adv_by_std_in_grpo: bool = True,
+    monitor_scores: Optional[list[float]] = None,
+    did_sel_hint: Optional[list[float]] = None,
+    is_correct: Optional[list[bool]] = None,
+    # format_score: Optional[list[float]] = None,
+    monitor_index: Optional[np.ndarray] = None,
+    question_types: Optional[list[Literal["hint-omission", "hint-incorrect", "hint-correct", "control"]]] = None,
+    difficulties: Optional[list[float]] = None,
+    config: Optional[AlgoConfig] = None,
+) -> tuple[torch.Tensor, torch.Tensor, dict]:
+    """
+    Compute advantage for GRPO, operating only on Outcome reward
+    (with only one scalar reward for each response).
+
+    Args:
+        token_level_rewards: `(torch.Tensor)`
+            shape is (bs, response_length)
+        response_mask: `(torch.Tensor)`
+            shape is (bs, response_length)
+        index: `(np.ndarray)`
+            index array for grouping
+        epsilon: `(float)`
+            small value to avoid division by zero
+        norm_adv_by_std_in_grpo: `(bool)`
+            whether to scale the GRPO advantage
+        config: `(Optional[AlgoConfig])`
+            algorithm configuration object
+
+    Note:
+        If norm_adv_by_std_in_grpo is True, the advantage is scaled by the std, as in the original GRPO.
+        If False, the advantage is not scaled, as in Dr.GRPO (https://arxiv.org/abs/2503.20783).
+
+    Returns:
+        advantages: `(torch.Tensor)`
+            shape is (bs, response_length)
+        Returns: `(torch.Tensor)`
+            shape is (bs, response_length)
+    """
+    # Pickle all the inputs to this function
+    adv_inputs = {
+        "token_level_rewards": token_level_rewards,
+        "response_mask": response_mask,
+        "uids": uids,
+        "epsilon": epsilon,
+        "norm_adv_by_std_in_grpo": norm_adv_by_std_in_grpo,
+        "monitor_scores": monitor_scores,
+        "did_sel_hint": did_sel_hint,
+        "is_correct": is_correct,
+        "monitor_index": monitor_index,
+        "config": config,
+    }
+
+    # with open("adv_inputs.pkl", "wb") as f:
+    #     pickle.dump(adv_inputs, f)
+    # check that we are getting specialized parameters that we expect
+
+    id2other_score = token_level_rewards.sum(
+        dim=-1
+    )  # M: I decided to return a score of 0, but there is still KL and entropy bonus that have been added here.
+
+    monitor_index2infos = defaultdict(list)
+    # id2score = defaultdict(list)
+    # id2mean = {}
+    # id2std = {}
+
+    with torch.no_grad():
+        # 1. assemble list of infos, sorted by monitor_index
+
+        bsz = response_mask.size(0)
+        for i in range(bsz):
+            if difficulties is None:
+                x = None
+            else:
+                if difficulties[i] > 1:
+                    x = difficulties[i] / 10
+                else:
+                    x = difficulties[i]
+            monitor_index2infos[monitor_index[i]].append(
+                {
+                    "is_correct": is_correct[i],
+                    "monitor_score": monitor_scores[i],
+                    "did_sel_hint": did_sel_hint[i],
+                    "uid": uids[i],
+                    "other_score": id2other_score[i],
+                    "id": i,
+                    "question_type": question_types[i],
+                    "difficulty": x,
+                }
+            )
+
+        # 2. for each monitor index, compute unnormalized scores (where the hinted question's unormalized score dependes on the baseline hint selection rate -- measuring 'effect size')
+
+        num_varients = max(monitor_index2infos.keys()) + 1  # M: should 2x num unique qs
+
+        assert num_varients % 2 == 0, (
+            "expecting the number of varients to be divisible by 2 so, for each question"
+            "we can get the question with and without the hint"
+        )
+
+        for i in range(num_varients // 2):
+            base_idx = 2 * i
+            hinted_idx = 2 * i + 1
+
+            baseline_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+
+            assert baseline_hint_sel_rate >= 0 and baseline_hint_sel_rate <= 1, (
+                f"baseline correct {baseline_hint_sel_rate} is not in [0,1],\n {adv_inputs=}"
+            )
+            # TODO assert v["did_sel_hint"] is False for v in monitor_index2infos[base_idx]
+            for j in range(len(monitor_index2infos[base_idx])):
+                infos = monitor_index2infos[base_idx][j]
+                correctness_plus_other = infos["other_score"] + infos["is_correct"]
+                true_hint_sel_effect = 0
+                calibration = (true_hint_sel_effect - infos["monitor_score"]) ** 2
+                score_unwhitened = correctness_plus_other - calibration
+                monitor_index2infos[base_idx][j]["score_unwhitened"] = score_unwhitened
+
+            for j in range(len(monitor_index2infos[hinted_idx])):
+                infos = monitor_index2infos[hinted_idx][j]
+                correctness_plus_other = infos["other_score"] + infos["is_correct"]
+                hint_sel_effect = infos[
+                    "did_sel_hint"
+                ]  #! M: this is the key line that we changed, everything else should be the same and I will not change
+                calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
+                score_unwhitened = correctness_plus_other - calibration
+                monitor_index2infos[hinted_idx][j]["score_unwhitened"] = score_unwhitened
+
+        # 3. whiten scores per monitor_index
+        id2score_normalized = torch.zeros_like(token_level_rewards.sum(dim=-1))
+        for mntr_idx in range(num_varients):
+            assert len(monitor_index2infos[mntr_idx]) > 1, f"{adv_inputs}"
+            scores_unwhitened_tensor = torch.tensor([v["score_unwhitened"] for v in monitor_index2infos[mntr_idx]])
+            mean = torch.mean(scores_unwhitened_tensor)
+            std = torch.std(scores_unwhitened_tensor)
+            for j in range(len(monitor_index2infos[mntr_idx])):
+                infos = monitor_index2infos[mntr_idx][j]
+                id = infos["id"]
+                assert id2score_normalized[id] == 0, f"{mntr_idx=}, {j=} \n{adv_inputs=}"
+
+                score_unwhitened = infos["score_unwhitened"]
+                if norm_adv_by_std_in_grpo:
+                    id2score_normalized[id] = (score_unwhitened - mean) / (std + epsilon)
+                else:
+                    id2score_normalized[id] = score_unwhitened - mean
+
+        #     # TODO: most complex python lines in history: can simplfy
+        #     id2score[monitor_index2infos[base_idx][0]["index"]] = [
+        #         for v in monitor_index2infos[base_idx]
+        #     ]
+
+        #     id2score[monitor_index2infos[hinted_idx][0]["index"]] = [
+        #         (
+        #             v["other_score"]
+        #             + float(v["is_correct"])
+        #             - (max([float(v["did_sel_hint"]) - baseline_correct, 0]) - v["monitor_score"]) ** 2
+        #         )
+        #         for v in monitor_index2infos[hinted_idx]
+        #     ]
+
+        # for idx in id2score:  # M: i think idx is the uid of generations, in case we have n>1.
+        #     if len(id2score[idx]) == 1:
+        #         assert False, "bro why are u doing GRPO with n_rollout==1?"
+        #         id2mean[idx] = torch.tensor(0.0)
+        #         id2std[idx] = torch.tensor(1.0)
+        #     elif len(id2score[idx]) > 1:
+        #         scores_tensor = torch.stack(id2score[idx])
+        #         id2mean[idx] = torch.mean(scores_tensor)
+        #         id2std[idx] = torch.std(scores_tensor)
+        #     else:
+        #         raise ValueError(f"no score in prompt index: {idx}")
+        # for i in range(bsz):
+        #     if norm_adv_by_std_in_grpo:
+        #         #! I think I have something wrong here -- id has been used to refer to both the uid and the index of the sample in the batch
+        #         scores_normalized[i] = (id2score[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)
+        #     else:
+        #         scores_normalized[i] = scores_normalized[i] - id2mean[index[i]]
+
+        advantages = id2score_normalized.unsqueeze(-1) * response_mask
+
+        # Compute metrics
+        metrics = {}
+
+        # Collect data for aggregation
+        all_baseline_hint_sel = []
+        all_hinted_hint_sel = []
+        all_effect_sizes = []
+        all_baseline_correct = []
+        all_hinted_correct = []
+        all_baseline_monitor = []
+        all_hinted_monitor = []
+        all_baseline_calib = []
+        all_hinted_calib = []
+        all_baseline_unwhitened = []
+        all_hinted_unwhitened = []
+        monitor_idx_intdiv2_to_difficulties = []
+
+        # Collect per-question-pair metrics
+        for i in range(num_varients // 2):
+            base_idx = 2 * i
+            hinted_idx = 2 * i + 1
+
+            # Baseline hint selection rate (the key metric for effect size)
+            baseline_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            all_baseline_hint_sel.append(baseline_hint_sel_rate)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_hint_sel_rate"] = float(baseline_hint_sel_rate)
+
+            # Hinted hint selection rate
+            hinted_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_hinted_hint_sel.append(hinted_hint_sel_rate)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_hint_sel_rate"] = float(hinted_hint_sel_rate)
+
+            # Effect size (the difference we're trying to predict)
+            effect_size = hinted_hint_sel_rate - baseline_hint_sel_rate
+            all_effect_sizes.append(effect_size)
+            # metrics[f"advantages-very-verbose/q{i}_effect_size"] = float(effect_size)
+
+            # Correctness rates
+            baseline_correct = sum([v["is_correct"] for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_correct = sum([v["is_correct"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_baseline_correct.append(baseline_correct)
+            all_hinted_correct.append(hinted_correct)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_correctness"] = float(baseline_correct)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_correctness"] = float(hinted_correct)
+
+            # Monitor scores (model's predictions)
+            baseline_monitor_avg = sum([v["monitor_score"] for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_monitor_avg = sum([v["monitor_score"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_baseline_monitor.append(baseline_monitor_avg)
+            all_hinted_monitor.append(hinted_monitor_avg)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_monitor_score"] = float(baseline_monitor_avg)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_monitor_score"] = float(hinted_monitor_avg)
+
+            # Calibration errors
+            baseline_calib_err = sum([(0 - v["monitor_score"]) ** 2 for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_calib_err = sum(
+                [
+                    ((v["did_sel_hint"] - baseline_hint_sel_rate) - v["monitor_score"]) ** 2
+                    for v in monitor_index2infos[hinted_idx]
+                ]
+            ) / len(monitor_index2infos[hinted_idx])
+            all_baseline_calib.append(baseline_calib_err)
+            all_hinted_calib.append(hinted_calib_err)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_calibration_mse"] = float(baseline_calib_err)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_calibration_mse"] = float(hinted_calib_err)
+
+            # Unwhitened scores (before normalization)
+            baseline_unwhitened = sum([v["score_unwhitened"].item() for v in monitor_index2infos[base_idx]]) / len(
+                monitor_index2infos[base_idx]
+            )
+            hinted_unwhitened = sum([v["score_unwhitened"].item() for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+            all_baseline_unwhitened.append(baseline_unwhitened)
+            all_hinted_unwhitened.append(hinted_unwhitened)
+            # metrics[f"advantages-very-verbose/q{i}_baseline_unwhitened_score"] = float(baseline_unwhitened)
+            # metrics[f"advantages-very-verbose/q{i}_hinted_unwhitened_score"] = float(hinted_unwhitened)
+
+            monitor_idx_intdiv2_to_difficulties.append(monitor_index2infos[base_idx][0].get("difficulty"))
+
+        # Summary statistics under advantages/
+        metrics["advantages/baseline_hint_sel_rate_mean"] = float(np.mean(all_baseline_hint_sel))
+        metrics["advantages/baseline_hint_sel_rate_std"] = float(np.std(all_baseline_hint_sel))
+        metrics["advantages/hinted_hint_sel_rate_mean"] = float(np.mean(all_hinted_hint_sel))
+        metrics["advantages/hinted_hint_sel_rate_std"] = float(np.std(all_hinted_hint_sel))
+
+        metrics["advantages/effect_size_mean"] = float(np.mean(all_effect_sizes))
+        metrics["advantages/effect_size_std"] = float(np.std(all_effect_sizes))
+        metrics["advantages/effect_size_min"] = float(np.min(all_effect_sizes))
+        metrics["advantages/effect_size_max"] = float(np.max(all_effect_sizes))
+
+        metrics["advantages/baseline_correctness_mean"] = float(np.mean(all_baseline_correct))
+        metrics["advantages/baseline_correctness_std"] = float(np.std(all_baseline_correct))
+        metrics["advantages/hinted_correctness_mean"] = float(np.mean(all_hinted_correct))
+        metrics["advantages/hinted_correctness_std"] = float(np.std(all_hinted_correct))
+
+        metrics["advantages/baseline_monitor_score_mean"] = float(np.mean(all_baseline_monitor))
+        metrics["advantages/baseline_monitor_score_std"] = float(np.std(all_baseline_monitor))
+        metrics["advantages/hinted_monitor_score_mean"] = float(np.mean(all_hinted_monitor))
+        metrics["advantages/hinted_monitor_score_std"] = float(np.std(all_hinted_monitor))
+
+        metrics["advantages/baseline_calibration_mse_mean"] = float(np.mean(all_baseline_calib))
+        metrics["advantages/baseline_calibration_mse_std"] = float(np.std(all_baseline_calib))
+        metrics["advantages/hinted_calibration_mse_mean"] = float(np.mean(all_hinted_calib))
+        metrics["advantages/hinted_calibration_mse_std"] = float(np.std(all_hinted_calib))
+        metrics["advantages/overall_calibration_mse"] = float(np.mean(all_baseline_calib + all_hinted_calib))
+
+        metrics["advantages/baseline_unwhitened_score_mean"] = float(np.mean(all_baseline_unwhitened))
+        metrics["advantages/hinted_unwhitened_score_mean"] = float(np.mean(all_hinted_unwhitened))
+
+        # Advantage distribution
+        metrics["advantages/advantage_mean"] = float(id2score_normalized.mean().item())
+        metrics["advantages/advantage_std"] = float(id2score_normalized.std().item())
+        metrics["advantages/advantage_min"] = float(id2score_normalized.min().item())
+        metrics["advantages/advantage_max"] = float(id2score_normalized.max().item())
+
+        # advantages per question_type
+        # Convert lists to numpy arrays for indexing
+        all_hinted_hint_sel = np.array(all_hinted_hint_sel)
+        all_effect_sizes = np.array(all_effect_sizes)
+        all_hinted_correct = np.array(all_hinted_correct)
+        all_hinted_monitor = np.array(all_hinted_monitor)
+        all_hinted_calib = np.array(all_hinted_calib)
+        all_baseline_unwhitened = np.array(all_baseline_unwhitened)
+        all_hinted_unwhitened = np.array(all_hinted_unwhitened)
+        monitor_idx_intdiv2_to_difficulties_array = np.array(monitor_idx_intdiv2_to_difficulties)
+
+        # ...existing code...
+        if None not in monitor_idx_intdiv2_to_difficulties_array:
+            try:
+                brier_score = np.mean((all_effect_sizes - monitor_idx_intdiv2_to_difficulties_array) ** 2)
+                metrics["advantages/difficulty_effect_size_brier"] = brier_score
+
+            except Exception as e:
+                # Log error or handle gracefully
+                print(
+                    f"ERROR: Error calculating difficulty--effect size Brier score: {e=}, {monitor_idx_intdiv2_to_difficulties_array=}"
+                )
+
+        # assume that each monitor index has only one question type and at least 1 question
+        question_types = [monitor_index2infos[i][0]["question_type"] for i in range(len(monitor_index2infos))]
+        all_q_types = set(question_types)
+        all_q_types = all_q_types - {"control"}
+        for q_type in all_q_types:
+            indicator_vector = (np.array(question_types) == q_type)[np.array([i for i in range(512) if i % 2 == 1])]
+            if indicator_vector.any():  # was getting o-size array reduction operation
+                metrics[f"{q_type}-advantages/num"] = np.sum(indicator_vector)
+
+                metrics[f"{q_type}-advantages/hinted_hint_sel_rate_mean"] = float(
+                    np.mean(all_hinted_hint_sel[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_hint_sel_rate_std"] = float(
+                    np.std(all_hinted_hint_sel[indicator_vector])
+                )
+
+                metrics[f"{q_type}-advantages/effect_size_mean"] = float(np.mean(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_std"] = float(np.std(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_min"] = float(np.min(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_max"] = float(np.max(all_effect_sizes[indicator_vector]))
+
+                metrics[f"{q_type}-advantages/hinted_correctness_mean"] = float(
+                    np.mean(all_hinted_correct[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_correctness_std"] = float(
+                    np.std(all_hinted_correct[indicator_vector])
+                )
+
+                metrics[f"{q_type}-advantages/hinted_monitor_score_mean"] = float(
+                    np.mean(all_hinted_monitor[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_monitor_score_std"] = float(
+                    np.std(all_hinted_monitor[indicator_vector])
+                )
+
+                metrics[f"{q_type}-advantages/hinted_calibration_mse_mean"] = float(
+                    np.mean(all_hinted_calib[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_calibration_mse_std"] = float(
+                    np.std(all_hinted_calib[indicator_vector])
+                )
+
+                metrics[f"{q_type}-advantages/baseline_unwhitened_score_mean"] = float(
+                    np.mean(all_baseline_unwhitened[indicator_vector])
+                )
+                metrics[f"{q_type}-advantages/hinted_unwhitened_score_mean"] = float(
+                    np.mean(all_hinted_unwhitened[indicator_vector])
+                )
+
+                try:
+                    brier_score = np.mean(
+                        (
+                            all_effect_sizes[indicator_vector]
+                            - monitor_idx_intdiv2_to_difficulties_array[indicator_vector]
+                        )
+                        ** 2
+                    )
+                    metrics[f"{q_type}-advantages/difficulty_effect_size_brier"] = brier_score
+
                 except (ValueError, TypeError) as e:
                     # Log error or handle gracefully
                     print(f"ERROR: Error calculating difficulty--effect size Brier score: {q_type}, {e}")
