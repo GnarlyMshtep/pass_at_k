@@ -890,6 +890,7 @@ def compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
     difficulties: Optional[list[float]] = None,
     config: Optional[AlgoConfig] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, dict]:
+    LAMBDA_CALIB_WEIGHT = .3
     """
     Compute advantage for GRPO, operating only on Outcome reward
     (with only one scalar reward for each response).
@@ -997,7 +998,7 @@ def compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
                 correctness_plus_other = infos["other_score"] + infos["is_correct"] # the other score here is KL in reward and stuff like that -- it should be ~0 afaik and we can assert htis 
                 hint_sel_effect = 0
                 calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
-                score_unwhitened = correctness_plus_other - calibration
+                score_unwhitened = correctness_plus_other - LAMBDA_CALIB_WEIGHT* calibration
 
 
                 monitor_index2infos[base_idx][j]["calibration"] = calibration
@@ -1011,7 +1012,7 @@ def compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
                     "did_sel_hint"
                 ]  #! M: this is the key line that we changed, everything else should be the same and I will not change
                 calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
-                score_unwhitened = correctness_plus_other - calibration
+                score_unwhitened = correctness_plus_other - LAMBDA_CALIB_WEIGHT* calibration
 
                 monitor_index2infos[hinted_idx][j]["calibration"] = calibration
                 monitor_index2infos[hinted_idx][j]["used_effect_size"] = hint_sel_effect
