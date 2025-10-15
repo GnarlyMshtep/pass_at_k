@@ -18,8 +18,8 @@ from custom.verifiers.countdown.countdown_verifier import countdown_compute_scor
 
 load_dotenv()
 
-remote_model = AsyncOpenAI()
-or_model = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
+#remote_model = AsyncOpenAI()
+#or_model = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
 
 def is_float(a: Optional[str]) -> bool:
     try:
