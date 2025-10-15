@@ -343,9 +343,9 @@ def leetcode2k():
 
 if __name__ == "__main__":
     import argparse
-
+    from os.path import expandvars
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root_dir", default="./data/")
+    parser.add_argument("--root_dir", default=expandvars("$HF_HOME/data/"))
     parser.add_argument("--hdfs_dir", default=None)
 
     args = parser.parse_args()
