@@ -308,6 +308,29 @@ def compute_advantage(
         )
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
+    elif adv_estimator == AdvantageEstimator.GRPO_MONITORABILITY_CORRECTNESS_NO_EFFECT_SIZE:
+        # Initialize the mask for GRPO calculation
+        question_types = [v["question_type"] for v in data.non_tensor_batch["extra_info"]]
+        difficulties = [v.get("difficulty") for v in data.non_tensor_batch["extra_info"]]
+        grpo_calculation_mask = data.batch["response_mask"]
+        # Call compute_grpo_outcome_advantage with parameters matching its definition
+        advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
+            token_level_rewards=data.batch["token_level_rewards"],
+            response_mask=grpo_calculation_mask,
+            uids=data.non_tensor_batch["uid"],
+            norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
+            # M: 2 new data fields required for the computation.
+            monitor_scores=data.non_tensor_batch["reward_extra_info/monitor_score"],
+            did_sel_hint=data.non_tensor_batch["reward_extra_info/did_sel_hint"],
+            is_correct=data.non_tensor_batch["reward_extra_info/is_correct"],
+            # format_score=data.non_tensor_batch.get["reward_extra_info/format_score"],
+            monitor_index=data.non_tensor_batch["monitor_index"],
+            question_types=question_types,
+            difficulties=difficulties,
+            config=config,
+        )
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
     else:
         # handle all other adv estimator type other than GAE and GRPO
         adv_estimator_fn = core_algos.get_adv_estimator_fn(adv_estimator)
