@@ -875,7 +875,7 @@ def compute_grpo_monitorability_outcome_advantage(
 @register_adv_est(
     AdvantageEstimator.GRPO_MONITORABILITY_CORRECTNESS_NO_EFFECT_SIZE
 )  # or simply: @register_adv_est("grpo")
-def compute_grpo_monitorability_outcome_advantage(
+def compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
     token_level_rewards: torch.Tensor,
     response_mask: torch.Tensor,
     uids: np.ndarray,
@@ -890,6 +890,7 @@ def compute_grpo_monitorability_outcome_advantage(
     difficulties: Optional[list[float]] = None,
     config: Optional[AlgoConfig] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, dict]:
+    LAMBDA_CALIB_WEIGHT = .3
     """
     Compute advantage for GRPO, operating only on Outcome reward
     (with only one scalar reward for each response).
@@ -918,6 +919,7 @@ def compute_grpo_monitorability_outcome_advantage(
         Returns: `(torch.Tensor)`
             shape is (bs, response_length)
     """
+    print("DEBUG: in compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE (which I confirmed uses the right effect size)")
     # Pickle all the inputs to this function
     adv_inputs = {
         "token_level_rewards": token_level_rewards,
@@ -993,10 +995,14 @@ def compute_grpo_monitorability_outcome_advantage(
             # TODO assert v["did_sel_hint"] is False for v in monitor_index2infos[base_idx]
             for j in range(len(monitor_index2infos[base_idx])):
                 infos = monitor_index2infos[base_idx][j]
-                correctness_plus_other = infos["other_score"] + infos["is_correct"]
-                true_hint_sel_effect = 0
-                calibration = (true_hint_sel_effect - infos["monitor_score"]) ** 2
-                score_unwhitened = correctness_plus_other - calibration
+                correctness_plus_other = infos["other_score"] + infos["is_correct"] # the other score here is KL in reward and stuff like that -- it should be ~0 afaik and we can assert htis 
+                hint_sel_effect = 0
+                calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
+                score_unwhitened = correctness_plus_other - LAMBDA_CALIB_WEIGHT* calibration
+
+
+                monitor_index2infos[base_idx][j]["calibration"] = calibration
+                monitor_index2infos[base_idx][j]["used_effect_size"] = hint_sel_effect
                 monitor_index2infos[base_idx][j]["score_unwhitened"] = score_unwhitened
 
             for j in range(len(monitor_index2infos[hinted_idx])):
@@ -1006,7 +1012,10 @@ def compute_grpo_monitorability_outcome_advantage(
                     "did_sel_hint"
                 ]  #! M: this is the key line that we changed, everything else should be the same and I will not change
                 calibration = (hint_sel_effect - infos["monitor_score"]) ** 2
-                score_unwhitened = correctness_plus_other - calibration
+                score_unwhitened = correctness_plus_other - LAMBDA_CALIB_WEIGHT* calibration
+
+                monitor_index2infos[hinted_idx][j]["calibration"] = calibration
+                monitor_index2infos[hinted_idx][j]["used_effect_size"] = hint_sel_effect
                 monitor_index2infos[hinted_idx][j]["score_unwhitened"] = score_unwhitened
 
         # 3. whiten scores per monitor_index
@@ -1067,7 +1076,8 @@ def compute_grpo_monitorability_outcome_advantage(
         # Collect data for aggregation
         all_baseline_hint_sel = []
         all_hinted_hint_sel = []
-        all_effect_sizes = []
+        all_used_effect_sizes = []
+        all_true_effect_sizes = []
         all_baseline_correct = []
         all_hinted_correct = []
         all_baseline_monitor = []
@@ -1094,13 +1104,19 @@ def compute_grpo_monitorability_outcome_advantage(
             hinted_hint_sel_rate = sum([v["did_sel_hint"] for v in monitor_index2infos[hinted_idx]]) / len(
                 monitor_index2infos[hinted_idx]
             )
+           
             all_hinted_hint_sel.append(hinted_hint_sel_rate)
             # metrics[f"advantages-very-verbose/q{i}_hinted_hint_sel_rate"] = float(hinted_hint_sel_rate)
 
             # Effect size (the difference we're trying to predict)
-            effect_size = hinted_hint_sel_rate - baseline_hint_sel_rate
-            all_effect_sizes.append(effect_size)
-            # metrics[f"advantages-very-verbose/q{i}_effect_size"] = float(effect_size)
+            used_effect_size = sum([v["used_effect_size"] for v in monitor_index2infos[hinted_idx]]) / len(
+                monitor_index2infos[hinted_idx]
+            )
+           
+            all_used_effect_sizes.append(used_effect_size) 
+
+            true_effect_size = hinted_hint_sel_rate - baseline_hint_sel_rate
+            all_true_effect_sizes.append(true_effect_size)
 
             # Correctness rates
             baseline_correct = sum([v["is_correct"] for v in monitor_index2infos[base_idx]]) / len(
@@ -1127,13 +1143,14 @@ def compute_grpo_monitorability_outcome_advantage(
             # metrics[f"advantages-very-verbose/q{i}_hinted_monitor_score"] = float(hinted_monitor_avg)
 
             # Calibration errors
-            baseline_calib_err = sum([(0 - v["monitor_score"]) ** 2 for v in monitor_index2infos[base_idx]]) / len(
-                monitor_index2infos[base_idx]
-            )
+            baseline_calib_err = sum(
+                [
+                    v["calibration"] for v in monitor_index2infos[base_idx]
+                ]
+            ) / len(monitor_index2infos[base_idx])
             hinted_calib_err = sum(
                 [
-                    ((v["did_sel_hint"] - baseline_hint_sel_rate) - v["monitor_score"]) ** 2
-                    for v in monitor_index2infos[hinted_idx]
+                    v["calibration"] for v in monitor_index2infos[hinted_idx]
                 ]
             ) / len(monitor_index2infos[hinted_idx])
             all_baseline_calib.append(baseline_calib_err)
@@ -1161,10 +1178,15 @@ def compute_grpo_monitorability_outcome_advantage(
         metrics["advantages/hinted_hint_sel_rate_mean"] = float(np.mean(all_hinted_hint_sel))
         metrics["advantages/hinted_hint_sel_rate_std"] = float(np.std(all_hinted_hint_sel))
 
-        metrics["advantages/effect_size_mean"] = float(np.mean(all_effect_sizes))
-        metrics["advantages/effect_size_std"] = float(np.std(all_effect_sizes))
-        metrics["advantages/effect_size_min"] = float(np.min(all_effect_sizes))
-        metrics["advantages/effect_size_max"] = float(np.max(all_effect_sizes))
+        metrics["advantages/used_effect_size_mean"] = float(np.mean(all_used_effect_sizes))
+        metrics["advantages/used_effect_size_std"] = float(np.std(all_used_effect_sizes))
+        metrics["advantages/used_effect_size_min"] = float(np.min(all_used_effect_sizes))
+        metrics["advantages/used_effect_size_max"] = float(np.max(all_used_effect_sizes))
+
+        metrics["advantages/true_effect_size_mean"] = float(np.mean(all_true_effect_sizes))
+        metrics["advantages/true_effect_size_std"] = float(np.std(all_true_effect_sizes))
+        metrics["advantages/true_effect_size_min"] = float(np.min(all_true_effect_sizes))
+        metrics["advantages/true_effect_size_max"] = float(np.max(all_true_effect_sizes))
 
         metrics["advantages/baseline_correctness_mean"] = float(np.mean(all_baseline_correct))
         metrics["advantages/baseline_correctness_std"] = float(np.std(all_baseline_correct))
@@ -1194,7 +1216,9 @@ def compute_grpo_monitorability_outcome_advantage(
         # advantages per question_type
         # Convert lists to numpy arrays for indexing
         all_hinted_hint_sel = np.array(all_hinted_hint_sel)
-        all_effect_sizes = np.array(all_effect_sizes)
+        all_true_effect_sizes = np.array(all_used_effect_sizes)
+        all_used_effect_sizes = np.array(all_true_effect_sizes)
+
         all_hinted_correct = np.array(all_hinted_correct)
         all_hinted_monitor = np.array(all_hinted_monitor)
         all_hinted_calib = np.array(all_hinted_calib)
@@ -1205,7 +1229,7 @@ def compute_grpo_monitorability_outcome_advantage(
         # ...existing code...
         if None not in monitor_idx_intdiv2_to_difficulties_array:
             try:
-                brier_score = np.mean((all_effect_sizes - monitor_idx_intdiv2_to_difficulties_array) ** 2)
+                brier_score = np.mean((all_used_effect_sizes - monitor_idx_intdiv2_to_difficulties_array) ** 2)
                 metrics["advantages/difficulty_effect_size_brier"] = brier_score
 
             except Exception as e:
@@ -1230,10 +1254,15 @@ def compute_grpo_monitorability_outcome_advantage(
                     np.std(all_hinted_hint_sel[indicator_vector])
                 )
 
-                metrics[f"{q_type}-advantages/effect_size_mean"] = float(np.mean(all_effect_sizes[indicator_vector]))
-                metrics[f"{q_type}-advantages/effect_size_std"] = float(np.std(all_effect_sizes[indicator_vector]))
-                metrics[f"{q_type}-advantages/effect_size_min"] = float(np.min(all_effect_sizes[indicator_vector]))
-                metrics[f"{q_type}-advantages/effect_size_max"] = float(np.max(all_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_mean"] = float(np.mean(all_true_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_std"] = float(np.std(all_true_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_min"] = float(np.min(all_true_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_max"] = float(np.max(all_true_effect_sizes[indicator_vector]))
+                
+                metrics[f"{q_type}-advantages/effect_size_mean"] = float(np.mean(all_used_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_std"] = float(np.std(all_used_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_min"] = float(np.min(all_used_effect_sizes[indicator_vector]))
+                metrics[f"{q_type}-advantages/effect_size_max"] = float(np.max(all_used_effect_sizes[indicator_vector]))
 
                 metrics[f"{q_type}-advantages/hinted_correctness_mean"] = float(
                     np.mean(all_hinted_correct[indicator_vector])
@@ -1266,7 +1295,7 @@ def compute_grpo_monitorability_outcome_advantage(
                 try:
                     brier_score = np.mean(
                         (
-                            all_effect_sizes[indicator_vector]
+                            all_used_effect_sizes[indicator_vector]
                             - monitor_idx_intdiv2_to_difficulties_array[indicator_vector]
                         )
                         ** 2
