@@ -10,22 +10,31 @@ import numpy as np
 from .utils import _ERROR_MSG_PREFIX
 
 _MAX_CHAR_DISPLAY = 2048
-CODER1_EXEC = os.environ.get("CODER1_EXEC", "firejail")
+CODER1_EXEC = os.environ.get("CODER1_EXEC", "basic")
 
-if CODER1_EXEC == "docker":
-    from .docker_exec import code_exec_docker
-    code_exec = code_exec_docker
-elif CODER1_EXEC == "firejail":
-    from .firejail_exec import code_exec_firejail
-    code_exec = code_exec_firejail
-elif CODER1_EXEC == "ces":
-    from .ces_exec import remote_code_exec_ces
-    code_exec = remote_code_exec_ces
-elif CODER1_EXEC == "kira":
-    from .kira_exec import remote_code_exec_kira
-    code_exec = remote_code_exec_kira
+if CODER1_EXEC == "basic":
+    from .basic_exec import code_exec_sandbox
+
+    code_exec = code_exec_sandbox
 else:
     raise ValueError(f"Unknown CODER1_EXEC: {CODER1_EXEC}")
+
+
+# if CODER1_EXEC == "docker":
+#     from .docker_exec import code_exec_docker
+#     code_exec = code_exec_docker
+# elif CODER1_EXEC == "firejail":
+#     from .firejail_exec import code_exec_firejail
+#     code_exec = code_exec_firejail
+# elif CODER1_EXEC == "ces":
+#     from .ces_exec import remote_code_exec_ces
+#     code_exec = remote_code_exec_ces
+# elif CODER1_EXEC == "kira":
+#     from .kira_exec import remote_code_exec_kira
+#     code_exec = remote_code_exec_kira
+
+# else:
+#     raise ValueError(f"Unknown CODER1_EXEC: {CODER1_EXEC}")
 
 
 def remote_check_stdio(code, stdin, stdout):

@@ -16,7 +16,7 @@ reward_path=custom/reward/reward_utils.py
 modelname=Qwen2_5-7B
 model_path=$HF_HOME/models/$modelname
 
-max_token_len_per_gpu=45000
+max_token_len_per_gpu=40000
 max_response_length=4096
 
 n_gpu=4

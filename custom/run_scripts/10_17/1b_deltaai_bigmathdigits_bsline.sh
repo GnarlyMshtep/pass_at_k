@@ -16,7 +16,7 @@ reward_path=custom/reward/reward_utils.py
 modelname=Qwen2_5-1_5B
 model_path=$HF_HOME/models/$modelname
 
-max_token_len_per_gpu=53000
+max_token_len_per_gpu=40000
 max_response_length=4096
 
 n_gpu=1
@@ -35,7 +35,6 @@ python3 validate_env.py \
     --reward-name "$reward_name" \
     --n-gpu "$n_gpu" \
 
-# False gradient checkpointing -- revert if weird err
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -62,7 +61,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
     actor_rollout_ref.actor.entropy_coeff=0 \
-    actor_rollout_ref.model.enable_gradient_checkpointing=False \
+    actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
