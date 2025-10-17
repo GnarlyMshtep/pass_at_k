@@ -2,27 +2,27 @@ set -eux
 if [ -e "core" ]; then
     rm core
 fi
-datasetname=bigmath_digits_boxed
+datasetname=deepmath_hints_mix
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
 
-reward_name=compute_score_math_boxed
+reward_name=math_digits_correct_and_hint_usage_STRING_MATCHING_ONLY
 reward_path=custom/reward/reward_utils.py
 
 
-modelname=Qwen2_5-1_5B
+modelname=Qwen2_5-7B
 model_path=$HF_HOME/models/$modelname
 
-max_token_len_per_gpu=53000
+max_token_len_per_gpu=45000
 max_response_length=4096
 
-n_gpu=1
+n_gpu=4
 
-proj_name='deltaai_stable_bsline'
-exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_bsline"
+proj_name='cot-monitor'
+exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_warmup_stdnorm"
 
 micro_batch_size_per_gpu_prob_ignored=128
 
@@ -49,6 +49,7 @@ python3 -m verl.trainer.main_ppo \
     data.truncation='error' \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.actor.optim.lr=1e-6 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps=15 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=256 \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
