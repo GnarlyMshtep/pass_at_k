@@ -10,7 +10,6 @@ import re
 from typing import Any, Dict, List, Tuple
 
 import datasets
-import ipdb
 import numpy as np
 from datasets import load_dataset
 
@@ -711,9 +710,12 @@ def make_map_fn(split: str):
 
 
 def main():
+    import os.path
     parser = argparse.ArgumentParser(description="Preprocess DeepMath-103K dataset with hint variations")
     parser.add_argument(
-        "--local_dir", default="~/data/deepmath_hints_mix", help="Local directory to save processed data"
+        "--local_dir",
+        default=os.path.expandvars("$HF_HOME/data/deepmath_hints_mix"),
+        help="Local directory to save processed data",
     )
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
@@ -841,7 +843,6 @@ def main():
 
     print(f"Final train dataset size: {len(train_dataset)}")
     print(f"Final validation dataset size: {len(val_dataset)}")
-    ipdb.set_trace()
     # Print first 15 questions for verification
     print("\n" + "="*80)
     print("FIRST 15 QUESTIONS:")

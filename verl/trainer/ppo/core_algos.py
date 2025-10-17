@@ -934,6 +934,7 @@ def compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
         "config": config,
     }
 
+    breakpoint()
     # with open("adv_inputs.pkl", "wb") as f:
     #     pickle.dump(adv_inputs, f)
     # check that we are getting specialized parameters that we expect
