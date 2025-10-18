@@ -714,7 +714,7 @@ def main():
     parser = argparse.ArgumentParser(description="Preprocess DeepMath-103K dataset with hint variations")
     parser.add_argument(
         "--local_dir",
-        default=os.path.expandvars("$HF_HOME/data/deepmath_hints_mix"),
+        default=os.path.expandvars("$HF_HOME/data/deepmath_correct_hints_only"),
         help="Local directory to save processed data",
     )
     parser.add_argument("--hdfs_dir", default=None,
