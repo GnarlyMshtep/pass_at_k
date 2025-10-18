@@ -2,31 +2,33 @@ set -eux
 if [ -e "core" ]; then
     rm core
 fi
-datasetname=deepmath_hints_mix
+datasetname=deepmath
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
 
-reward_name=math_digits_correct_and_hint_usage_STRING_MATCHING_ONLY
+reward_name=reward_func
 reward_path=deepmath_utils/reward_utils/reward_func_2.py
 
 
-modelname=Qwen2_5-7B
+modelname=Qwen2_5-1_5B
 model_path=$HF_HOME/models/$modelname
 
-max_token_len_per_gpu=25000
+max_token_len_per_gpu=40000
 max_response_length=4096
 
-n_gpu=4
+n_gpu=1
 
-proj_name='cot-monitor'
-exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_warmup_stdnorm"
+proj_name='deltaai_stable_bsline'
+exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_bsline"
 
-micro_batch_size_per_gpu_prob_ignored=8
 
-adv_est=grpo_monitorability_CORRECTNESS_NO_EFFECT_SIZE
+batch_size=8
+mini_batch_size=4
+n_rollout=4
+micro_batch_size_per_gpu_prob_ignored=16
 
 
 python3 validate_env.py \
@@ -37,24 +39,22 @@ python3 validate_env.py \
     --reward-name "$reward_name" \
     --n-gpu "$n_gpu" \
 
-# False gradient checkpointing -- revert if weird err
+#! filter overlong false to save time
 
 python3 -m verl.trainer.main_ppo \
-    algorithm.adv_estimator=$adv_est \
-    algorithm.norm_adv_by_std_in_grpo=True \
+    algorithm.adv_estimator=grpo \
     data.train_files="$train_files" \
     data.val_files="$test_files" \
-    data.train_batch_size=512 \
+    data.train_batch_size=$batch_size \
     data.max_prompt_length=512 \
     data.max_response_length=$max_response_length \
-    data.filter_overlong_prompts=True \
+    data.filter_overlong_prompts=False \
     data.shuffle=True \
     data.truncation='error' \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.actor.optim.lr=1e-6 \
-    actor_rollout_ref.actor.optim.lr_warmup_steps=15 \
     actor_rollout_ref.model.use_remove_padding=True \
-    actor_rollout_ref.actor.ppo_mini_batch_size=256 \
+    actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
     actor_rollout_ref.actor.ppo_max_token_len_per_gpu=$max_token_len_per_gpu \
@@ -73,7 +73,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
-    actor_rollout_ref.rollout.n=4 \
+    actor_rollout_ref.rollout.n=$n_rollout \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \

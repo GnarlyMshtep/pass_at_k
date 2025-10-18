@@ -110,6 +110,10 @@ def _check_antlr_version():
 
 def _fix_fracs(string):
     # replacing all extra spaces
+    #M: added because was seeing dfrac
+    while "\\dfrac" in string: 
+        string= string.replace("\\dfrac ", "\\frac")
+
     while "\\frac " in string:
         string = string.replace("\\frac ", "\\frac")
     substrs = string.split("\\frac")
