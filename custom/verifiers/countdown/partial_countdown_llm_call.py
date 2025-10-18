@@ -201,7 +201,6 @@ def partial_countdown_compute_score(
               reward = total number of binary ops present across the submitted sub-expressions.
       - Otherwise: reward = 0.0
     """
-    # breakpoint()
     _t0 = time.perf_counter()
 
     # Try LLM-based verification first. We treat the provided solution_str as a scratch pad

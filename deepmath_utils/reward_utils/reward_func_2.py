@@ -53,7 +53,7 @@ def reward_func(data_source, solution_str, ground_truth, extra_info) -> dict:
         omi_correct = False
 
     # math
-    #M: why would this ever work? 
+    #M: why would this ever work? doesn't solution_str have a bunch of other stuff? I would imagine you need to call extract_answer
     try:
         mathv_pred = parse(solution_str)
         mathv_correct_ref = verify_ray.remote(parse(f"\\boxed{{${ground_truth}$}}"), mathv_pred)
@@ -65,7 +65,7 @@ def reward_func(data_source, solution_str, ground_truth, extra_info) -> dict:
         mathv_correct = False
 
     acc = (omi_correct or mathv_correct)
-    score = 1.0 if acc else -1.0
+    score = 1.0 if acc else 0
 
     return {
         "score": score,
@@ -76,3 +76,4 @@ def reward_func(data_source, solution_str, ground_truth, extra_info) -> dict:
         "extracted_answer": omi_pred, 
 
     }
+

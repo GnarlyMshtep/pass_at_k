@@ -374,7 +374,6 @@ def compute_score_multi_attempt_per_rollout_taller(data_source, solution_str, gr
         
 
 def extra_reward_metrics(responses: list[str], prompts: list[str], ground_truths:list[str]) ->dict[str, Any]:
-    # breakpoint() #M: would like to inspect what's going on
     
     # N_ROLLOUTS = os.getenv("N_ROLLOUTS", None)
     # assert N_ROLLOUTS != None, "please set env variable N_ROLLOUTS to the number of rollouts per question, i.e the number of approaches"

@@ -128,7 +128,6 @@ def partial_countdown_compute_score(
               reward = total number of binary ops present across the submitted sub-expressions.
       - Otherwise: reward = 0.0
     """
-    # breakpoint()
     _t0 = time.perf_counter()
     ans = _extract_answer(solution_str)
     if ans is None:
