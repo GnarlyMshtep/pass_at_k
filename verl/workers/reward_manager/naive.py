@@ -101,8 +101,9 @@ class NaiveRewardManager(AbstractRewardManager):
                 return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
 
             max_retries = 10
-            base_delay = 1.0
+            base_delay = 0
             bucket_size = 1000
+            timeout_base=50.0
 
             print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
             for chunk_idx in range(math.ceil(len(data) / bucket_size)): 
@@ -112,7 +113,7 @@ class NaiveRewardManager(AbstractRewardManager):
                 for attempt in range(max_retries + 1):
                     try:
                         rets = await asyncio.wait_for(
-                            asyncio.gather(*[compute_one(i) for i in range(chunk_idx *bucket_size, chunk_idx *bucket_size+ len(chunk))]), timeout=(50.0) * (attempt + 1)
+                            asyncio.gather(*[compute_one(i) for i in range(chunk_idx *bucket_size, chunk_idx *bucket_size+ len(chunk))]), timeout=(timeout_base) * (attempt + 1)
                         )
                         break
                     except (asyncio.TimeoutError, OpenAIError) as e:
@@ -120,7 +121,7 @@ class NaiveRewardManager(AbstractRewardManager):
                             raise RuntimeError(f"OpenAI unresponsive error: Max retries exceeded {e=}") from e
 
                         delay = base_delay * 1 # don't change the delay -- I don't think it matters
-                        print(f"DEBUG: QUERIES TO OA FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds...")
+                        print(f"DEBUG: REWARD FN IN TIME FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds...")
 
                 for ret in rets:
                     score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i = ret 
