@@ -1,15 +1,14 @@
 try:
-    from ..openmathinst_utils import extract_answer, math_equal
+    from ..openmathinst_utils import extract_answer, math_equal, time_limit, TimeoutException
 except:
-    from deepmath_utils.openmathinst_utils import extract_answer, math_equal
+    from deepmath_utils.openmathinst_utils import extract_answer, math_equal, time_limit, TimeoutException
 
 import ray
 from ray.exceptions import GetTimeoutError
 from math_verify import verify, parse
 from typing import Union, Tuple,Optional
 
-@ray.remote
-def math_equal_ray(
+def math_equal_direct(
     prediction: Union[bool, float, str],
     reference: Union[float, str],
     include_percentage: bool = True,
@@ -19,10 +18,9 @@ def math_equal_ray(
 ) -> bool:
     return math_equal(prediction, reference, include_percentage, tolerance, timeout, check_antlr_version)
 
-@ray.remote
-def verify_ray(
-    gold, 
-    target, 
+def verify_direct(
+    gold,
+    target,
     float_rounding: int=6,
     numeric_precision: int=15,
     strict: bool=True,
@@ -78,31 +76,25 @@ def reward_func(data_source, solution_str, ground_truth, extra_info) -> dict:
     }
 
 
-def eq(a: Optional[str],b:Optional[str])-> Tuple[bool, bool]: 
-    if a is None or b is None: 
+def eq(a: Optional[str], b: Optional[str]) -> Tuple[bool, bool]:
+    if a is None or b is None:
         return False, False
+
+    # Run math_equal with 0.3s timeout (can be slow on complex expressions)
     try:
-        omi_correct_ref = math_equal_ray.remote(a, b, check_antlr_version=False)
-        omi_correct = ray.get(omi_correct_ref, timeout=10.0)
-    except GetTimeoutError as e:
-        ray.cancel(omi_correct_ref, force=True)
-        omi_correct = False
-    except Exception:
+        with time_limit(0.3):
+            omi_correct = math_equal_direct(a, b, check_antlr_version=False)
+    except (TimeoutException, Exception):
         omi_correct = False
 
-    # math
-    #M: why would this ever work? doesn't solution_str have a bunch of other stuff? I would imagine you need to call extract_answer
+    # Run verify without timeout (already fast)
     try:
         mathv_pred = parse(a)
-        mathv_correct_ref = verify_ray.remote(parse(f"\\boxed{{${b}$}}"), mathv_pred)
-        mathv_correct = ray.get(mathv_correct_ref, timeout=5.0)#!decreased to 5 secs
-    except GetTimeoutError as e:
-        ray.cancel(mathv_correct_ref, force=True)
-        mathv_correct = False
+        mathv_correct = verify_direct(parse(f"\\boxed{{${b}$}}"), mathv_pred)
     except Exception:
         mathv_correct = False
 
-    return omi_correct , mathv_correct
+    return omi_correct, mathv_correct
 
 @ray.remote
 def reward_funcm_w_hint_usage_STRING_MATCHING_ONLY(data_source, solution_str, ground_truth, extra_info: dict):
