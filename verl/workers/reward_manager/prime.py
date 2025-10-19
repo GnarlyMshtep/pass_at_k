@@ -108,6 +108,7 @@ class PrimeRewardManager(AbstractRewardManager):
         self,
         tokenizer: PreTrainedTokenizer,
         num_examine: int,
+        num_workers, #idk why this is getting passed in and idc
         compute_score: Optional[Callable] = None,
         reward_fn_key: str = "data_source",
     ) -> None:

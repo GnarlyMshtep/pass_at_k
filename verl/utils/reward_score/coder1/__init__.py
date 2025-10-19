@@ -6,14 +6,21 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Tuple
 
 import numpy as np
+import ray
 
-from .utils import _ERROR_MSG_PREFIX
+try:
+    from .utils import _ERROR_MSG_PREFIX
+except ImportError:
+    from verl.utils.reward_score.coder1.utils import _ERROR_MSG_PREFIX
 
 _MAX_CHAR_DISPLAY = 2048
 CODER1_EXEC = os.environ.get("CODER1_EXEC", "basic")
 
 if CODER1_EXEC == "basic":
-    from .basic_exec import code_exec_sandbox
+    try:
+        from .basic_exec import code_exec_sandbox
+    except ImportError:
+        from verl.utils.reward_score.coder1.basic_exec import code_exec_sandbox
 
     code_exec = code_exec_sandbox
 else:
@@ -134,8 +141,9 @@ def _compute_score(solution_str, ground_truth, extra_info, format_reward=0.1, an
     reward_log.append(output)
     return format_reward + answer_reward, "\n".join(reward_log)
 
-
-def compute_score(solution_str, ground_truth, extra_info, format_reward=0.1, answer_reward=1.):
+# #M: I added this so I can use the naive reward manager but still have parallalism for the reward -- actually lets see how it works without
+# @ray.remote -- using prime instead like they did
+def compute_score(data_source, solution_str, ground_truth, extra_info, format_reward=0.1, answer_reward=1.):
     if isinstance(extra_info, np.ndarray):
         extra_info = extra_info.item()
     score, reward_log = _compute_score(solution_str,
@@ -145,5 +153,5 @@ def compute_score(solution_str, ground_truth, extra_info, format_reward=0.1, ans
                                        answer_reward=answer_reward)
     marker = "✅" if score == (format_reward + answer_reward) else "❌"
     reward_log = marker * 16 + "Reward Calculation" + marker * 16 + "\n" + reward_log + "\n" + marker * 16 + f"Final Rward = {score}" + marker * 16
-    print(reward_log + "\n\n")
+    # print(reward_log + "\n\n")
     return score
