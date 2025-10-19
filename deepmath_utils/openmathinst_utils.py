@@ -362,8 +362,11 @@ def is_digit(s):
         return False, None
 
 
-def normalize(answer) -> str:
+def normalize(answer:str) -> str:
     # checking if answer is $<number> and removing $ in that case to compare
+    #M: 
+    answer = answer.replace("dfrac", "frac")
+
     if isinstance(answer, str) and bool(re.match(r'\$\d+(\.\d+)?', answer)):
         return answer[1:]
 
