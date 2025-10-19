@@ -264,6 +264,58 @@ def check_python_env() -> bool:
     return True
 
 
+def prompt_user_confirmation(msg: str) -> bool:
+    """Prompt user for yes/no confirmation."""
+    while True:
+        response = input(f"{YELLOW}{msg} (y/n): {NC}").strip().lower()
+        if response in ['y', 'yes']:
+            return True
+        elif response in ['n', 'no']:
+            return False
+        else:
+            print("Please enter 'y' or 'n'")
+
+
+def display_and_confirm_config(args) -> bool:
+    """Display all configuration settings and ask for confirmation."""
+    print("\n" + "=" * 60)
+    print("EXPERIMENT CONFIGURATION")
+    print("=" * 60)
+
+    # Batch sizes
+    print(f"\n{GREEN}Batch Sizes:{NC}")
+    print(f"  batch_size:                {args.batch_size}")
+    print(f"  mini_batch_size:           {args.mini_batch_size}")
+    print(f"  n_rollout:                 {args.n_rollout}")
+    print(f"  micro_batch_size_per_gpu:  {args.micro_batch_size_per_gpu}")
+
+    if not prompt_user_confirmation("\nDo these batch sizes look correct?"):
+        error("User rejected batch size configuration")
+        return False
+
+    # Algorithm settings
+    print(f"\n{GREEN}Algorithm Settings:{NC}")
+    print(f"  Advantage Estimator:       {args.adv_estimator}")
+    print(f"  Normalize by Std:          {args.norm_by_std}")
+    print(f"  Reward Function:           {args.reward_name} (from {args.reward_path})")
+
+    if not prompt_user_confirmation("\nDo these algorithm settings look correct?"):
+        error("User rejected algorithm configuration")
+        return False
+
+    # Experiment naming
+    print(f"\n{GREEN}Experiment Naming:{NC}")
+    print(f"  Project Name:              {args.proj_name}")
+    print(f"  Experiment Name:           {args.exp_name}")
+
+    if not prompt_user_confirmation("\nDo these experiment names look correct?"):
+        error("User rejected experiment naming")
+        return False
+
+    success("All configuration settings confirmed!")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description='Validate VERL experiment environment')
     parser.add_argument('--train-path', required=True, help='Path to training data')
@@ -273,7 +325,21 @@ def main():
     parser.add_argument('--reward-name', required=True, help='Name of reward function')
     parser.add_argument('--n-gpu', type=int, default=1, help='Number of GPUs required')
     parser.add_argument('--validate-parquet', action='store_true', help='Validate parquet files are readable')
-    
+
+    # Batch size arguments
+    parser.add_argument('--batch-size', type=int, required=True, help='Training batch size')
+    parser.add_argument('--mini-batch-size', type=int, required=True, help='PPO mini batch size')
+    parser.add_argument('--n-rollout', type=int, required=True, help='Number of rollouts')
+    parser.add_argument('--micro-batch-size-per-gpu', type=int, required=True, help='Micro batch size per GPU')
+
+    # Algorithm arguments
+    parser.add_argument('--adv-estimator', required=True, help='Advantage estimator')
+    parser.add_argument('--norm-by-std', required=True, help='Normalize advantages by std (True/False)')
+
+    # Experiment naming
+    parser.add_argument('--proj-name', required=True, help='Project name for wandb')
+    parser.add_argument('--exp-name', required=True, help='Experiment name')
+
     args = parser.parse_args()
     
     print("=" * 60)
@@ -302,16 +368,25 @@ def main():
     # Check HF_HOME separately since it returns a tuple
     hf_check, _ = checks[0]
     all_checks_passed = hf_check and all(checks[1:])
-    
-    print("\n" + "=" * 60)
-    if all_checks_passed:
-        print(f"{GREEN}All critical checks passed!{NC}")
-        print("=" * 60)
-        sys.exit(0)
-    else:
+
+    if not all_checks_passed:
+        print("\n" + "=" * 60)
         print(f"{RED}Validation failed - see errors above{NC}")
         print("=" * 60)
         sys.exit(1)
+
+    # All checks passed, now display config and get user confirmation
+    if not display_and_confirm_config(args):
+        print("\n" + "=" * 60)
+        print(f"{RED}Configuration rejected by user - exiting{NC}")
+        print("=" * 60)
+        sys.exit(1)
+
+    print("\n" + "=" * 60)
+    print(f"{GREEN}All checks passed and configuration confirmed!{NC}")
+    print(f"{GREEN}Ready to start training!{NC}")
+    print("=" * 60)
+    sys.exit(0)
 
 
 if __name__ == '__main__':

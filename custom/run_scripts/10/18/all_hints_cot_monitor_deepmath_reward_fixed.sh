@@ -2,34 +2,39 @@ set -eux
 if [ -e "core" ]; then
     rm core
 fi
-datasetname=deepmath
+datasetname=deepmath_correct_hints_only
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
 
-reward_name=reward_func
+reward_name=reward_funcm_w_hint_usage_STRING_MATCHING_ONLY
 reward_path=deepmath_utils/reward_utils/reward_func_2.py
 
 
-modelname=Qwen2_5-1_5B
+modelname=Qwen2_5-7B
 model_path=$HF_HOME/models/$modelname
 
-max_token_len_per_gpu=40000
+max_token_len_per_gpu=25000
 max_response_length=4096
 
-n_gpu=1
+n_gpu=4
 
-proj_name='deltaai_stable_bsline'
-exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_bsline"
+proj_name='cot-monitor'
+exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_warmup_stdnorm_fixedDeepmathReward"
+
+micro_batch_size_per_gpu_prob_ignored=32
 
 
-batch_size=8
-mini_batch_size=4
+batch_size=512
+mini_batch_size=256
 n_rollout=4
 micro_batch_size_per_gpu_prob_ignored=16
 
+
+adv_est=grpo_monitorability_CORRECTNESS_NO_EFFECT_SIZE
+norm_adv_by_std_in_grpo=False
 
 python3 validate_env.py \
     --train-path "$train_path" \
@@ -38,21 +43,33 @@ python3 validate_env.py \
     --reward-path "$reward_path" \
     --reward-name "$reward_name" \
     --n-gpu "$n_gpu" \
+    --batch-size "$batch_size" \
+    --mini-batch-size "$mini_batch_size" \
+    --n-rollout "$n_rollout" \
+    --micro-batch-size-per-gpu "$micro_batch_size_per_gpu_prob_ignored" \
+    --adv-estimator "$adv_est" \
+    --norm-by-std $norm_adv_by_std_in_grpo \
+    --proj-name "$proj_name" \
+    --exp-name "$exp_name"
 
-#! filter overlong false to save time
+# False gradient checkpointing -- revert if weird err
+
+export RAY_IGNORE_UNHANDLED_ERRORS=1
 
 python3 -m verl.trainer.main_ppo \
-    algorithm.adv_estimator=grpo \
+    algorithm.adv_estimator=$adv_est \
+    algorithm.norm_adv_by_std_in_grpo=$norm_adv_by_std_in_grpo \
     data.train_files="$train_files" \
     data.val_files="$test_files" \
     data.train_batch_size=$batch_size \
     data.max_prompt_length=512 \
     data.max_response_length=$max_response_length \
-    data.filter_overlong_prompts=False \
+    data.filter_overlong_prompts=True \
     data.shuffle=True \
     data.truncation='error' \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.actor.optim.lr=1e-6 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps=15 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
@@ -72,7 +89,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.75 \
     actor_rollout_ref.rollout.n=$n_rollout \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
@@ -85,11 +102,11 @@ python3 -m verl.trainer.main_ppo \
     trainer.project_name=$proj_name \
     trainer.experiment_name=$exp_name \
     trainer.n_gpus_per_node=$n_gpu \
-    trainer.nnodes=1 \
-    trainer.save_freq=20 \
+    trainer.nnodes=15 \
+    trainer.save_freq=1 \
     +trainer.remove_previous_ckpt_in_save=True \
     trainer.resume_mode=auto\
-    trainer.test_freq=20 \
+    trainer.test_freq=30 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$HF_HOME/rollouts/${proj_name}/${exp_name}/train" \
     trainer.validation_data_dir="$HF_HOME/rollouts/${proj_name}/${exp_name}/val" \
