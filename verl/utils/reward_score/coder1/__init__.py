@@ -115,6 +115,7 @@ def _compute_score(solution_str, ground_truth, extra_info, format_reward=0.1, an
         stdout_list: str = ground_truth["outputs"]
 
         # Add parallelism
+        #M: I want to change this to asyncio
         with ThreadPoolExecutor(max_workers=min(8, len(stdin_list))) as executor:
             futures = [
                 executor.submit(remote_check_stdio, solution_code, stdin, stdout)
@@ -123,7 +124,7 @@ def _compute_score(solution_str, ground_truth, extra_info, format_reward=0.1, an
             for future in as_completed(futures):
                 succ, output, stdin, stdout = future.result()
                 if not succ or output.strip() != stdout.strip():
-                    output = output[:_MAX_CHAR_DISPLAY]  # truncate output to print
+                    # output = output[:_MAX_CHAR_DISPLAY]  # truncate output to print #M: do not trucate, we are not printing
                     reward_log.append("!" * 16 + f"⚠️ Test Execution Failed in {time.time() - t_start:.1f}s" + "!" * 16)
                     reward_log.append(f"🔎Input: {repr(stdin)}")
                     reward_log.append(f"✅Expected: {repr(stdout.strip())}")
@@ -142,7 +143,7 @@ def _compute_score(solution_str, ground_truth, extra_info, format_reward=0.1, an
     return format_reward + answer_reward, "\n".join(reward_log)
 
 # #M: I added this so I can use the naive reward manager but still have parallalism for the reward -- actually lets see how it works without
-# @ray.remote -- using prime instead like they did
+@ray.remote #-- using prime instead like they did
 def compute_score(data_source, solution_str, ground_truth, extra_info, format_reward=0.1, answer_reward=1.):
     if isinstance(extra_info, np.ndarray):
         extra_info = extra_info.item()
@@ -154,4 +155,4 @@ def compute_score(data_source, solution_str, ground_truth, extra_info, format_re
     marker = "✅" if score == (format_reward + answer_reward) else "❌"
     reward_log = marker * 16 + "Reward Calculation" + marker * 16 + "\n" + reward_log + "\n" + marker * 16 + f"Final Rward = {score}" + marker * 16
     # print(reward_log + "\n\n")
-    return score
+    return {"score": score, "reward_log":reward_log} 

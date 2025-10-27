@@ -44,6 +44,42 @@ def _call_with_kwargs(raw_fn, extra_kwargs, *args, **kwargs):
         return raw_fn(*args, **merged_kwargs)
 
 
+def _derive_module_name_from_path(file_path: str) -> str:
+    """Derive a proper Python module name from a file path.
+
+    Args:
+        file_path: Absolute or relative path to a Python file
+
+    Returns:
+        str: Module name that can be imported (e.g., 'verl.utils.reward_score.coder1')
+    """
+    # Get absolute path
+    abs_path = os.path.abspath(file_path)
+
+    # Find the working directory (which should be in sys.path)
+    cwd = os.getcwd()
+
+    # Try to get relative path from cwd
+    try:
+        rel_path = os.path.relpath(abs_path, cwd)
+    except ValueError:
+        # Fallback: use just the filename as module name
+        rel_path = os.path.basename(abs_path)
+
+    # Remove .py extension
+    if rel_path.endswith('.py'):
+        rel_path = rel_path[:-3]
+
+    # Convert path separators to dots
+    module_name = rel_path.replace(os.sep, '.')
+
+    # If it ends with __init__, remove that part
+    if module_name.endswith('.__init__'):
+        module_name = module_name[:-9]
+
+    return module_name
+
+
 def get_custom_reward_fn(config: DictConfig) -> Optional[RawRewardFn]:
     """Load and return a custom reward function from external file.
 
@@ -72,13 +108,18 @@ def get_custom_reward_fn(config: DictConfig) -> Optional[RawRewardFn]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Reward function file '{file_path}' not found.")
 
-    spec = importlib.util.spec_from_file_location("custom_module", file_path)
+    # Derive the real module name from the file path
+    module_name = _derive_module_name_from_path(file_path)
+
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     try:
-        sys.modules["custom_module"] = module
+        # Register module with its real name so it can be pickled/unpickled correctly
+        sys.modules[module_name] = module
         assert spec.loader is not None
         spec.loader.exec_module(module)
+        print(f"Loaded custom reward module as '{module_name}' from '{file_path}'")
     except Exception as e:
         raise RuntimeError(f"Error loading module from '{file_path}': {e}") from e
 

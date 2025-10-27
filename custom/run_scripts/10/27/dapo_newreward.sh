@@ -11,37 +11,37 @@ fi
 if [ -e "core" ]; then
     rm core
 fi
-datasetname=code-r1-12k-leetcode2k-taco
+datasetname=dapo-math
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
 
-reward_name=compute_score
-reward_path=verl/utils/reward_score/coder1/__init__.py
+
+reward_name=matan_reward_func
+reward_path=deepmath_utils/reward_utils/reward_func_2.py
 
 
-modelname=Qwen2_5-Coder-7B-Instruct
+modelname=Qwen2_5-7B
 model_path=$HF_HOME/models/$modelname
 
-max_token_len_per_gpu=25000
+max_token_len_per_gpu=28000
 max_response_length=4096
 
 n_gpu=4
 
-proj_name='code_stable_baseline'
-exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_naiveRayRemoteAttempt"
+proj_name='dapo'
+exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_matan_reward_fn"
 
 
-batch_size=256
-mini_batch_size=128
-n_rollout=8
+batch_size=512
+mini_batch_size=256
+n_rollout=4
 micro_batch_size_per_gpu_prob_ignored=32
 
-
 adv_est=grpo
-norm_by_std=True
+norm_by_std=False
 
 
 if [ "$SKIP_VALIDATION" = false ]; then
@@ -63,17 +63,14 @@ if [ "$SKIP_VALIDATION" = false ]; then
 else
     echo "Skipping validation (passed -y flag)"
 fi
-
 # False gradient checkpointing -- revert if weird err
-
-#! vllm memory util too high OOMs saving the model (.5 def safe, .75 prob crashes)
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=$adv_est \
     algorithm.norm_adv_by_std_in_grpo=$norm_by_std \
     data.train_files="$train_files" \
     data.val_files="$test_files" \
-    data.train_batch_size=$batch_size \
+    data.train_batch_size=512 \
     data.max_prompt_length=512 \
     data.max_response_length=$max_response_length \
     data.filter_overlong_prompts=True \
@@ -81,9 +78,9 @@ python3 -m verl.trainer.main_ppo \
     data.truncation='error' \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.actor.optim.lr=1e-6 \
-    actor_rollout_ref.actor.optim.lr_warmup_steps=-1 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps=15 \
     actor_rollout_ref.model.use_remove_padding=True \
-    actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
+    actor_rollout_ref.actor.ppo_mini_batch_size=256 \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
     actor_rollout_ref.actor.ppo_max_token_len_per_gpu=$max_token_len_per_gpu \
@@ -102,13 +99,12 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
-    actor_rollout_ref.rollout.n=$n_rollout \
+    actor_rollout_ref.rollout.n=4 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \
     custom_reward_function.name=$reward_name \
     custom_reward_function.path=$reward_path \
-    reward_model.reward_manager=naive \
     trainer.val_before_train=False\
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
@@ -119,7 +115,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.save_freq=20 \
     +trainer.remove_previous_ckpt_in_save=True \
     trainer.resume_mode=auto\
-    trainer.test_freq=30 \
+    trainer.test_freq=20 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$HF_HOME/rollouts/${proj_name}/${exp_name}/train" \
     trainer.validation_data_dir="$HF_HOME/rollouts/${proj_name}/${exp_name}/val" \
