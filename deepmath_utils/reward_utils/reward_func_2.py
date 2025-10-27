@@ -96,6 +96,29 @@ def eq(a: Optional[str], b: Optional[str]) -> Tuple[bool, bool]:
 
     return omi_correct, mathv_correct
 
+
+@ray.remote
+def matan_reward_func(data_source, solution_str, ground_truth, extra_info: dict):
+    """
+    This is the same as below but removing the hint matching
+    """
+    extracted_answer = extract_answer(solution_str)
+    omi_correct , mathv_correct  = eq(extracted_answer, ground_truth)
+    correct = omi_correct or mathv_correct
+    correct_and_format_score = correct + (float(extracted_answer is not None)) * 0.1
+
+    return {
+        "is_correct": float(correct),
+        "extracted_answer": extracted_answer,
+        "score": 0,  # M: this should not be accessed
+        "format_score": float(extracted_answer is not None) * 0.1,
+        "question_type": extra_info.get("question_type", "WEIRD: FAILED TO RETRIEVE QUESTION TYPE"),
+        # "time_per_res": float(end_time - start_time),
+        # "monitor_res_length": len(monitor_res),
+        "correct_and_format_score": float(correct_and_format_score),
+    }
+
+
 @ray.remote
 def reward_funcm_w_hint_usage_STRING_MATCHING_ONLY(data_source, solution_str, ground_truth, extra_info: dict):
     """
