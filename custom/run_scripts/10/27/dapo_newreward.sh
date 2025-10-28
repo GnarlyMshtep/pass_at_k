@@ -96,9 +96,9 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.55 \
     actor_rollout_ref.rollout.n=4 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
@@ -112,13 +112,13 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$exp_name \
     trainer.n_gpus_per_node=$n_gpu \
     trainer.nnodes=1 \
-    trainer.save_freq=20 \
+    trainer.save_freq=1\
     +trainer.remove_previous_ckpt_in_save=True \
     trainer.resume_mode=auto\
-    trainer.test_freq=20 \
+    trainer.test_freq=30 \
     +trainer.rollout_dump_freq=1 \
-    trainer.rollout_data_dir="$HF_HOME/rollouts/${proj_name}/${exp_name}/train" \
-    trainer.validation_data_dir="$HF_HOME/rollouts/${proj_name}/${exp_name}/val" \
-    trainer.default_local_dir="$HF_HOME/models/checkpoints/${proj_name}/${exp_name}"
+    trainer.rollout_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/train" \
+    trainer.validation_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/val" \
+    trainer.default_local_dir="$HFH/models/checkpoints/${proj_name}/${exp_name}"
     trainer.total_epochs=15 $@
 
