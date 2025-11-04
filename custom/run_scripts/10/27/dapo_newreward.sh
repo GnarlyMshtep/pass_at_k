@@ -19,8 +19,10 @@ train_files="['$train_path']"
 test_files="['$test_path']"
 
 
-reward_name=matan_reward_func
-reward_path=deepmath_utils/reward_utils/reward_func_2.py
+# reward_name=matan_reward_func
+# reward_path=deepmath_utils/reward_utils/reward_func_2.py
+reward_name=compute_score_math_boxed
+reward_path=custom/reward/reward_utils.py
 
 
 modelname=Qwen2_5-7B
