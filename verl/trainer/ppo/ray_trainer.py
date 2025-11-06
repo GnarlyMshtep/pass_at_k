@@ -354,6 +354,31 @@ def compute_advantage(
         )
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
+    
+    elif adv_estimator == AdvantageEstimator.RSGRPO:
+        # Prefer per-UID beta if provided on the batch; otherwise fall back to a fixed risk_beta from config
+        risk_beta_per_uid = None
+        if ("uid" in data.non_tensor_batch) and ("risk_beta" in data.non_tensor_batch):
+            uid_list = data.non_tensor_batch["uid"]
+            beta_list = data.non_tensor_batch["risk_beta"]
+            risk_beta_per_uid = {}
+            # Build a mapping; first occurrence for a uid defines its beta
+            for uid, beta in zip(uid_list, beta_list, strict=False):
+                if uid not in risk_beta_per_uid:
+                    risk_beta_per_uid[uid] = float(beta)
+        else:
+            risk_beta = config.get("risk_beta", None)
+            assert risk_beta is not None, "risk_beta must be set when using RSGRPO"
+            risk_beta_per_uid = {uid: risk_beta for uid in data.non_tensor_batch["uid"]}
+
+        advantages, returns = core_algos.compute_rs_grpo_outcome_advantage(
+            token_level_rewards=data.batch["token_level_rewards"],
+            response_mask=data.batch["response_mask"],
+            index=data.non_tensor_batch["uid"],
+            risk_beta_per_uid=risk_beta_per_uid,
+        )
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
 
     elif adv_estimator == AdvantageEstimator.GRPO:
         # Initialize the mask for GRPO calculation
@@ -1005,6 +1030,148 @@ class RayPPOTrainer:
         
         return new_batch
 
+    def _apply_beta_prompt_processing(self, batch: DataProto) -> DataProto:
+        """Sample a risk beta per uid, prefix prompts with chosen beta, and store per-sample betas.
+
+        Controlled via config keys under algorithm:
+          - sample_risk_beta_per_uid: bool
+          - risk_beta_options: list[float] (or reuse risk_beta if provided as list)
+          - probabilities_of_betas: list[float] (fallback: probility_of_betas)
+          - beta_prompt_template: str with {beta}
+          - beta_insertion_position: one of user_message_end|user_message_begin|system_message_end|system_message_begin
+        """
+        try:
+            alg_cfg = self.config.algorithm
+        except Exception:
+            return batch
+
+        if not alg_cfg.get("sample_risk_beta_per_uid", False):
+            return batch
+
+        betas = alg_cfg["risk_beta_options"]
+        probs = alg_cfg["probabilities_of_betas"]
+
+        # Parse comma-separated strings if needed
+        if isinstance(betas, str):
+            betas = [float(x.strip()) for x in betas.split(",")]
+        else:
+            raise ValueError("risk_beta_options must be a comma-separated string")
+        if isinstance(probs, str):
+            probs = [float(x.strip()) for x in probs.split(",")]
+        else:
+            raise ValueError("probabilities_of_betas must be a comma-separated string")
+
+        # Build per-uid beta
+        uids = batch.non_tensor_batch["uid"]
+        unique_uids = np.unique(uids)
+
+        probs_arr = np.array(probs, dtype=float)
+        probs_arr = probs_arr / probs_arr.sum()
+
+        rng = np.random.default_rng()
+        uid2beta = {uid: float(rng.choice(betas, p=probs_arr)) for uid in unique_uids}
+        per_sample_betas = [uid2beta[uid] for uid in uids]
+        batch.non_tensor_batch["risk_beta"] = np.array(per_sample_betas, dtype=object)
+
+        # Optionally prefix prompts
+        template = alg_cfg.get("beta_prompt_template", None)
+        if template is None:
+            return batch
+        if isinstance(template, str):
+            template = template.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
+        insertion_position = alg_cfg["beta_insertion_position"]
+
+        raw_chats = batch.non_tensor_batch.get("raw_prompt", None)
+        if raw_chats is None:
+            raise ValueError("raw_prompt is required when using beta_prompt_processing")
+
+        original_seq_length = batch.batch["input_ids"].shape[1]
+        new_input_ids = []
+        new_attention_masks = []
+
+        for i, messages in enumerate(raw_chats):
+            new_messages = list(messages)
+            beta_value = per_sample_betas[i]
+            # Support expressions like {beta}, {(beta+5)*10}, etc.
+            # Evaluate the template with beta in scope
+            import re
+            # Replace {expression} with evaluated result
+            def eval_expr(match):
+                expr = match.group(1)
+                # Evaluate with beta in local scope
+                beta = beta_value  # noqa: F841
+                result = eval(expr)
+                return str(result)
+            beta_text = re.sub(r'\{([^}]+)\}', eval_expr, template)
+
+            def _find_index_by_role(role: str, reverse: bool = False):
+                rng_idx = range(len(new_messages) - 1, -1, -1) if reverse else range(len(new_messages))
+                for idx in rng_idx:
+                    msg = new_messages[idx]
+                    if isinstance(msg, dict) and msg.get("role") == role:
+                        return idx
+                return None
+
+            pos = insertion_position
+            if pos in ("user_message_end", "user_message_begin"):
+                idx = _find_index_by_role("user", reverse=True)
+                assert idx is not None, "No user message found in raw_prompt"
+                msg = dict(new_messages[idx])
+                content = msg["content"]
+                assert isinstance(content, str), "User message content must be a string"
+                if pos == "user_message_end":
+                    msg["content"] = content + beta_text
+                else:
+                    msg["content"] = beta_text + content
+                new_messages[idx] = msg
+            elif pos in ("system_message_end", "system_message_begin"):
+                idx = _find_index_by_role("system", reverse=False)
+                if idx is None:
+                    sys_msg = {"role": "system", "content": beta_text}
+                    new_messages = [sys_msg] + new_messages 
+                    raise Warning("System message is found in the conversation, but beta_insertion_position is system_message_begin/system_message_end")
+                else:
+                    msg = dict(new_messages[idx])
+                    content = msg["content"]
+                    assert isinstance(content, str), "System message content must be a string"
+                    if pos == "system_message_end":
+                        msg["content"] = content + beta_text
+                    else:
+                        msg["content"] = beta_text + content
+                    new_messages[idx] = msg
+            else:
+                raise AssertionError(f"Invalid beta_insertion_position: {pos}")
+
+            new_prompt = self.tokenizer.apply_chat_template(new_messages, add_generation_prompt=True, tokenize=False)
+
+            model_inputs = self.tokenizer(new_prompt, return_tensors="pt", add_special_tokens=False)
+            new_input_ids_raw = model_inputs["input_ids"]
+            new_attention_mask_raw = model_inputs["attention_mask"]
+
+            from verl.utils.torch_functional import postprocess_data
+            new_input_ids_processed, new_attention_mask_processed = postprocess_data(
+                input_ids=new_input_ids_raw,
+                attention_mask=new_attention_mask_raw,
+                max_length=original_seq_length,
+                pad_token_id=self.tokenizer.pad_token_id,
+                left_pad=True,
+                truncation="error",
+            )
+
+            new_input_ids.append(new_input_ids_processed.squeeze(0))
+            new_attention_masks.append(new_attention_mask_processed.squeeze(0))
+
+        stacked_input_ids = torch.stack(new_input_ids)
+        stacked_attention_masks = torch.stack(new_attention_masks)
+        from verl.utils.model import compute_position_id_with_mask
+        stacked_position_ids = compute_position_id_with_mask(stacked_attention_masks)
+
+        batch.batch["input_ids"] = stacked_input_ids
+        batch.batch["attention_mask"] = stacked_attention_masks
+        batch.batch["position_ids"] = stacked_position_ids
+
+        return batch
+
     def _validate(self):
         data_source_lst = []
         reward_extra_infos_dict: dict[str, list] = defaultdict(list)
@@ -1045,6 +1212,9 @@ class RayPPOTrainer:
                 test_batch.non_tensor_batch["uid"] = np.array(
                     [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
                 )
+
+            # Apply per-UID beta sampling and prompt prefixing if enabled
+            test_batch = self._apply_beta_prompt_processing(test_batch)
 
             # repeat test batch
             if not self._is_multi_attempt_enabled():
@@ -1452,6 +1622,103 @@ class RayPPOTrainer:
         else:
             assert False, f"invalid split {split}"
 
+    def _compute_beta_pass_at_k_metrics(self, batch: DataProto) -> dict:
+        """Compute pass@k metrics broken down by beta values.
+        
+        Args:
+            batch: DataProto containing is_correct and risk_beta fields
+            
+        Returns:
+            Dictionary of metrics with keys like "train-beta/beta=-4.0/pass@1"
+        """
+        import math
+        
+        metrics = {}
+        
+        # Check if we have the necessary fields
+        if "risk_beta" not in batch.non_tensor_batch:
+            return metrics
+        
+        # Get the metric field (is_correct or acc)
+        metric_field = None
+        if hasattr(self.config.algorithm, 'filter_groups') and hasattr(self.config.algorithm.filter_groups, 'metric'):
+            metric_field = self.config.algorithm.filter_groups.metric
+        
+        if metric_field is None or metric_field not in batch.non_tensor_batch:
+            metric_field = "is_correct"
+        
+        if "uid" not in batch.non_tensor_batch:
+            raise ValueError("uid not found in batch.non_tensor_batch")
+        
+        # Extract data
+        is_correct = np.asarray(batch.non_tensor_batch[metric_field], dtype=float)
+        risk_beta = np.asarray(batch.non_tensor_batch["risk_beta"], dtype=float)
+        uids = batch.non_tensor_batch["uid"]
+        
+        # Convert is_correct to binary successes
+        successes = (is_correct == 1.0).astype(int)
+        
+        # Get unique beta values
+        unique_betas = np.unique(risk_beta)
+        
+        # For each beta value, compute pass@k metrics
+        for beta_val in unique_betas:
+            # Get indices for this beta
+            beta_mask = risk_beta == beta_val
+            beta_indices = np.where(beta_mask)[0]
+            
+            if len(beta_indices) == 0:
+                continue
+            
+            # Build uid -> indices mapping for this beta
+            uid2idxs = defaultdict(list)
+            for idx in beta_indices:
+                uid2idxs[uids[idx]].append(idx)
+            
+            # Compute pass@k for this beta
+            k2vals = defaultdict(list)
+            num_prompts = len(uid2idxs)
+            total_samples = 0
+            total_correct = 0
+            
+            for uid, idxs in uid2idxs.items():
+                grp_success = successes[idxs]
+                n_total = int(len(grp_success))
+                total_samples += n_total
+                if n_total <= 0:
+                    continue
+                c = int(grp_success.sum())
+                total_correct += c
+                
+                # Powers of two up to n_total, plus n_total; ensure k=1 present
+                ks = []
+                k_val = 1
+                while k_val < n_total:
+                    ks.append(k_val)
+                    k_val *= 2
+                ks.append(n_total)
+                
+                for k in ks:
+                    numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
+                    denom = math.comb(n_total, k)
+                    k2vals[k].append(1.0 - (numer / denom))
+            
+            # Add metrics for this beta
+            beta_str = f"{beta_val:.1f}" if abs(beta_val - round(beta_val)) > 1e-6 else f"{int(beta_val)}"
+            
+            # Add sample count and accuracy metrics
+            if total_samples > 0:
+                metrics[f"train-beta/beta={beta_str}/num_samples"] = total_samples
+                metrics[f"train-beta/beta={beta_str}/num_prompts"] = num_prompts
+                metrics[f"train-beta/beta={beta_str}/accuracy"] = total_correct / total_samples
+            
+            # Add pass@k metrics
+            for k, vals in k2vals.items():
+                if len(vals) > 0:
+                    metrics[f"train-beta/beta={beta_str}/pass@{k}"] = float(np.mean(vals))
+        
+        return metrics
+
     def _balance_batch(self, batch: DataProto, metrics, logging_prefix="global_seqlen"):
         """Reorder the data on single controller such that each dp rank gets similar total tokens"""
         attention_mask = batch.batch["attention_mask"]
@@ -1558,6 +1825,9 @@ class RayPPOTrainer:
                     batch.non_tensor_batch["uid"] = np.array(
                         [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
                     )
+
+                # Apply per-UID beta sampling and prompt prefixing if enabled
+                batch = self._apply_beta_prompt_processing(batch)
 
                 gen_batch = self._get_gen_batch(batch)
 
@@ -1698,6 +1968,10 @@ class RayPPOTrainer:
                             config=self.config.algorithm,
                         )
                         metrics.update(extra_advantage_metrics)
+                        
+                        # Compute pass@k metrics broken down by beta values
+                        beta_pass_at_k_metrics = self._compute_beta_pass_at_k_metrics(batch)
+                        metrics.update(beta_pass_at_k_metrics)
 
                     # update critic
                     if self.use_critic:
