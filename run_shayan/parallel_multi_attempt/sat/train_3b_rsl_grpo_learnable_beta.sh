@@ -15,8 +15,8 @@ project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat_2to3'
 max_response_length=2048
-risk_beta="0"
-probability_of_betas="1"
+risk_beta="0,4"
+probability_of_betas="0.5,0.5"
 exp_name="${model_name}_${dataset_name}_rsl_grpo_beta_${risk_beta//,/_}_${probability_of_betas//,/_}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Resume configuration
@@ -32,13 +32,13 @@ total_rollouts_per_prompt=$((max_attempts * num_samples_per_attempt))
 clip_ratio_low=0.2
 clip_ratio_high=0.28
 
-num_gpus=4
+num_gpus=2
 micro_batch_size_per_gpu=8
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
 
-num_workers=8
+num_workers=4
 
 max_model_len=$((1024 + max_response_length))
 max_batched_tokens=$((max_model_len + 1024))
@@ -58,13 +58,15 @@ monitor_metric="val/pass@1"
 #   - If using this, remove beta_prompt_template 
 #   - NOTE: Keys in the mapping should match your risk_beta_options values
 
+# '+algorithm.beta_prompt_template="risk level: {beta}"' \
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=rsgrpo \
     +algorithm.sample_risk_beta_per_uid=True \
     +algorithm.risk_beta_options=\'${risk_beta}\' \
     +algorithm.probabilities_of_betas=\'${probability_of_betas}\' \
-    '+algorithm.beta_prompt_template="risk level: {beta}"' \
-    +algorithm.beta_insertion_position=user_message_end \
+    +'algorithm.beta_to_string_mapping={0:"",4:"\nBe creative and take risks."}' \
+    +algorithm.beta_insertion_position=system_message_end \
+    +algorithm.default_system_prompt="You are Qwen, created by Alibaba Cloud. You are a helpful assistant." \
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
     data.train_files=$HF_HOME/data/${dataset_name}/train.parquet \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \

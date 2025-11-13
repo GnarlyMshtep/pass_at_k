@@ -1140,7 +1140,7 @@ class RayPPOTrainer:
                 rng_idx = range(len(new_messages) - 1, -1, -1) if reverse else range(len(new_messages))
                 for idx in rng_idx:
                     msg = new_messages[idx]
-                    if isinstance(msg, dict) and msg.get("role") == role:
+                    if isinstance(msg, dict) and msg['role'] == role:
                         return idx
                 return None
 
@@ -1159,18 +1159,25 @@ class RayPPOTrainer:
             elif pos in ("system_message_end", "system_message_begin"):
                 idx = _find_index_by_role("system", reverse=False)
                 if idx is None:
-                    sys_msg = {"role": "system", "content": beta_text}
-                    new_messages = [sys_msg] + new_messages 
-                    raise Warning("System message not found in the conversation, but beta_insertion_position is system_message_begin/system_message_end")
+                    default_system_prompt = alg_cfg.get("default_system_prompt", None)
+                    if default_system_prompt is None:
+                        raise ValueError(
+                            "default_system_prompt must be provided in algorithm config when "
+                            "beta_insertion_position is set to 'system_message_end' or 'system_message_begin' "
+                            "and no system message exists in the prompt."
+                        )
+                    sys_msg = {"role": "system", "content": default_system_prompt}
+                    new_messages = [sys_msg] + new_messages
+                    idx = 0 
+                
+                msg = dict(new_messages[idx])
+                content = msg["content"]
+                assert isinstance(content, str), "System message content must be a string"
+                if pos == "system_message_end":
+                    msg["content"] = content + beta_text
                 else:
-                    msg = dict(new_messages[idx])
-                    content = msg["content"]
-                    assert isinstance(content, str), "System message content must be a string"
-                    if pos == "system_message_end":
-                        msg["content"] = content + beta_text
-                    else:
-                        msg["content"] = beta_text + content
-                    new_messages[idx] = msg
+                    msg["content"] = beta_text + content
+                new_messages[idx] = msg
             else:
                 raise AssertionError(f"Invalid beta_insertion_position: {pos}")
 
