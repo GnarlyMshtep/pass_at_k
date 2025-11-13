@@ -470,7 +470,7 @@ def compute_rs_grpo_outcome_advantage(
                 assert False, "bro why are u doing GRPO with n_rollout==1?"
             elif len(id2score[idx]) > 1:
                 scores_tensor = torch.stack(id2score[idx])
-                if risk_beta_per_uid[idx] < epsilon:
+                if abs(risk_beta_per_uid[idx]) < epsilon:
                     id2divisor[idx] = torch.mean(scores_tensor)
                 else:
                     id2divisor[idx] = torch.mean(torch.exp(risk_beta_per_uid[idx] * scores_tensor))
@@ -478,10 +478,10 @@ def compute_rs_grpo_outcome_advantage(
                 raise ValueError(f"no score in prompt index: {idx}")
         
         for i in range(bsz):
-            if risk_beta_per_uid[index[i]] < epsilon:
+            if abs(risk_beta_per_uid[index[i]]) < epsilon:
                 scores[i] = (scores[i] - id2divisor[index[i]])
             else:
-                scores[i] = ((torch.exp(risk_beta_per_uid[index[i]] * scores[i]) / id2divisor[index[i]]) - 1)/id2divisor[index[i]]
+                scores[i] = ((torch.exp(risk_beta_per_uid[index[i]] * scores[i]) / id2divisor[index[i]]) - 1)/risk_beta_per_uid[index[i]]
         scores = scores.unsqueeze(-1) * response_mask
 
     return scores, scores

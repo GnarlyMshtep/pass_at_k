@@ -366,6 +366,8 @@ def compute_advantage(
             for uid, beta in zip(uid_list, beta_list, strict=False):
                 if uid not in risk_beta_per_uid:
                     risk_beta_per_uid[uid] = float(beta)
+                else: 
+                    assert risk_beta_per_uid[uid] == float(beta), "risk_beta_per_uid must be the same for all uids"
         else:
             risk_beta = config.get("risk_beta", None)
             assert risk_beta is not None, "risk_beta must be set when using RSGRPO"
@@ -1129,7 +1131,7 @@ class RayPPOTrainer:
                 if idx is None:
                     sys_msg = {"role": "system", "content": beta_text}
                     new_messages = [sys_msg] + new_messages 
-                    raise Warning("System message is found in the conversation, but beta_insertion_position is system_message_begin/system_message_end")
+                    raise Warning("System message not found in the conversation, but beta_insertion_position is system_message_begin/system_message_end")
                 else:
                     msg = dict(new_messages[idx])
                     content = msg["content"]
