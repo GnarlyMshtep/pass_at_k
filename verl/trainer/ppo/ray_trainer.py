@@ -1039,14 +1039,15 @@ class RayPPOTrainer:
           - sample_risk_beta_per_uid: bool
           - risk_beta_options: list[float] (or reuse risk_beta if provided as list)
           - probabilities_of_betas: list[float] (fallback: probility_of_betas)
-          - beta_prompt_template: str with {beta}
+          - beta_prompt_template: str with {beta} 
+          - beta_to_string_mapping: dict mapping beta values to strings (e.g., {"0": "string1", "4": "string2"})
           - beta_insertion_position: one of user_message_end|user_message_begin|system_message_end|system_message_begin
         """
         try:
             alg_cfg = self.config.algorithm
         except Exception:
             return batch
-
+        assert alg_cfg.get("beta_prompt_template", None) is None or alg_cfg.get("beta_to_string_mapping", None) is None, "Either beta_prompt_template or beta_to_string_mapping must be provided, not both"
         if not alg_cfg.get("sample_risk_beta_per_uid", False):
             return batch
 
@@ -1075,10 +1076,14 @@ class RayPPOTrainer:
         per_sample_betas = [uid2beta[uid] for uid in uids]
         batch.non_tensor_batch["risk_beta"] = np.array(per_sample_betas, dtype=object)
 
+        # Check if beta_to_string_mapping is provided
+        beta_to_string_mapping = alg_cfg.get("beta_to_string_mapping", None)
+        
         # Optionally prefix prompts
         template = alg_cfg.get("beta_prompt_template", None)
-        if template is None:
+        if template is None and beta_to_string_mapping is None:
             return batch
+        
         if isinstance(template, str):
             template = template.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
         insertion_position = alg_cfg["beta_insertion_position"]
@@ -1094,17 +1099,42 @@ class RayPPOTrainer:
         for i, messages in enumerate(raw_chats):
             new_messages = list(messages)
             beta_value = per_sample_betas[i]
-            # Support expressions like {beta}, {(beta+5)*10}, etc.
-            # Evaluate the template with beta in scope
-            import re
-            # Replace {expression} with evaluated result
-            def eval_expr(match):
-                expr = match.group(1)
-                # Evaluate with beta in local scope
-                beta = beta_value  # noqa: F841
-                result = eval(expr)
-                return str(result)
-            beta_text = re.sub(r'\{([^}]+)\}', eval_expr, template)
+            
+            # Determine beta_text based on mapping or template
+            if beta_to_string_mapping is not None:
+                # Use the mapping: try exact match first, then check for close float matches
+                beta_text = None
+                for key, value in beta_to_string_mapping.items():
+                    # Convert key to float for comparison
+                    try:
+                        key_float = float(key)
+                        if abs(key_float - beta_value) < 1e-6:
+                            beta_text = value
+                            break
+                    except (ValueError, TypeError):
+                        continue
+                
+                if beta_text is None:
+                    raise ValueError(
+                        f"Beta value {beta_value} not found in beta_to_string_mapping. "
+                        f"Available keys: {list(beta_to_string_mapping.keys())}"
+                    )
+                
+                # Apply escape sequences to the mapped string
+                if isinstance(beta_text, str):
+                    beta_text = beta_text.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
+            else:
+                # Use template with expression evaluation
+                # Support expressions like {beta}, {(beta+5)*10}, etc.
+                import re
+                # Replace {expression} with evaluated result
+                def eval_expr(match):
+                    expr = match.group(1)
+                    # Evaluate with beta in local scope
+                    beta = beta_value  # noqa: F841
+                    result = eval(expr)
+                    return str(result)
+                beta_text = re.sub(r'\{([^}]+)\}', eval_expr, template)
 
             def _find_index_by_role(role: str, reverse: bool = False):
                 rng_idx = range(len(new_messages) - 1, -1, -1) if reverse else range(len(new_messages))
