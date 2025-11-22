@@ -72,7 +72,7 @@ class Gsm8kInteraction(BaseInteraction):
             response = "Your response is incorrect! You need to reflect on your answer and try again."
             should_terminate_sequence = False
 
-        return True, "", 0, {}
+        return should_terminate_sequence, response, reward, {}
 
     async def calculate_score(self, instance_id: str, **kwargs) -> float:
         return gsm8k.compute_score(

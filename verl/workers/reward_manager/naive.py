@@ -17,7 +17,6 @@ from typing import Any
 
 import torch
 
-import custom.reward.reward_utils as reward_utils
 from verl import DataProto
 from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import register
@@ -83,7 +82,9 @@ class NaiveRewardManager(AbstractRewardManager):
             data_source = data_item.non_tensor_batch[self.reward_fn_key]
             extra_info = data_item.non_tensor_batch.get("extra_info", {})
             num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
+            rollout_reward_scores = data_item.non_tensor_batch.get("reward_scores", {})
             extra_info["num_turns"] = num_turns
+            extra_info["rollout_reward_scores"] = rollout_reward_scores
 
             score = self.compute_score(
                 data_source=data_source,
@@ -120,11 +121,6 @@ class NaiveRewardManager(AbstractRewardManager):
             return {
                 "reward_tensor": reward_tensor,
                 "reward_extra_info": reward_extra_info,
-                "extra_reward_metrics": reward_utils.extra_reward_metrics(
-                    responses=self.tokenizer.batch_decode(data.batch["responses"], skip_special_tokens=True), 
-                    prompts=self.tokenizer.batch_decode(data.batch["prompts"], skip_special_tokens=True), 
-                    ground_truths = [item["ground_truth"] for item in  data.non_tensor_batch["reward_model"]]
-                    ) 
             }
         else:
             return reward_tensor

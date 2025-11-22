@@ -20,11 +20,9 @@ from typing import Any, Optional
 
 import torch
 from pydantic import BaseModel, ConfigDict, model_validator
-from transformers import (PreTrainedTokenizer, PreTrainedTokenizerFast,
-                          ProcessorMixin)
+from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast, ProcessorMixin
 
-from verl.tools.schemas import (OpenAIFunctionToolCall,
-                                OpenAIFunctionToolSchema, ToolResponse)
+from verl.tools.schemas import OpenAIFunctionToolCall, OpenAIFunctionToolSchema, ToolResponse
 from verl.utils.model import compute_position_id_with_mask
 
 logger = logging.getLogger(__file__)
@@ -122,8 +120,6 @@ class AsyncRolloutRequest(BaseModel):
     base_conv_wo_gen_prompt_end_pos: int
     base_conv_with_gen_prompt_end_pos: int
 
-    uid: str
-
     @model_validator(mode="before")
     @classmethod
     def initialize_request(cls, values):
@@ -133,9 +129,6 @@ class AsyncRolloutRequest(BaseModel):
             raise ValueError("max_prompt_len is required for AsyncRolloutRequest initialization")
         if not (processing_class := values.pop("processing_class", None)):
             raise ValueError("processing_class is required for AsyncRolloutRequest initialization")
-
-        non_iid_flag = int(os.getenv("NON_IID_FLAG", 0))
-
 
         values["messages"] = [Message.model_validate(msg) for msg in messages]
 
@@ -175,7 +168,7 @@ class AsyncRolloutRequest(BaseModel):
                 messages,
                 multi_modal_data=multi_modal_data,
                 tools=tools,
-                add_generation_prompt=(not non_iid_flag),
+                add_generation_prompt=True,
                 tokenize=True,
                 return_dict=True,
             )
@@ -187,6 +180,9 @@ class AsyncRolloutRequest(BaseModel):
             if values["input_ids"].shape[-1] > max_prompt_len:
                 # Only log the warning to avoid truncating in the middle of generation prompt. Consider raising an
                 # error for this case in the future.
+                # Ensure batch_data_id exists with default value if not provided
+                if "batch_data_id" not in values:
+                    values["batch_data_id"] = cls.model_fields["batch_data_id"].default
                 logger.warning(
                     f"Prompt {values['batch_data_id']} has length {values['input_ids'].shape[-1]} "
                     f"which is greater than max_prompt_len {max_prompt_len} after applied chat template with tools."
@@ -214,13 +210,12 @@ class AsyncRolloutRequest(BaseModel):
             tokenize=True,
         ).shape[-1]
 
-        # Set add_generation_prompt based on NON_IID_FLAG environment variable
         values["base_conv_with_gen_prompt_end_pos"] = cls._handle_apply_chat_template(
             processing_class,
             BASE_CHAT_HISTORY,
             multi_modal_data=multi_modal_data,
             tools=tools,
-            add_generation_prompt=(not non_iid_flag),
+            add_generation_prompt=True,
             tokenize=True,
         ).shape[-1]
 
@@ -374,7 +369,7 @@ class AsyncRolloutRequest(BaseModel):
                 messages,
                 multi_modal_data=self.multi_modal_data,
                 tools=tools,
-                add_generation_prompt=False,#TODO: maybe need to change this to not have the assistant prompt being set, but I would be surprised. 
+                add_generation_prompt=True,
                 tokenize=True,
             )
             return generation_prompt_ids.squeeze(0).tolist()
@@ -401,18 +396,19 @@ class AsyncRolloutRequest(BaseModel):
         self,
         processing_class: PreTrainedTokenizer | PreTrainedTokenizerFast | ProcessorMixin,
         content: str,
+        content_ids: Optional[torch.Tensor] = None,
         tool_calls: Optional[list[OpenAIFunctionToolCall]] = None,
     ) -> None:
         self.messages.append(Message(role="assistant", content=content, tool_calls=tool_calls))
+        if content_ids is None:
+            messages = [*BASE_CHAT_HISTORY, self.messages[-1]]
+            tools = [tool.model_dump() for tool in self.tool_schemas] if self.tool_schemas else None
 
-        messages = [*BASE_CHAT_HISTORY, self.messages[-1]]
-        tools = [tool.model_dump() for tool in self.tool_schemas] if self.tool_schemas else None
-
-        # We don't need to pass multi_modal_data here because we don't have any multi-modal data from Engine
-        # Inference, it is pure text.
-        content_ids = self._handle_apply_chat_template(
-            processing_class, messages, multi_modal_data={}, tools=tools, add_generation_prompt=False, tokenize=True
-        )[..., self.base_conv_with_gen_prompt_end_pos :]
+            # We don't need to pass multi_modal_data here because we don't have any multi-modal data from Engine
+            # Inference, it is pure text.
+            content_ids = self._handle_apply_chat_template(
+                processing_class, messages, multi_modal_data={}, tools=tools, add_generation_prompt=False, tokenize=True
+            )[..., self.base_conv_with_gen_prompt_end_pos :]
         self._update_input_ids(processing_class, content_ids, attention_mask=True, loss_mask=True)
 
     def add_tool_response_messages(
@@ -426,17 +422,20 @@ class AsyncRolloutRequest(BaseModel):
         # We require the processing of the image and video to be done at tool.execute() level
         delta_multi_modal_data = {key: [] for key in self.multi_modal_keys}
         for content in contents:
-            content_list = []
-            # When we update multi_model_keys, we also need to update this logic
-            if content.image:
-                content_list.extend([{"type": "image"} for _ in content.image])
-                delta_multi_modal_data["image"].extend(content.image)
-            if content.video:
-                content_list.extend([{"type": "video"} for _ in content.video])
-                delta_multi_modal_data["video"].extend(content.video)
-            if content.text:
-                content_list.append({"type": "text", "text": content.text})
-            self.messages.append(Message(role="tool", content=content_list))
+            if content.is_text_only():
+                self.messages.append(Message(role="tool", content=content.text))
+            else:
+                content_list = []
+                # When we update multi_model_keys, we also need to update this logic
+                if content.image:
+                    content_list.extend([{"type": "image"} for _ in content.image])
+                    delta_multi_modal_data["image"].extend(content.image)
+                if content.video:
+                    content_list.extend([{"type": "video"} for _ in content.video])
+                    delta_multi_modal_data["video"].extend(content.video)
+                if content.text:
+                    content_list.append({"type": "text", "text": content.text})
+                self.messages.append(Message(role="tool", content=content_list))
 
         messages = [*BASE_CHAT_HISTORY, *self.messages[-len(contents) :]]
         tools = [tool.model_dump() for tool in self.tool_schemas] if self.tool_schemas else None

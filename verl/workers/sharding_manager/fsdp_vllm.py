@@ -41,6 +41,7 @@ from verl.utils.fsdp_utils import (
     load_fsdp_model_to_gpu,
     offload_fsdp_model_to_cpu,
 )
+from verl.utils.import_utils import deprecated
 from verl.utils.model import check_exclude_modules, check_target_modules, convert_weight_keys
 from verl.utils.profiler import GPUMemoryLogger, log_gpu_memory_usage, simple_timer
 from verl.utils.torch_functional import check_device_is_available
@@ -52,6 +53,7 @@ logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
 
+@deprecated()
 class FSDPVLLMShardingManager(BaseShardingManager):
     """Sharding manager for FSDP models with vLLM inference engine integration.
 
@@ -205,20 +207,20 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             else:
                 params = self.module.state_dict()
             params = convert_weight_keys(params, getattr(self.module, "_fsdp_wrapped_module", self.module))
-            with simple_timer("offload_fsdp_model_to_cpu", self.timing):
-                if self.offload_param:
-                    offload_fsdp_model_to_cpu(self.module)
-                log_gpu_memory_usage("After state_dict() in sharding manager memory", logger=logger)
+
+            if self.offload_param:
+                offload_fsdp_model_to_cpu(self.module)
+            log_gpu_memory_usage("After state_dict() in sharding manager memory", logger=logger)
 
             # vllm need to set _set_allocator_settings to False
             logger.debug("fsdp vllm sharding_manager _set_allocator_settings to False")
             set_expandable_segments(False)
-            with simple_timer("wake_up", self.timing):
-                if self.rollout_config.free_cache_engine:
-                    if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
-                        self.inference_engine.wake_up(tags=["weights"])
-                    else:
-                        self.inference_engine.wake_up()
+
+            if self.rollout_config.free_cache_engine:
+                if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
+                    self.inference_engine.wake_up(tags=["weights"])
+                else:
+                    self.inference_engine.wake_up()
 
             # update model params
             self.update_params(params, peft_config=peft_config)

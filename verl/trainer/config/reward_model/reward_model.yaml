@@ -6,6 +6,12 @@
 # If False, the following parameters are not effective
 enable: False
 
+# Whether to deploy the model to a separate resource pool.
+# If true, n_gpus_per_node & nnodes will be used to determine the resource node.
+enable_resource_pool: False
+n_gpus_per_node: 0
+nnodes: 0
+
 # FSDP strategy: "fsdp" or "fsdp2"
 strategy: ???
 
@@ -48,15 +54,6 @@ forward_max_token_len_per_gpu: ${critic.forward_max_token_len_per_gpu}
 # Default is naive. If all verification functions are multiprocessing-safe,
 # the reward manager can be set to prime for parallel verification.
 reward_manager: naive
-
-# Extra arguments forwarded to the reward manager implementation.
-# You can override any of these via CLI, e.g. +reward_model.reward_kwargs.num_workers=8
-reward_kwargs:
-
-  # Number of worker processes to parallelize per-sample scoring inside the
-  # reward manager where supported (e.g., DAPO).
-  # Set >1 to enable multiprocessing; 1 disables it.
-  num_workers: 1
 
 # Whether to launch custom reward function asynchronously during log_prob
 # custom reward function executed async on CPU, during log_prob

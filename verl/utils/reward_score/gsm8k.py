@@ -14,8 +14,6 @@
 
 import re
 
-from custom.reward.reward_utils import _get_tagged_data
-
 _SOLUTION_CLIP_CHARS = 300
 
 
@@ -51,7 +49,7 @@ def extract_solution(solution_str, method="strict"):
     return final_answer
 
 
-def compute_score(solution_str, ground_truth, method="strict", format_score=0.1, score=1.0):
+def compute_score(solution_str, ground_truth, method="strict", format_score=0.0, score=1.0):
     """The scoring function for GSM8k.
 
     Reference: Trung, Luong, et al. "Reft: Reasoning with reinforced fine-tuning." Proceedings of the 62nd Annual
@@ -64,14 +62,11 @@ def compute_score(solution_str, ground_truth, method="strict", format_score=0.1,
         format_score: the score for the format
         score: the score for the correct answer
     """
-    answer = _get_tagged_data(solution_str, "solution")
+    answer = extract_solution(solution_str=solution_str, method=method)
     if answer is None:
         return 0
     else:
-        try: 
-            if int(answer) == int(ground_truth):
-                return score
-            else:
-                return format_score
-        except ValueError: 
-                return format_score
+        if answer == ground_truth:
+            return score
+        else:
+            return format_score
