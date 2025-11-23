@@ -21,6 +21,7 @@ from typing import Any, Callable
 
 import numpy as np
 import torch
+import math
 
 from verl import DataProto
 from verl.utils.import_utils import deprecated
@@ -75,6 +76,88 @@ def _compute_response_info(batch: DataProto) -> dict[str, Any]:
         prompt_length=prompt_length,
         response_length=response_length,
     )
+
+def compute_pass_at_k_metrics(batch: DataProto) -> dict[str, Any]:
+    """
+    Computes pass@k metrics for a batch of data.
+    """
+    pass_at_k_metrics = {}
+
+    # Train-time pass@k metrics (per-batch), if correctness is available
+    non_tensor = batch.non_tensor_batch
+    if "is_correct" in non_tensor and "uid" in non_tensor:
+        # Prepare groupings by prompt uid
+        is_correct_np = np.asarray(non_tensor["is_correct"], dtype=float)
+        successes = (is_correct_np == 1.0).astype(int)
+        uids = np.asarray(non_tensor["uid"])  # dtype object ok
+        
+        # Get data sources for grouping
+        data_sources = non_tensor.get("data_source", ["unknown"] * len(successes))
+        if isinstance(data_sources, np.ndarray):
+            data_sources = data_sources.tolist()
+
+        # Build groups: uid -> indices (for original aggregated metrics)
+        uid2idxs: dict[Any, list[int]] = defaultdict(list)
+        for i in range(len(successes)):
+            uid2idxs[uids[i]].append(i)
+
+        # Build groups: (data_source, uid) -> indices (for data source-specific metrics)
+        ds_uid2idxs: dict[tuple[str, Any], list[int]] = defaultdict(list)
+        for i in range(len(successes)):
+            ds_uid2idxs[(data_sources[i], uids[i])].append(i)
+
+        #  Aggregate iid pass@k across all prompt groups (aggregated)
+        k2vals: dict[int, list[float]] = defaultdict(list)
+        for _, idxs in uid2idxs.items():
+            grp_success = successes[idxs]
+            n_total = int(len(grp_success))
+            if n_total <= 0:
+                continue
+            c = int(grp_success.sum())
+            # powers of two up to n_total, plus n_total; ensure k=1 present
+            ks: list[int] = []
+            k_val = 1
+            while k_val < n_total:
+                ks.append(k_val)
+                k_val *= 2
+            ks.append(n_total)
+            for k in ks:
+                numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
+                denom = math.comb(n_total, k)
+                k2vals[k].append(1.0 - (numer / denom))
+
+        # Add original aggregated metrics
+        for k, vals in k2vals.items():
+            if len(vals) > 0:
+                pass_at_k_metrics[f"train/pass/iid@{k}"] = float(np.mean(vals))
+
+        # Aggregate iid pass@k across prompt groups, separated by data source
+        ds_k2vals: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+        for (data_source, _), idxs in ds_uid2idxs.items():
+            grp_success = successes[idxs]
+            n_total = int(len(grp_success))
+            if n_total <= 0:
+                continue
+            c = int(grp_success.sum())
+            # powers of two up to n_total, plus n_total; ensure k=1 present
+            ks: list[int] = []
+            k_val = 1
+            while k_val < n_total:
+                ks.append(k_val)
+                k_val *= 2
+            ks.append(n_total)
+            for k in ks:
+                numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
+                denom = math.comb(n_total, k)
+                ds_k2vals[data_source][k].append(1.0 - (numer / denom))
+
+        # Add data source-specific metrics
+        for data_source, k2vals in ds_k2vals.items():
+            for k, vals in k2vals.items():
+                if len(vals) > 0:
+                    pass_at_k_metrics[f"trainWithDataSources/pass/iid@{k}/{data_source}"] = float(np.mean(vals))
+
+    return pass_at_k_metrics
 
 
 def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str, Any]:
@@ -207,7 +290,9 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "prompt_length/min": torch.min(prompt_length).detach().item(),
         "prompt_length/clip_ratio": torch.mean(torch.eq(prompt_length, max_prompt_length).float()).detach().item(),
     }
-
+    # pass@k metrics
+    pass_at_k_metrics = compute_pass_at_k_metrics(batch)
+    metrics.update(pass_at_k_metrics)
     # multi-turn conversation
     if "__num_turns__" in batch.non_tensor_batch:
         num_turns = batch.non_tensor_batch["__num_turns__"]

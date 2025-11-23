@@ -630,6 +630,28 @@ class RayPPOTrainer:
             gen_batch.non_tensor_batch.update(batch.non_tensor_batch)
 
         return gen_batch
+
+    def _tokenize_messages(self, messages: list, original_seq_length: int) -> tuple[torch.Tensor, torch.Tensor, list, str]:
+        new_prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+
+        new_raw_prompt_ids = self.tokenizer.encode(new_prompt, add_special_tokens=False)
+
+        model_inputs = self.tokenizer(new_prompt, return_tensors="pt", add_special_tokens=False)
+        new_input_ids_raw = model_inputs["input_ids"]
+        new_attention_mask_raw = model_inputs["attention_mask"]
+
+        from verl.utils.torch_functional import postprocess_data
+        new_input_ids_processed, new_attention_mask_processed = postprocess_data(
+            input_ids=new_input_ids_raw,
+            attention_mask=new_attention_mask_raw,
+            max_length=original_seq_length,
+            pad_token_id=self.tokenizer.pad_token_id,
+            left_pad=True,
+            truncation="error",
+        )
+        return new_input_ids_processed.squeeze(0), new_attention_mask_processed.squeeze(0), new_raw_prompt_ids, new_prompt
+
+
     def _apply_beta_prompt_processing(self, batch: DataProto) -> DataProto:
         """Sample a risk beta per uid, prefix prompts with chosen beta, and store per-sample betas.
 
@@ -668,7 +690,6 @@ class RayPPOTrainer:
 
         probs_arr = np.array(probs, dtype=float)
         probs_arr = probs_arr / probs_arr.sum()
-
         rng = np.random.default_rng()
         uid2beta = {uid: float(rng.choice(betas, p=probs_arr)) for uid in unique_uids}
         per_sample_betas = [uid2beta[uid] for uid in uids]
@@ -689,10 +710,12 @@ class RayPPOTrainer:
         raw_chats = batch.non_tensor_batch.get("raw_prompt", None)
         if raw_chats is None:
             raise ValueError("raw_prompt is required when using beta_prompt_processing")
-
         original_seq_length = batch.batch["input_ids"].shape[1]
         new_input_ids = []
         new_attention_masks = []
+        new_raw_prompts = []
+        new_raw_prompt_ids = []
+        new_full_prompts = []
 
         for i, messages in enumerate(raw_chats):
             new_messages = list(messages)
@@ -779,33 +802,26 @@ class RayPPOTrainer:
             else:
                 raise AssertionError(f"Invalid beta_insertion_position: {pos}")
 
-            new_prompt = self.tokenizer.apply_chat_template(new_messages, add_generation_prompt=True, tokenize=False)
-
-            model_inputs = self.tokenizer(new_prompt, return_tensors="pt", add_special_tokens=False)
-            new_input_ids_raw = model_inputs["input_ids"]
-            new_attention_mask_raw = model_inputs["attention_mask"]
-
-            from verl.utils.torch_functional import postprocess_data
-            new_input_ids_processed, new_attention_mask_processed = postprocess_data(
-                input_ids=new_input_ids_raw,
-                attention_mask=new_attention_mask_raw,
-                max_length=original_seq_length,
-                pad_token_id=self.tokenizer.pad_token_id,
-                left_pad=True,
-                truncation="error",
-            )
-
-            new_input_ids.append(new_input_ids_processed.squeeze(0))
-            new_attention_masks.append(new_attention_mask_processed.squeeze(0))
+            new_input_ids_processed, new_attention_mask_processed, raw_prompt_ids_item, full_prompt_item = self._tokenize_messages(new_messages, original_seq_length)
+            new_raw_prompt_ids.append(raw_prompt_ids_item)
+            new_full_prompts.append(full_prompt_item)
+            new_raw_prompts.append(new_messages)
+            new_input_ids.append(new_input_ids_processed)
+            new_attention_masks.append(new_attention_mask_processed)
 
         stacked_input_ids = torch.stack(new_input_ids)
         stacked_attention_masks = torch.stack(new_attention_masks)
         from verl.utils.model import compute_position_id_with_mask
         stacked_position_ids = compute_position_id_with_mask(stacked_attention_masks)
-
         batch.batch["input_ids"] = stacked_input_ids
         batch.batch["attention_mask"] = stacked_attention_masks
         batch.batch["position_ids"] = stacked_position_ids
+        
+        # Update raw_prompt, raw_prompt_ids, and full_prompts in non_tensor_batch
+        batch.non_tensor_batch["raw_prompt"] = np.array(new_raw_prompts, dtype=object)
+        batch.non_tensor_batch["raw_prompt_ids"] = np.array(new_raw_prompt_ids, dtype=object)
+        if "full_prompts" in batch.non_tensor_batch:
+            batch.non_tensor_batch["full_prompts"] = np.array(new_full_prompts, dtype=object)
 
         return batch
 
@@ -1283,7 +1299,7 @@ class RayPPOTrainer:
                     k2vals[k].append(1.0 - (numer / denom))
             
             # Add metrics for this beta
-            beta_str = f"{beta_val:.1f}" if abs(beta_val - round(beta_val)) > 1e-6 else f"{int(beta_val)}"
+            beta_str = f"{beta_val:.1f}" if abs(beta_val - round(beta_val)) > 1e-6 else f"{round(beta_val)}"
             
             # Add sample count and accuracy metrics
             if total_samples > 0:

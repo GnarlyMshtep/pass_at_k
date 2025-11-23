@@ -32,7 +32,7 @@ total_rollouts_per_prompt=$((max_attempts * num_samples_per_attempt))
 clip_ratio_low=0.2
 clip_ratio_high=0.28
 
-num_gpus=2
+num_gpus=4
 micro_batch_size_per_gpu=8
 mini_batch_size=32
 train_batch_size=128
@@ -64,9 +64,9 @@ python3 -m verl.trainer.main_ppo \
     +algorithm.sample_risk_beta_per_uid=True \
     +algorithm.risk_beta_options=\'${risk_beta}\' \
     +algorithm.probabilities_of_betas=\'${probability_of_betas}\' \
-    +'algorithm.beta_to_string_mapping={0:"",4:"\nBe creative and take risks."}' \
-    +algorithm.beta_insertion_position=system_message_end \
-    +algorithm.default_system_prompt="You are Qwen, created by Alibaba Cloud. You are a helpful assistant." \
+    +'algorithm.beta_to_string_mapping={0:"\nBe risk-neutral",4:"\nBe risk-averse"}' \
+    +algorithm.beta_insertion_position=user_message_end \
+    +'algorithm.default_system_prompt="You are Qwen, created by Alibaba Cloud. You are a helpful assistant."' \
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
     data.train_files=$HF_HOME/data/${dataset_name}/train.parquet \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
@@ -80,7 +80,7 @@ python3 -m verl.trainer.main_ppo \
     data.return_raw_chat=True \
     data.return_full_prompt=True \
     actor_rollout_ref.model.path=$HF_HOME/models/${model_name} \
-    actor_rollout_ref.actor.optim.lr=6e-6 \
+    actor_rollout_ref.actor.optim.lr=2e-6 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
     actor_rollout_ref.actor.clip_ratio_low=${clip_ratio_low} \
     actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
@@ -89,8 +89,8 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
-    actor_rollout_ref.actor.use_kl_loss=False \
-    actor_rollout_ref.actor.kl_loss_coef=0.000 \
+    actor_rollout_ref.actor.use_kl_loss=True \
+    actor_rollout_ref.actor.kl_loss_coef=0.0001 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
     actor_rollout_ref.actor.entropy_coeff=0.0000 \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \

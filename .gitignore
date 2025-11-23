@@ -136,3 +136,9 @@ outputs
 # Suubmodules
 custom/Enigmata/
 custom/text_to_sql/AlphaSQL/
+
+# Door simulation learning history files
+door_simulation/learning_history_*.txt
+
+# Preserved scripts for sbatch jobs
+.preserved_scripts/
