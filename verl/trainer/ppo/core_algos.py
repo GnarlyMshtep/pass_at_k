@@ -393,7 +393,7 @@ def compute_rs_grpo_outcome_advantage(
     with torch.no_grad():
         bsz = scores.shape[0]
         for i in range(bsz):
-            id2score[index[i]].append(scores[i])
+            id2score[index[i]].append(scores[i].to(torch.float32))
         for idx in id2score: 
             if len(id2score[idx]) == 1:
                 assert False, "bro why are u doing GRPO with n_rollout==1?"
@@ -403,6 +403,8 @@ def compute_rs_grpo_outcome_advantage(
                     id2divisor[idx] = torch.mean(scores_tensor)
                 else:
                     id2divisor[idx] = torch.mean(torch.exp(risk_beta_per_uid[idx] * scores_tensor))
+                    # if risk_beta_per_uid[idx] == 8:
+                    #     print(f"beta:{risk_beta_per_uid[idx]}, id2divisor[idx]: {id2divisor[idx]}, sum of scores_tensor: {scores_tensor.sum()}")
             else:
                 raise ValueError(f"no score in prompt index: {idx}")
         
@@ -410,7 +412,26 @@ def compute_rs_grpo_outcome_advantage(
             if abs(risk_beta_per_uid[index[i]]) < epsilon:
                 scores[i] = (scores[i] - id2divisor[index[i]])
             else:
+                # if risk_beta_per_uid[idx] == 8:
+                #     a = torch.exp(risk_beta_per_uid[index[i]] * scores[i]) / id2divisor[index[i]]
+                #     # print("scores[i]:", scores[i], "sorat", torch.exp(risk_beta_per_uid[index[i]] * scores[i]), "kasr",  a, "dtype", a.dtype)
                 scores[i] = ((torch.exp(risk_beta_per_uid[index[i]] * scores[i]) / id2divisor[index[i]]) - 1)/risk_beta_per_uid[index[i]]
+        if config.get("beta_advantage_equalize", False):
+        # Calculate mean of absolute value of scores for each unique beta value
+            beta2abs = defaultdict(list)
+            beta2mean_abs = defaultdict(float)
+            for i in range(bsz):
+                beta = risk_beta_per_uid[index[i]]
+                beta2abs[beta].append(abs(scores[i].item()))
+            for beta, abs_list in beta2abs.items():
+                beta2mean_abs[beta] = sum(abs_list) / len(abs_list)
+            total_mean_abs = torch.mean(torch.abs(scores)).item()
+            # Multiply each sample score by total_mean_abs divided by the mean of its beta's abs scores
+            for i in range(bsz):
+                beta = risk_beta_per_uid[index[i]]
+                scores[i] = scores[i] * (total_mean_abs / beta2mean_abs[beta])
+            
+        
         scores = scores.unsqueeze(-1) * response_mask
 
     return scores, scores

@@ -328,6 +328,7 @@ def compute_advantage(
             response_mask=data.batch["response_mask"],
             index=data.non_tensor_batch["uid"],
             risk_beta_per_uid=risk_beta_per_uid,
+            config=config,
         )
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
@@ -1526,6 +1527,32 @@ class RayPPOTrainer:
                                 loss_mat=entropys, loss_mask=response_masks, loss_agg_mode=loss_agg_mode
                             )
                             old_log_prob_metrics = {"actor/entropy": entropy_agg.detach().item()}
+                            
+                            # Compute entropy for each beta value separately if beta exists
+                            if "risk_beta" in batch.non_tensor_batch:
+                                risk_beta = np.asarray(batch.non_tensor_batch["risk_beta"], dtype=float)
+                                unique_betas = np.unique(risk_beta)
+                                
+                                for beta_val in unique_betas:
+                                    # Create mask for samples with this beta value
+                                    beta_mask_np = (risk_beta == beta_val)
+                                    beta_mask_torch = torch.from_numpy(beta_mask_np).to(entropys.device)
+                                    
+                                    # Select rows corresponding to this beta
+                                    entropys_beta = entropys[beta_mask_torch]
+                                    response_masks_beta = response_masks[beta_mask_torch]
+                                    
+                                    # Compute aggregated entropy for this beta
+                                    if entropys_beta.shape[0] > 0:
+                                        entropy_agg_beta = agg_loss(
+                                            loss_mat=entropys_beta, 
+                                            loss_mask=response_masks_beta, 
+                                            loss_agg_mode=loss_agg_mode
+                                        )
+                                        # Format beta string similar to _compute_beta_pass_at_k_metrics
+                                        beta_str = f"{beta_val:.1f}" if abs(beta_val - round(beta_val)) > 1e-6 else f"{round(beta_val)}"
+                                        old_log_prob_metrics[f"actor/entropy/beta={beta_str}"] = entropy_agg_beta.detach().item()
+                            
                             metrics.update(old_log_prob_metrics)
                             old_log_prob.batch.pop("entropys")
                             batch = batch.union(old_log_prob)

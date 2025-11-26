@@ -20,6 +20,7 @@ Single Process Actor
 import logging
 import os
 
+import numpy as np
 import torch
 from torch import nn
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
@@ -393,9 +394,15 @@ class DataParallelPPOActor(BasePPOActor):
         # Include rollout_log_probs for computing rollout_corr metrics in bypass mode
         if "rollout_log_probs" in data.batch.keys():
             select_keys.append("rollout_log_probs")
-
+        
+        # Include risk_beta for beta-specific entropy coefficients
+        non_tensor_select_keys = []
+        if self.config.beta_specific_entropy_coeff and "risk_beta" in data.non_tensor_batch.keys():
+            non_tensor_select_keys.append("risk_beta")
+        
         has_multi_modal_inputs = "multi_modal_inputs" in data.non_tensor_batch.keys()
-        non_tensor_select_keys = ["multi_modal_inputs"] if has_multi_modal_inputs else []
+        if has_multi_modal_inputs:
+            non_tensor_select_keys.append("multi_modal_inputs")
 
         data = data.select(batch_keys=select_keys, non_tensor_batch_keys=non_tensor_select_keys)
 
@@ -437,7 +444,7 @@ class DataParallelPPOActor(BasePPOActor):
 
                     # all return: (bsz, response_length)
                     calculate_entropy = False
-                    if entropy_coeff != 0:
+                    if entropy_coeff != 0 or self.config.beta_specific_entropy_coeff:
                         calculate_entropy = True
                     entropy, log_prob = self._forward_micro_batch(
                         model_inputs, temperature=temperature, calculate_entropy=calculate_entropy
@@ -489,11 +496,54 @@ class DataParallelPPOActor(BasePPOActor):
                         )
                         micro_batch_metrics.update(rollout_corr_metrics)
 
-                    if entropy_coeff != 0:
-                        entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
-
-                        # compute policy loss
-                        policy_loss = pg_loss - entropy_loss * entropy_coeff
+                    if entropy_coeff != 0 or self.config.beta_specific_entropy_coeff:
+                        # Compute entropy loss
+                        if self.config.beta_specific_entropy_coeff:
+                            # Use beta-specific entropy coefficients
+                            if "risk_beta" not in model_inputs:
+                                raise ValueError("risk_beta not found in batch")
+                            
+                            risk_beta = model_inputs["risk_beta"]
+                            # risk_beta is stored as np.ndarray(dtype=object) in non_tensor_batch
+                            risk_beta = torch.from_numpy(np.asarray(risk_beta, dtype=float)).to(entropy.device)
+                            
+                            # Group samples by beta and compute entropy loss for each group
+                            beta_coeff_map = self.config.beta_entropy_coeff_map
+                            entropy_loss = torch.tensor(0.0, device=entropy.device)
+                            total_samples = 0
+                            
+                            for beta_key, coeff_val in beta_coeff_map.items():
+                                beta_key_float = float(beta_key)
+                                # Find samples with this beta value
+                                beta_mask = torch.abs(risk_beta - beta_key_float) < 1e-6
+                                n_samples = beta_mask.sum().item()
+                                
+                                if n_samples > 0:
+                                    # Extract entropy and response_mask for this beta group
+                                    entropy_beta = entropy[beta_mask]  # (n_samples, response_length)
+                                    response_mask_beta = response_mask[beta_mask]  # (n_samples, response_length)
+                                    
+                                    # Compute entropy loss for this group using agg_loss
+                                    entropy_loss_beta = agg_loss(
+                                        loss_mat=entropy_beta,
+                                        loss_mask=response_mask_beta,
+                                        loss_agg_mode=loss_agg_mode
+                                    )
+                                    
+                                    # Weight by coefficient and number of samples
+                                    entropy_loss += entropy_loss_beta * float(coeff_val) * n_samples
+                                    total_samples += n_samples
+                            
+                            # Check if total_samples matches number of samples in batch
+                            expected_total_samples = response_mask.shape[0]
+                            if total_samples != expected_total_samples:
+                                raise ValueError(f"total_samples ({total_samples}) does not match total batch size ({expected_total_samples}) for entropy loss computation (possible missing beta groups or mismatch in sample assignment).")
+                            
+                            policy_loss = pg_loss - entropy_loss / total_samples
+                        else:
+                            # Use global entropy coefficient
+                            entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+                            policy_loss = pg_loss - entropy_loss * entropy_coeff
                     else:
                         policy_loss = pg_loss
 

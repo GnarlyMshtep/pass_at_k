@@ -252,6 +252,7 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "critic/advantages/mean": torch.mean(valid_adv).detach().item(),
         "critic/advantages/max": torch.max(valid_adv).detach().item(),
         "critic/advantages/min": torch.min(valid_adv).detach().item(),
+        "critic/advantages/absmean": torch.mean(torch.abs(valid_adv)).detach().item(),
         # returns
         "critic/returns/mean": torch.mean(valid_returns).detach().item(),
         "critic/returns/max": torch.max(valid_returns).detach().item(),
@@ -290,6 +291,29 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "prompt_length/min": torch.min(prompt_length).detach().item(),
         "prompt_length/clip_ratio": torch.mean(torch.eq(prompt_length, max_prompt_length).float()).detach().item(),
     }
+    
+    # Compute mean advantages for each beta value
+    if "risk_beta" in batch.non_tensor_batch:
+        risk_beta = np.asarray(batch.non_tensor_batch["risk_beta"], dtype=float)
+        unique_betas = np.unique(risk_beta)
+        
+        for beta_val in unique_betas:
+            # Create mask for samples with this beta value
+            beta_mask_np = (risk_beta == beta_val)
+            beta_mask_torch = torch.from_numpy(beta_mask_np).to(advantages.device)
+            
+            # Select advantages and response_mask for samples with this beta
+            advantages_beta = advantages[beta_mask_torch]
+            response_mask_beta = response_mask[beta_mask_torch]
+            
+            # Get valid advantages (masked by response_mask)
+            if advantages_beta.shape[0] > 0:
+                valid_adv_beta = torch.masked_select(advantages_beta, response_mask_beta)
+                if valid_adv_beta.numel() > 0:
+                    # Format beta string similar to _compute_beta_pass_at_k_metrics
+                    beta_str = f"{beta_val:.1f}" if abs(beta_val - round(beta_val)) > 1e-6 else f"{round(beta_val)}"
+                    metrics[f"critic/advantages/absmean/beta={beta_str}"] = torch.mean(torch.abs(valid_adv_beta)).detach().item()
+    
     # pass@k metrics
     pass_at_k_metrics = compute_pass_at_k_metrics(batch)
     metrics.update(pass_at_k_metrics)

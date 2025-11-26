@@ -14,8 +14,8 @@ PROJECT_DIR=$(pwd)
 project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat_2to3'
-max_response_length=2048
-risk_beta="0,4"
+max_response_length=1500
+risk_beta="-8,8"
 probability_of_betas="0.5,0.5"
 exp_name="${model_name}_${dataset_name}_rsl_grpo_beta_${risk_beta//,/_}_${probability_of_betas//,/_}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
@@ -64,7 +64,10 @@ python3 -m verl.trainer.main_ppo \
     +algorithm.sample_risk_beta_per_uid=True \
     +algorithm.risk_beta_options=\'${risk_beta}\' \
     +algorithm.probabilities_of_betas=\'${probability_of_betas}\' \
-    +'algorithm.beta_to_string_mapping={0:"\nBe risk-neutral",4:"\nBe risk-averse"}' \
+    +'algorithm.beta_to_string_mapping={-8:"\n Play Safely.",8:"\n Risk More."}' \
+    +actor_rollout_ref.actor.beta_specific_entropy_coeff=True \
+    +'actor_rollout_ref.actor.beta_entropy_coeff_map={-8: -0.001, 8: 0.001}' \
+    +algorithm.beta_advantage_equalize=True \
     +algorithm.beta_insertion_position=user_message_end \
     +'algorithm.default_system_prompt="You are Qwen, created by Alibaba Cloud. You are a helpful assistant."' \
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
@@ -144,4 +147,29 @@ python3 -m verl.trainer.main_ppo \
 #
 # The mapping keys should match your risk_beta_options values exactly.
 # Each beta value will get its own custom string inserted at beta_insertion_position.
+# ============================================================================
+
+# ============================================================================
+# EXAMPLE: Using beta-specific entropy coefficients
+# ============================================================================
+# To use different entropy coefficients for different beta values, add these lines:
+#
+# 1. Enable beta-specific entropy coefficients/ Define the mapping from beta values to entropy coefficients:
+#    actor_rollout_ref.actor.beta_specific_entropy_coeff=True \
+#
+# 2. 
+#    +'actor_rollout_ref.actor.beta_entropy_coeff_map={-8: -0.001, 8: 0.001}' \
+#
+# Notes:
+# - When beta_specific_entropy_coeff=True, entropy will be calculated even if
+#   entropy_coeff=0.0000 (as set on line 96)
+# - The beta_entropy_coeff_map keys should match your risk_beta_options values
+# - Entropy loss is computed per beta group using agg_loss, then weighted by
+#   coefficient and sample count, then averaged
+# - Negative coefficients encourage lower entropy (more deterministic)
+# - Positive coefficients encourage higher entropy (more exploratory)
+#
+# Example usage (add these lines after line 96):
+#    actor_rollout_ref.actor.beta_specific_entropy_coeff=True \
+#    +'actor_rollout_ref.actor.beta_entropy_coeff_map={-8: -0.001, 8: 0.001}' \
 # ============================================================================

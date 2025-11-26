@@ -141,7 +141,7 @@ class ActorWorker(Worker, DistProfilerExtension):
     def update_actor(self, data: DataProto):
         data.meta_info["use_dynamic_bsz"] = self.config.use_dynamic_bsz
         data.meta_info["use_fused_kernels"] = self.config.use_fused_kernels
-        data.meta_info["calculate_entropy"] = self.config.entropy_coeff != 0.0
+        data.meta_info["calculate_entropy"] = self.config.entropy_coeff != 0.0 or self.config.beta_specific_entropy_coeff
         if self.config.use_dynamic_bsz:
             data.meta_info["max_token_len_per_gpu"] = self.config.ppo_max_token_len_per_gpu
         else:
