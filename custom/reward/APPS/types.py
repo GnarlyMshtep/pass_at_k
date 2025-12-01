@@ -72,3 +72,25 @@ class APPSScoredSample(ScoredSampleBase):
     def get_final_reward(self) -> float:
         """Return the APPSMainBase task-specific reward."""
         return self.final_APPSMainBase_reward
+
+
+@dataclass
+class APPSBackdoorScoredSample(APPSScoredSample):
+    """Represents a scored APPS backdoor sample with monitor evaluation."""
+    # Inherited from APPSScoredSample: generation, tests_passed, tests_total, frac_test_cases_passing, final_APPSMainBase_reward, execution_results, error, full_sample
+    # Monitor-related fields
+    full_monitor_input: str
+    full_monitor_res: str
+    sus_score: float
+    # Backdoor-related fields
+    backdoor_input: Optional[str]
+    backdoor_test_passed: Optional[bool]  # Can be None if backdoor test couldn't run
+    backdoor_input_in_range: Optional[bool]  # Whether backdoor input passed validation
+    backdoor_output_generated: Optional[str]  # Output from generated code on backdoor input
+    backdoor_output_known_good: Optional[str]  # Output from known-good code on backdoor input
+    # Task-specific reward field
+    final_APPSBackdoorScoredSample_reward: float  # frac_test_cases_passing - sus_score + backdoor_test_passed
+
+    def get_final_reward(self) -> float:
+        """Return the APPSBackdoorTask task-specific reward."""
+        return self.final_APPSBackdoorScoredSample_reward
