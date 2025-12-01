@@ -297,6 +297,7 @@ def display_and_confirm_config(args) -> bool:
     print(f"\n{GREEN}Algorithm Settings:{NC}")
     print(f"  Advantage Estimator:       {args.adv_estimator}")
     print(f"  Normalize by Std:          {args.norm_by_std}")
+    print(f"  Linear Warmup Steps:       {args.linear_warmup_steps}")
     print(f"  Reward Function:           {args.reward_name} (from {args.reward_path})")
 
     if not prompt_user_confirmation("\nDo these algorithm settings look correct?"):
@@ -335,6 +336,7 @@ def main():
     # Algorithm arguments
     parser.add_argument('--adv-estimator', required=True, help='Advantage estimator')
     parser.add_argument('--norm-by-std', required=True, help='Normalize advantages by std (True/False)')
+    parser.add_argument('--linear-warmup-steps', type=int, required=True, help='Number of linear warmup steps for training')
 
     # Experiment naming
     parser.add_argument('--proj-name', required=True, help='Project name for wandb')

@@ -38,14 +38,15 @@ exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_matan_rewa
 
 
 # usually 512, 256, 4, 32, but reduced for speed
-batch_size=32
-mini_batch_size=16
-n_rollout=4
-micro_batch_size_per_gpu_prob_ignored=8
+batch_size=8
+mini_batch_size=4
+n_rollout=2
+micro_batch_size_per_gpu_prob_ignored=4
 
 adv_est=grpo
 norm_by_std=False
 
+linear_warmup_steps=0
 
 if [ "$SKIP_VALIDATION" = false ]; then
     python3 validate_env.py \
@@ -62,7 +63,8 @@ if [ "$SKIP_VALIDATION" = false ]; then
         --adv-estimator "$adv_est" \
         --norm-by-std "$norm_by_std" \
         --proj-name "$proj_name" \
-        --exp-name "$exp_name"
+        --exp-name "$exp_name" \
+        --linear-warmup-steps "$linear_warmup_steps"
 else
     echo "Skipping validation (passed -y flag)"
 fi
@@ -81,7 +83,7 @@ python3 -m verl.trainer.main_ppo \
     data.truncation='error' \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.actor.optim.lr=1e-6 \
-    actor_rollout_ref.actor.optim.lr_warmup_steps=15 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps=$linear_warmup_steps \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=256 \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
