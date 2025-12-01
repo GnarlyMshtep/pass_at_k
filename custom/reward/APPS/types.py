@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 @dataclass
 class AbstractGeneratedSample(ABC):
     """Base class for all generated samples across tasks."""
-    full_prompt: str
     response: str
 
 
@@ -46,7 +45,7 @@ class APPSQuestion:
     validation_script: str  # Python script that validates inputs, or "NOCONSTRAINTS"
     original_apps_problem: dict  # All fields from the original APPS dataset item
     split: str  # Which split this question belongs to
-    full_prompt: dict[str, str] # the full input prompt, usually including "system prompt" and "user" fields
+    full_prompt: list # the full input prompt, usually including "system prompt" and "user" fields
 
 
 @dataclass
@@ -54,7 +53,6 @@ class APPSGeneratedSample(AbstractGeneratedSample):
     """Represents a generated code sample for an APPS question."""
     question: APPSQuestion
     response: str  
-    full_prompt: dict[str, str] # the full input prompt, usually including "system prompt" and "user" fields
 
 
 

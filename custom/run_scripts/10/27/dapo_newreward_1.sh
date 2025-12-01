@@ -34,7 +34,7 @@ max_response_length=4096
 n_gpu=1
 
 proj_name='dapo'
-exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_matan_reward_fn"
+exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_${reward_name}"
 
 
 batch_size=512
