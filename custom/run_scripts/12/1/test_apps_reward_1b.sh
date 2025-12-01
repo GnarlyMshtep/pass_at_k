@@ -11,7 +11,7 @@ fi
 if [ -e "core" ]; then
     rm core
 fi
-datasetname=dapo-math
+datasetname=apps_benign_prompt
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
 
@@ -21,26 +21,27 @@ test_files="['$test_path']"
 
 # reward_name=matan_reward_func
 # reward_path=deepmath_utils/reward_utils/reward_func_2.py
-reward_name=compute_score_math_boxed
-reward_path=custom/reward/reward_utils.py
+reward_name=reward_func_benign_prompt
+reward_path=custom/reward/APPS/APPS_reward.py
 
 
-modelname=Qwen2_5-7B
+modelname=Qwen3-1_7B
 model_path=$HF_HOME/models/$modelname
 
 max_token_len_per_gpu=28000
 max_response_length=4096
 
-n_gpu=4
+n_gpu=1
 
-proj_name='dapo'
+proj_name='subtle_reasoning_repro'
 exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_matan_reward_fn"
 
 
-batch_size=512
-mini_batch_size=256
+# usually 512, 256, 4, 32, but reduced for speed
+batch_size=32
+mini_batch_size=16
 n_rollout=4
-micro_batch_size_per_gpu_prob_ignored=32
+micro_batch_size_per_gpu_prob_ignored=8
 
 adv_est=grpo
 norm_by_std=False
@@ -72,8 +73,8 @@ python3 -m verl.trainer.main_ppo \
     algorithm.norm_adv_by_std_in_grpo=$norm_by_std \
     data.train_files="$train_files" \
     data.val_files="$test_files" \
-    data.train_batch_size=512 \
-    data.max_prompt_length=512 \
+    data.train_batch_size=$batch_size \
+    data.max_prompt_length=1024 \
     data.max_response_length=$max_response_length \
     data.filter_overlong_prompts=True \
     data.shuffle=True \
@@ -98,10 +99,10 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.55 \
-    actor_rollout_ref.rollout.n=4 \
+    actor_rollout_ref.rollout.n=$n_rollout \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.use_kl_in_reward=False \
@@ -114,13 +115,13 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name=$exp_name \
     trainer.n_gpus_per_node=$n_gpu \
     trainer.nnodes=1 \
-    trainer.save_freq=1\
+    trainer.save_freq=20\
     +trainer.remove_previous_ckpt_in_save=True \
     trainer.resume_mode=auto\
-    trainer.test_freq=30 \
+    trainer.test_freq=1000 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/train" \
     trainer.validation_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/val" \
-    trainer.default_local_dir="models/checkpoints/${proj_name}/${exp_name}"
+    trainer.default_local_dir="$HFH/models/checkpoints/${proj_name}/${exp_name}"
     trainer.total_epochs=15 $@
 

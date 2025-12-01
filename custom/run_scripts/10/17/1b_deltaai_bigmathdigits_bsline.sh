@@ -27,6 +27,8 @@ exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_bsline"
 micro_batch_size_per_gpu_prob_ignored=128
 
 
+
+
 python3 validate_env.py \
     --train-path "$train_path" \
     --test-path "$test_path" \
