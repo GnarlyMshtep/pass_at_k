@@ -11,9 +11,9 @@ fi
 if [ -e "core" ]; then
     rm core
 fi
-datasetname=apps_benign_prompt
-train_path=$HF_HOME/data/$datasetname/train.parquet
-test_path=$HF_HOME/data/$datasetname/test.parquet
+
+train_path=$HOME/projects/data/$datasetname/train.parquet
+test_path=$HOME/projects/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
@@ -21,20 +21,17 @@ test_files="['$test_path']"
 
 # reward_name=matan_reward_func
 # reward_path=deepmath_utils/reward_utils/reward_func_2.py
-reward_name=reward_func_benign_prompt
 reward_path=custom/reward/APPS/APPS_reward.py
 
 
-modelname=Qwen3-8B
+
 model_path=$HF_HOME/models/$modelname
+# model_path=Qwen/$modelname
 
 max_token_len_per_gpu=28000
-max_response_length=6096
+
 
 n_gpu=4
-
-proj_name='subtle_reasoning_repro'
-exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_${reward_name}"
 
 
 # usually 512, 256, 4, 32, but reduced for speed
@@ -124,6 +121,6 @@ python3 -m verl.trainer.main_ppo \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/train" \
     trainer.validation_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/val" \
-    trainer.default_local_dir="$HFH/models/checkpoints/${proj_name}/${exp_name}"
+    trainer.default_local_dir="$HFH/models/checkpoints/${proj_name}/${exp_name}" \
     trainer.total_epochs=15 $@
 
