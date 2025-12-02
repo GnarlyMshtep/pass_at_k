@@ -1,3 +1,5 @@
+slurm/
+
 .zcompdump
 *zsh_history
 1.jsonl
