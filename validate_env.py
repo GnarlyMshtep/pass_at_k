@@ -265,15 +265,16 @@ def check_python_env() -> bool:
 
 
 def prompt_user_confirmation(msg: str) -> bool:
-    """Prompt user for yes/no confirmation."""
-    while True:
-        response = input(f"{YELLOW}{msg} (y/n): {NC}").strip().lower()
-        if response in ['y', 'yes']:
-            return True
-        elif response in ['n', 'no']:
-            return False
-        else:
-            print("Please enter 'y' or 'n'")
+    # """Prompt user for yes/no confirmation."""
+    # while True:
+    #     response = input(f"{YELLOW}{msg} (y/n): {NC}").strip().lower()
+    #     if response in ['y', 'yes']:
+    #         return True
+    #     elif response in ['n', 'no']:
+    #         return False
+    #     else:
+    #         print("Please enter 'y' or 'n'")
+    return True
 
 
 def display_and_confirm_config(args) -> bool:
