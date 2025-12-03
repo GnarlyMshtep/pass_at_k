@@ -70,7 +70,7 @@ python3 -m verl.trainer.main_ppo \
     data.train_files="$train_files" \
     data.val_files="$test_files" \
     data.train_batch_size=$batch_size \
-    data.max_prompt_length=1024 \
+    data.max_prompt_length=512 \
     data.max_response_length=$max_response_length \
     data.filter_overlong_prompts=True \
     data.shuffle=True \
