@@ -27,6 +27,7 @@ from numpy.typing import NDArray
 import custom.reward.reward_utils as reward_utils
 from verl import DataProto
 from verl.utils.import_utils import deprecated
+from scipy.special import comb
 
 
 @deprecated("verl.utils.metric.reduce_metrics")
@@ -387,17 +388,15 @@ def calc_maj_val(data: list[dict[str, Any]], vote_key: str, val_key: str) -> flo
     return maj_val
 
 
-def process_validation_metrics(
-    data_sources: list[str], sample_inputs: list[str], infos_dict: dict[str, list[Any]], seed: int = 42
-) -> dict[str, dict[str, dict[str, float]]]:
+def process_validation_metrics(data_sources: list[str], sample_inputs: list[str], infos_dict: dict[str, list[Any]], val_config) -> dict[str, dict[str, dict[str, float]]]:
     """
     Process validation metrics into a structured format with statistical analysis.
-
+    
     This function organizes validation metrics by data source and prompt, then computes
     various statistical measures including means, standard deviations, best/worst values,
     and majority voting results. It also performs bootstrap sampling to estimate statistics
     for different sample sizes.
-
+    
     Args:
         data_sources: List of data source identifiers for each sample.
         sample_inputs: List of input prompts corresponding to each sample.
@@ -413,7 +412,7 @@ def process_validation_metrics(
                 }
             }
         }
-
+        
         Where metric_name includes:
         - "mean@N": Mean value across N samples
         - "std@N": Standard deviation across N samples
@@ -423,83 +422,82 @@ def process_validation_metrics(
         - "worst@N/std": Standard deviation of the worst values in bootstrap samples
         - "maj@N/mean": Mean of majority voting results in bootstrap samples (if "pred" exists)
         - "maj@N/std": Standard deviation of majority voting results (if "pred" exists)
-
+        
     Example:
         >>> data_sources = ["source1", "source1", "source2"]
         >>> sample_inputs = ["prompt1", "prompt1", "prompt2"]
-        >>> infos_dict = {"score": [0.8, 0.9, 0.7], "pred": ["A", "A", "B"]}
+        >>> infos_dict = {"score": [0.8, 0.9, 0.7], "pred": ["A", "A", "B"]} (in fact, it has keys "score" and "reward")
         >>> result = process_validation_metrics(data_sources, sample_inputs, infos_dict)
         >>> # result will contain statistics for each data source and variable
     """
+    metric_keys = val_config.get("metric_keys", None)
+    extra_prompt_keys = val_config.get("extra_prompt_keys", [])
+    seed = val_config.get("seed", 42)
     # Group metrics by data source, prompt and variable
     data_src2prompt2var2vals = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for sample_idx, data_source in enumerate(data_sources):
         prompt = sample_inputs[sample_idx]
+        for key in extra_prompt_keys:
+            extra_prompt = infos_dict[key][sample_idx]
+            prompt += " " + str(extra_prompt)
+
         var2vals = data_src2prompt2var2vals[data_source][prompt]
         for var_name, var_vals in infos_dict.items():
             var2vals[var_name].append(var_vals[sample_idx])
+    # print(data_src2prompt2var2vals)
 
     # Calculate metrics for each group
     data_src2prompt2var2metric = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
     for data_source, prompt2var2vals in data_src2prompt2var2vals.items():
         for prompt, var2vals in prompt2var2vals.items():
             for var_name, var_vals in var2vals.items():
-                if isinstance(var_vals[0], str) or any(v is None for v in var_vals):
-                    continue
+                if metric_keys is not None:
+                    if var_name not in metric_keys:
+                        continue
+                else:
+                    if var_vals[0] is None or isinstance(var_vals[0], str) or isinstance(var_vals[0], dict):
+                        continue
 
                 metric = {}
                 n_resps = len(var_vals)
-                metric[f"mean@{n_resps}"] = np.mean(var_vals)
+                try: metric[f"mean@{n_resps}"] = np.mean(var_vals)
+
+                except Exception as e:
+                    print(f"{var_name}\n{var_vals}\n{e}")
 
                 if n_resps > 1:
                     metric[f"std@{n_resps}"] = np.std(var_vals)
 
-                    ns = []
-                    n = 2
-                    while n < n_resps:
+                ns = []
+                n = 1
+                while True:
+                    if n <= n_resps:
                         ns.append(n)
                         n *= 2
-                    ns.append(n_resps)
+                    else:
+                        break
 
-                    for n in ns:
-                        [(bon_mean, bon_std), (won_mean, won_std)] = bootstrap_metric(
-                            data=var_vals, subset_size=n, reduce_fns=[np.max, np.min], seed=seed
-                        )
-                        metric[f"best@{n}/mean"], metric[f"best@{n}/std"] = bon_mean, bon_std
-                        metric[f"worst@{n}/mean"], metric[f"worst@{n}/std"] = won_mean, won_std
-                        if var2vals.get("pred", None) is not None:
-                            vote_data = [
-                                {"val": val, "pred": pred} for val, pred in zip(var_vals, var2vals["pred"], strict=True)
-                            ]
-                            [(maj_n_mean, maj_n_std)] = bootstrap_metric(
-                                data=vote_data,
-                                subset_size=n,
-                                reduce_fns=[partial(calc_maj_val, vote_key="pred", val_key="val")],
-                                seed=seed,
-                            )
-                            metric[f"maj@{n}/mean"], metric[f"maj@{n}/std"] = maj_n_mean, maj_n_std
+                for n in ns:
+                    n_correct = np.sum(var_vals)
+                    pass_at_n = 1 - comb(n_resps - n_correct, n) / comb(n_resps, n)
+                    metric[f"pass@{n}"] = pass_at_n
 
-                # Deterministic pass@k (for binary correctness variables)
-                # Apply to common correctness variable names
-                if var_name in {"acc", "is_correct", "exact_match"}:
-                    # Determine binary successes from var_vals
-                    vals_np = np.asarray(var_vals, dtype=float)
-                    successes = (vals_np > 0.5).astype(int)
-                    c = int(successes.sum())
-                    n_total = int(len(successes))
-                    # Powers of two up to n_total, plus n_total; also include k=1
-                    ks: list[int] = []
-                    k_val = 1
-                    while k_val < n_total:
-                        ks.append(k_val)
-                        k_val *= 2
-                    ks.append(n_total)
-                    for k in ks:
-                        numer = 0 if k > (n_total - c) else math.comb(n_total - c, k)
-                        denom = math.comb(n_total, k)
-                        metric[f"pass@{k}"] = 1.0 - (numer / denom)
+                #     for n in ns:
+                #         [(bon_mean, bon_std), (won_mean, won_std)] = bootstrap_metric(data=var_vals, subset_size=n, reduce_fns=[np.max, np.min], seed=seed)
+                #         metric[f"best@{n}/mean"], metric[f"best@{n}/std"] = bon_mean, bon_std
+                #         metric[f"worst@{n}/mean"], metric[f"worst@{n}/std"] = won_mean, won_std
+                #         if var2vals.get("pred", None) is not None:
+                #             vote_data = [{"val": val, "pred": pred} for val, pred in zip(var_vals, var2vals["pred"])]
+                #             [(maj_n_mean, maj_n_std)] = bootstrap_metric(
+                #                 data=vote_data,
+                #                 subset_size=n,
+                #                 reduce_fns=[partial(calc_maj_val, vote_key="pred", val_key="val")],
+                #                 seed=seed,
+                #             )
+                #             metric[f"maj@{n}/mean"], metric[f"maj@{n}/std"] = maj_n_mean, maj_n_std
 
                 data_src2prompt2var2metric[data_source][prompt][var_name] = metric
+    # print(data_src2prompt2var2metric)
 
     # Aggregate metrics across prompts
     data_src2var2metric2prompt_vals = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))

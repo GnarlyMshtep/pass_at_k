@@ -6,8 +6,8 @@
 #SBATCH --nodes=1                              # 节点数
 #SBATCH --ntasks-per-node=1                    # 每个节点的任务数
 #SBATCH --cpus-per-task=32                     # 每个任务的 CPU 核心数
-# SBATCH --partition=HGPU                       # 指定分区
-#SBATCH --gres=gpu:H100:2                         # 需要 1 个 GPU
+#SBATCH --partition=HGPU                       # 指定分区
+#SBATCH --gres=gpu:H200:2                         # 需要 1 个 GPU
 #SBATCH --time=48:00:00                      # 最大运行时间
 #SBATCH --chdir=/home/zhaoyiz/courses/matan/pass_at_k
 
@@ -17,7 +17,7 @@ main=test_apps_reward_4b_instruct.sh
 
 export TRITON_LIBCUDA_PATH="/.singularity.d/libs/"
 export ckpt_root=/workspace/rl_reasoning/train
-export n_cpu=$SLURM_CPUS_PER_TASK
+export n_cpu=32
 export n_gpu=2
 
 # change ray temp dir
