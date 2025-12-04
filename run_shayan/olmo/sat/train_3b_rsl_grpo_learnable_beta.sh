@@ -15,11 +15,13 @@ project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat_2to3'
 max_response_length=2048
-exp_name="${model_name}_${dataset_name}_olmo_grpo_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+risk_beta="-4,8"
+probability_of_betas="0.5,0.5"
+exp_name="${model_name}_${dataset_name}_olmo_rsl_grpo_beta_${risk_beta//,/_}_${probability_of_betas//,/_}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Resume configuration
 resume_mode="disable" # one of: disable, auto, resume_path
-resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen3-0.6B_sat_3to7_group_based_adv_1024_20250101_000000/global_step_200"
+resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_rs_grpo_beta_4_2048_20251127_120915/global_step_200"
 
 # Keep rollout counts aligned with the multi-attempt setup for throughput
 max_attempts=4
@@ -42,7 +44,6 @@ enable_filter_groups=True
 filter_groups_metric="is_correct"      # Filter based on accuracy variance (acc/score/seq_reward)
 max_num_gen_batches=0          # Max gen batches for active sampling (0 = unlimited)
 
-norm_adv_by_std_in_grpo=False
 
 num_gpus=4
 mini_batch_size=32
@@ -57,8 +58,31 @@ max_batched_tokens=$((max_model_len + 1024))
 # Best checkpoint settings: monitor single-attempt val metric
 monitor_metric="val/pass@1"
 
+# Beta prompt configuration: Choose ONE of the two options below:
+# 
+# Option 1: Use beta_prompt_template with dynamic expressions (current setting)
+#   - Use {beta} or expressions like {(beta+5)*10} in the template
+#   - Example: '+algorithm.beta_prompt_template="\nRisk level: {(beta+5)*10}"'
+#
+# Option 2: Use beta_to_string_mapping for custom strings per beta value
+#   - Map each beta value to a specific string
+#   - Example: '+algorithm.beta_to_string_mapping={0:"\nBe risk-neutral",4:"\nBe risk-averse"}'
+#   - If using this, remove beta_prompt_template 
+#   - NOTE: Keys in the mapping should match your risk_beta_options values
+
+# +'actor_rollout_ref.actor.beta_entropy_coeff_map={-8: -0.0001, 8: 0.0001}' \
+# '+algorithm.beta_prompt_template="risk level: {beta}"' \
 python3 -m recipe.dapo.main_dapo \
-    ++algorithm.adv_estimator=grpo \
+    algorithm.adv_estimator=rsgrpo \
+    +algorithm.sample_risk_beta_per_uid=True \
+    +algorithm.risk_beta_options=\'${risk_beta}\' \
+    +algorithm.probabilities_of_betas=\'${probability_of_betas}\' \
+    +'algorithm.beta_to_string_mapping={-4:"\n Please prioritize consistency and minimize the risk of error by adhering to the most probable and robust path.",8:"\n Please adopt a speculative strategy that prioritizes the potential for a maximum payout, even if the probability of success is low."}' \
+    +actor_rollout_ref.actor.beta_specific_entropy_coeff=True \
+    +'actor_rollout_ref.actor.beta_entropy_coeff_map={-4: -0.0001, 8: 0.0001}' \
+    +algorithm.beta_advantage_equalize=True \
+    +algorithm.beta_insertion_position=user_message_end \
+    +'algorithm.default_system_prompt="You are Qwen, created by Alibaba Cloud. You are a helpful assistant."' \
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
     data.train_files=$HF_HOME/data/${dataset_name}/train.parquet \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
@@ -105,7 +129,6 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.filter_groups.enable=${enable_filter_groups} \
     algorithm.filter_groups.metric=${filter_groups_metric} \
     algorithm.filter_groups.max_num_gen_batches=${max_num_gen_batches} \
-    algorithm.norm_adv_by_std_in_grpo=${norm_adv_by_std_in_grpo} \
     actor_rollout_ref.rollout.calculate_log_probs=True \
     trainer.critic_warmup=0 \
     custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/sat/sat_verifier.py" \
@@ -132,3 +155,43 @@ python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True
 
 
+# ============================================================================
+# EXAMPLE: Using beta_to_string_mapping with multiple beta values
+# ============================================================================
+# To use custom strings for different beta values, modify the script as follows:
+#
+# 1. Set multiple beta values:
+#    risk_beta="0,4,-4"
+#    probability_of_betas="0.33,0.33,0.34"
+#
+# 2. Add the beta_to_string_mapping parameter (REMOVE beta_prompt_template line):
+#    '+algorithm.beta_to_string_mapping={0:"\nPlease solve this problem.",4:"\nBe cautious and careful in your approach.","-4":"\nBe creative and try different approaches."}' \
+#
+# The mapping keys should match your risk_beta_options values exactly.
+# Each beta value will get its own custom string inserted at beta_insertion_position.
+# ============================================================================
+
+# ============================================================================
+# EXAMPLE: Using beta-specific entropy coefficients
+# ============================================================================
+# To use different entropy coefficients for different beta values, add these lines:
+#
+# 1. Enable beta-specific entropy coefficients/ Define the mapping from beta values to entropy coefficients:
+#    actor_rollout_ref.actor.beta_specific_entropy_coeff=True \
+#
+# 2. 
+#    +'actor_rollout_ref.actor.beta_entropy_coeff_map={-8: -0.001, 8: 0.001}' \
+#
+# Notes:
+# - When beta_specific_entropy_coeff=True, entropy will be calculated even if
+#   entropy_coeff=0.0000 (as set on line 96)
+# - The beta_entropy_coeff_map keys should match your risk_beta_options values
+# - Entropy loss is computed per beta group using agg_loss, then weighted by
+#   coefficient and sample count, then averaged
+# - Negative coefficients encourage lower entropy (more deterministic)
+# - Positive coefficients encourage higher entropy (more exploratory)
+#
+# Example usage (add these lines after line 96):
+#    actor_rollout_ref.actor.beta_specific_entropy_coeff=True \
+#    +'actor_rollout_ref.actor.beta_entropy_coeff_map={-8: -0.001, 8: 0.001}' \
+# ============================================================================

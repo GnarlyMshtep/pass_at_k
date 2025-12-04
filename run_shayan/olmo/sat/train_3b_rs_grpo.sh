@@ -15,11 +15,13 @@ project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat_2to3'
 max_response_length=2048
-exp_name="${model_name}_${dataset_name}_olmo_grpo_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+risk_beta=4
+exp_name="${model_name}_${dataset_name}_olmo_rs_grpo_beta_${risk_beta}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Resume configuration
 resume_mode="disable" # one of: disable, auto, resume_path
-resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen3-0.6B_sat_3to7_group_based_adv_1024_20250101_000000/global_step_200"
+resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_rs_grpo_beta_4_2048_20251127_120915/global_step_200"
+
 
 # Keep rollout counts aligned with the multi-attempt setup for throughput
 max_attempts=4
@@ -42,7 +44,6 @@ enable_filter_groups=True
 filter_groups_metric="is_correct"      # Filter based on accuracy variance (acc/score/seq_reward)
 max_num_gen_batches=0          # Max gen batches for active sampling (0 = unlimited)
 
-norm_adv_by_std_in_grpo=False
 
 num_gpus=4
 mini_batch_size=32
@@ -58,7 +59,8 @@ max_batched_tokens=$((max_model_len + 1024))
 monitor_metric="val/pass@1"
 
 python3 -m recipe.dapo.main_dapo \
-    ++algorithm.adv_estimator=grpo \
+    algorithm.adv_estimator=rsgrpo \
+    ++algorithm.risk_beta=${risk_beta}\
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
     data.train_files=$HF_HOME/data/${dataset_name}/train.parquet \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
@@ -105,7 +107,6 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.filter_groups.enable=${enable_filter_groups} \
     algorithm.filter_groups.metric=${filter_groups_metric} \
     algorithm.filter_groups.max_num_gen_batches=${max_num_gen_batches} \
-    algorithm.norm_adv_by_std_in_grpo=${norm_adv_by_std_in_grpo} \
     actor_rollout_ref.rollout.calculate_log_probs=True \
     trainer.critic_warmup=0 \
     custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/sat/sat_verifier.py" \

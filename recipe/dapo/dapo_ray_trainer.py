@@ -206,6 +206,9 @@ class RayDAPOTrainer(RayPPOTrainer):
                     new_batch.non_tensor_batch["uid"] = np.array(
                         [str(uuid.uuid4()) for _ in range(len(new_batch.batch))], dtype=object
                     )
+                    # Apply per-UID beta sampling and prompt prefixing if enabled
+                    batch = self._apply_beta_prompt_processing(batch)
+                    
                     # repeat to align with repeated responses in rollout
                     new_batch = new_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     new_batch = new_batch.union(gen_batch_output)
