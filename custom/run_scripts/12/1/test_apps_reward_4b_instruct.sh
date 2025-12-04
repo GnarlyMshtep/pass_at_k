@@ -30,8 +30,8 @@ max_token_len_per_gpu=28000
 
 
 # usually 512, 256, 4, 32, but reduced for speed
-batch_size=16
-mini_batch_size=16
+batch_size=32
+mini_batch_size=32
 n_rollout=8
 micro_batch_size_per_gpu_prob_ignored=4
 
@@ -68,7 +68,7 @@ python3 -m verl.trainer.main_ppo \
     data.train_files="$train_files" \
     data.val_files="$test_files" \
     data.train_batch_size=$batch_size \
-    data.max_prompt_length=512 \
+    data.max_prompt_length=1024 \
     data.max_response_length=$max_response_length \
     data.filter_overlong_prompts=True \
     data.shuffle=True \
@@ -102,7 +102,7 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=False \
     custom_reward_function.name=$reward_name \
     custom_reward_function.path=$reward_path \
-    trainer.val_before_train=False\
+    trainer.val_before_train=True \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
     trainer.project_name=$proj_name \
@@ -112,8 +112,8 @@ python3 -m verl.trainer.main_ppo \
     trainer.save_freq=20\
     +trainer.remove_previous_ckpt_in_save=True \
     trainer.resume_mode=auto\
-    trainer.test_freq=1000 \
-    +trainer.rollout_dump_freq=1 \
+    trainer.test_freq=20 \
+    +trainer.rollout_dump_freq=20 \
     trainer.rollout_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/train" \
     trainer.validation_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/val" \
     trainer.default_local_dir="$HFH/models/checkpoints/${proj_name}/${exp_name}" \

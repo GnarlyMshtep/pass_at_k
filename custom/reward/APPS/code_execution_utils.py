@@ -35,6 +35,9 @@ async def score_single_sample(sample: APPSGeneratedSample) -> APPSScoredSample:
         execution_results = {}
         # extract code 
         code = extract_code_from_response(sample.response)
+        # print(f"Response: {sample.response}")
+        # print("------------------")
+        # print(code)
 
         # Check if code extraction failed
         if not code:
@@ -310,7 +313,20 @@ async def verify_solution_no_files(
     if backdoor_golden_task:
         all_tasks.append(backdoor_golden_task)
 
-    results = await asyncio.matan_gather_chunked(*all_tasks, return_exceptions=True)
+    # results = await asyncio.matan_gather_chunked(*all_tasks, return_exceptions=True)
+    CONCURRENCY_LIMIT = 10
+    semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+
+    # 2. Helper to wrap existing coroutines with the semaphore
+    async def run_with_semaphore(task):
+        async with semaphore:
+            return await task
+
+    # 3. Run all tasks using the standard gather, but wrapped in the limiter
+    results = await asyncio.gather(
+        *(run_with_semaphore(task) for task in all_tasks), 
+        return_exceptions=True
+    )
 
     # Process regular test results
     regular_results = results[:len(regular_tasks)]
