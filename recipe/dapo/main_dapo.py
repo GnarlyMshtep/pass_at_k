@@ -37,29 +37,32 @@ def run_ppo(config) -> None:
     if not ray.is_initialized():
         # this is for local ray cluster
         default_runtime_env = {
-            "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN", "VLLM_LOGGING_LEVEL": "WARN", "RAY_DEBUG": "1", "RAY_DEBUG_POST_MORTEM": "1"}
+            "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN", "VLLM_LOGGING_LEVEL": "WARN"}
         }
         ray_init_kwargs = config.ray_kwargs.get("ray_init", {})
         runtime_env_kwargs = ray_init_kwargs.get("runtime_env", {})
         runtime_env = OmegaConf.merge(default_runtime_env, runtime_env_kwargs)
         ray_init_kwargs = OmegaConf.create({**ray_init_kwargs, "runtime_env": runtime_env})
-        ray_init_kwargs["num_cpus"] = 100
         print(f"ray init kwargs: {ray_init_kwargs}")
         ray.init(**OmegaConf.to_container(ray_init_kwargs))
 
-    if (
-        is_cuda_available
-        and config.global_profiler.tool == "nsys"
-        and OmegaConf.select(config.global_profiler, "steps") is not None
-        and len(OmegaConf.select(config.global_profiler, "steps")) > 0
-    ):
-        nsight_options = OmegaConf.to_container(
-            config.global_profiler.global_tool_config.nsys.controller_nsight_options
-        )
-        runner = TaskRunner.options(runtime_env={"nsight": nsight_options}).remote()
-    else:
-        runner = TaskRunner.remote()
-    ray.get(runner.run.remote(config))
+    try:
+        if (
+            is_cuda_available
+            and config.global_profiler.tool == "nsys"
+            and OmegaConf.select(config.global_profiler, "steps") is not None
+            and len(OmegaConf.select(config.global_profiler, "steps")) > 0
+        ):
+            nsight_options = OmegaConf.to_container(
+                config.global_profiler.global_tool_config.nsys.controller_nsight_options
+            )
+            runner = TaskRunner.options(runtime_env={"nsight": nsight_options}).remote()
+        else:
+            runner = TaskRunner.remote()
+        ray.get(runner.run.remote(config))
+    finally:
+        if ray.is_initialized():
+            ray.shutdown()
 
 
 @ray.remote(num_cpus=1)  # please make sure main_task is not scheduled on head
@@ -83,8 +86,10 @@ class TaskRunner:
         # instantiate tokenizer
         from verl.utils import hf_processor, hf_tokenizer
 
-        tokenizer = hf_tokenizer(local_path)
-        processor = hf_processor(local_path, use_fast=True)  # used for multimodal LLM, could be none
+        trust_remote_code = config.data.get("trust_remote_code", False)
+        tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
+        # used for multimodal LLM, could be none
+        processor = hf_processor(local_path, trust_remote_code=trust_remote_code, use_fast=True)
 
         from verl.single_controller.ray import RayWorkerGroup
 
@@ -92,14 +97,26 @@ class TaskRunner:
         if config.actor_rollout_ref.actor.strategy in {"fsdp", "fsdp2"}:
             assert config.critic.strategy in {"fsdp", "fsdp2"}
 
-            from verl.workers.fsdp_workers import ActorRolloutRefWorker, CriticWorker
+            from verl.workers.fsdp_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker, CriticWorker
 
+            # Choose worker class based on rollout mode (sync vs async)
+            actor_rollout_cls = (
+                AsyncActorRolloutRefWorker
+                if config.actor_rollout_ref.rollout.mode == "async"
+                else ActorRolloutRefWorker
+            )
             ray_worker_group_cls = RayWorkerGroup
 
         elif config.actor_rollout_ref.actor.strategy == "megatron":
             assert config.actor_rollout_ref.actor.strategy == config.critic.strategy
-            from verl.workers.megatron_workers import ActorRolloutRefWorker, CriticWorker
+            from verl.workers.megatron_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker, CriticWorker
 
+            # Choose worker class based on rollout mode (sync vs async)
+            actor_rollout_cls = (
+                AsyncActorRolloutRefWorker
+                if config.actor_rollout_ref.rollout.mode == "async"
+                else ActorRolloutRefWorker
+            )
             ray_worker_group_cls = RayWorkerGroup
 
         else:
@@ -108,7 +125,7 @@ class TaskRunner:
         from verl.trainer.ppo.ray_trainer import ResourcePoolManager, Role
 
         role_worker_mapping = {
-            Role.ActorRollout: ray.remote(ActorRolloutRefWorker),
+            Role.ActorRollout: ray.remote(actor_rollout_cls),
             Role.Critic: ray.remote(CriticWorker),
         }
 
@@ -139,7 +156,7 @@ class TaskRunner:
 
         # reference model
         if config.algorithm.use_kl_in_reward or config.actor_rollout_ref.actor.use_kl_loss:
-            role_worker_mapping[Role.RefPolicy] = ray.remote(ActorRolloutRefWorker)
+            role_worker_mapping[Role.RefPolicy] = ray.remote(actor_rollout_cls)
             mapping[Role.RefPolicy] = global_pool_id
 
         reward_fn = load_reward_manager(
@@ -148,7 +165,6 @@ class TaskRunner:
             0,
             max_resp_len=config.data.max_response_length,
             overlong_buffer_cfg=config.reward_model.overlong_buffer,
-            **config.reward_model.get("reward_kwargs", {}),
         )
 
         # Note that we always use function-based RM for validation
@@ -158,7 +174,6 @@ class TaskRunner:
             1,
             max_resp_len=config.data.max_response_length,
             overlong_buffer_cfg=config.reward_model.overlong_buffer,
-            **config.reward_model.get("reward_kwargs", {}),
         )
         resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
 

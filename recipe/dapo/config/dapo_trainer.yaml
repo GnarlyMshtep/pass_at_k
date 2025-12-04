@@ -24,8 +24,5 @@ algorithm:
     metric: null # acc / score / seq_reward / seq_final_reward / ...
     max_num_gen_batches: 0 # Non-positive values mean no upper limit
 
-  # Default k for Pass@k advantage estimator; can be overridden via CLI
-  pass_at_k_k: 2
-
 trainer:
   project_name: verl-dapo

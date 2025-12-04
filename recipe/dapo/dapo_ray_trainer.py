@@ -20,22 +20,15 @@ import os
 import uuid
 from collections import defaultdict
 from copy import deepcopy
-from math import comb
 from pprint import pprint
 
 import numpy as np
-import ray
 import torch
 from tqdm import tqdm
 
 from verl import DataProto
 from verl.trainer.ppo.core_algos import agg_loss
-from verl.trainer.ppo.metric_utils import (
-    compute_data_metrics,
-    compute_throughout_metrics,
-    compute_timing_metrics,
-    reduce_metrics,
-)
+from verl.trainer.ppo.metric_utils import compute_data_metrics, compute_throughout_metrics, compute_timing_metrics
 from verl.trainer.ppo.ray_trainer import (
     AdvantageEstimator,
     RayPPOTrainer,
@@ -44,8 +37,8 @@ from verl.trainer.ppo.ray_trainer import (
     compute_response_mask,
 )
 from verl.trainer.ppo.reward import compute_reward
+from verl.utils.metric import reduce_metrics
 from verl.utils.profiler import marked_timer
-from verl.trainer.ppo.reward import compute_reward, compute_reward_async
 from verl.utils.rollout_skip import RolloutSkip
 
 
@@ -53,6 +46,32 @@ class RayDAPOTrainer(RayPPOTrainer):
     """
     Note that this trainer runs on the driver process on a single CPU/GPU node.
     """
+
+    def compute_kl_related_metrics(self, batch: DataProto, metrics: dict, timing_raw: dict):
+        batch.batch["response_mask"] = compute_response_mask(batch)
+
+        # recompute old_log_probs
+        with marked_timer("old_log_prob", timing_raw, "blue"):
+            old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+            entropys = old_log_prob.batch["entropys"]
+            response_masks = batch.batch["response_mask"]
+            loss_agg_mode = self.config.actor_rollout_ref.actor.loss_agg_mode
+            entropy_agg = agg_loss(loss_mat=entropys, loss_mask=response_masks, loss_agg_mode=loss_agg_mode)
+            old_log_prob_metrics = {"actor/entropy": entropy_agg.detach().item()}
+            metrics.update(old_log_prob_metrics)
+            old_log_prob.batch.pop("entropys")
+            batch = batch.union(old_log_prob)
+
+        if self.use_reference_policy:
+            # compute reference log_prob
+            with marked_timer("ref", timing_raw, "olive"):
+                if not self.ref_in_actor:
+                    ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(batch)
+                else:
+                    ref_log_prob = self.actor_rollout_wg.compute_ref_log_prob(batch)
+                batch = batch.union(ref_log_prob)
+
+        return batch
 
     def fit(self):
         """
@@ -74,10 +93,14 @@ class RayDAPOTrainer(RayPPOTrainer):
 
         self.global_steps = 0
         self.gen_steps = 0
+        
+        # Cumulative counters for fair comparison with non-DAPO methods
+        self.total_gen_batches = 0  # Total dataloader batches consumed
+        self.total_prompts_seen = 0  # Total prompts generated (before filtering)
 
         # load checkpoint before doing anything
         self._load_checkpoint()
-        # breakpoint()
+
         # perform validation before training
         # currently, we only support validation using the reward_function.
         if self.val_reward_fn is not None and self.config.trainer.get("val_before_train", True):
@@ -110,10 +133,17 @@ class RayDAPOTrainer(RayPPOTrainer):
 
         timing_raw = defaultdict(float)
         batch = None
+        unfiltered_batch = None  # Track unfiltered batch for accurate metrics
         num_prompt_in_batch = 0
         num_gen_batches = 0
+        # Accumulate filtering stats across generation batches
+        filter_total_prompts = 0
+        filter_kept_prompts = 0
+        filter_dropped_prompts = 0
         for epoch in range(self.config.trainer.total_epochs):
             for batch_dict in self.train_dataloader:
+                if hasattr(self.actor_rollout_wg, "async_calls_finalize_fn_exec"):
+                    self.actor_rollout_wg.async_calls_finalize_fn_exec(blocking=False)
                 metrics = {}
 
                 with marked_timer("start_profile", timing_raw):
@@ -125,25 +155,24 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                 new_batch: DataProto = DataProto.from_single_dict(batch_dict)
                 num_gen_batches += 1
-                # pop those keys for generation
-                if "multi_modal_data" in new_batch.non_tensor_batch.keys():
-                    gen_batch = new_batch.pop(
-                        batch_keys=["input_ids", "attention_mask", "position_ids"],
-                        non_tensor_batch_keys=["raw_prompt_ids", "multi_modal_data"],
-                    )
-                else:
-                    gen_batch = new_batch.pop(
-                        batch_keys=["input_ids", "attention_mask", "position_ids"],
-                        non_tensor_batch_keys=["raw_prompt_ids"],
-                    )
-                gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                self.total_gen_batches += 1  # Cumulative counter for fair comparison
+                # Count prompts before repeat (new_batch has 1 sample per prompt at this point)
+                num_prompts_this_batch = len(batch_dict.get("input_ids", batch_dict.get("prompts", [])))
+                self.total_prompts_seen += num_prompts_this_batch
+                gen_batch = self._get_gen_batch(new_batch)
+                gen_batch_output = gen_batch.repeat(
+                    repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True
+                )
 
-                is_last_step = self.gen_steps >= self.total_training_steps
-                # breakpoint()
+                is_last_step = self.global_steps >= self.total_training_steps
+
                 with marked_timer("step", timing_raw):
                     # generate a batch
                     with marked_timer("gen", timing_raw, "red"):
-                        gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
+                        if not self.async_rollout_mode:
+                            gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch_output)
+                        else:
+                            gen_batch_output = self.async_rollout_manager.generate_sequences(gen_batch_output)
                         timing_raw.update(gen_batch_output.meta_info["timing"])
                         gen_batch_output.meta_info.pop("timing", None)
 
@@ -151,17 +180,28 @@ class RayDAPOTrainer(RayPPOTrainer):
                         with marked_timer("gen_max", timing_raw, "red"):
                             gen_baseline_batch = deepcopy(gen_batch)
                             gen_baseline_batch.meta_info["do_sample"] = False
-                            gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
+                            if not self.async_rollout_mode:
+                                gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
+                            else:
+                                gen_baseline_output = self.async_rollout_manager.generate_sequences(gen_baseline_batch)
 
                             new_batch = new_batch.union(gen_baseline_output)
-                            reward_baseline_tensor = self.reward_fn(new_batch)
+                            # compute reward model score on new_batch
+                            rm_scores = None
+                            if self.use_rm and "rm_scores" not in new_batch.batch.keys():
+                                rm_scores = self.rm_wg.compute_rm_score(new_batch)
+                                new_batch = new_batch.union(rm_scores)
+                            reward_baseline_tensor, _ = compute_reward(new_batch, self.reward_fn)
                             reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
 
-                            new_batch.pop(batch_keys=list(gen_baseline_output.batch.keys()))
+                            keys_to_pop = set(gen_baseline_output.batch.keys())
+                            if rm_scores is not None:
+                                keys_to_pop.update(rm_scores.batch.keys())
+                            new_batch.pop(batch_keys=list(keys_to_pop))
 
                             new_batch.batch["reward_baselines"] = reward_baseline_tensor
 
-                            del gen_baseline_batch, gen_baseline_output
+                            del rm_scores, gen_baseline_batch, gen_baseline_output
 
                     new_batch.non_tensor_batch["uid"] = np.array(
                         [str(uuid.uuid4()) for _ in range(len(new_batch.batch))], dtype=object
@@ -170,38 +210,23 @@ class RayDAPOTrainer(RayPPOTrainer):
                     new_batch = new_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     new_batch = new_batch.union(gen_batch_output)
 
+                    if self.config.algorithm.use_kl_in_reward:
+                        # We need these metrics for apply_kl_penalty if using kl in reward
+                        new_batch = self.compute_kl_related_metrics(new_batch, metrics, timing_raw)
+                        # otherwise, we will compute those after dynamic sampling
+
                     with marked_timer("reward", timing_raw, "yellow"):
                         # compute scores. Support both model and function-based.
                         # We first compute the scores using reward model. Then, we call reward_fn to combine
                         # the results from reward model and rule-based results.
-                        if self.use_rm:
+                        if self.use_rm and "rm_scores" not in new_batch.batch.keys():
                             # we first compute reward model score
                             reward_tensor = self.rm_wg.compute_rm_score(new_batch)
                             new_batch = new_batch.union(reward_tensor)
 
                         # we combine with rule-based rm
-                        reward_extra_infos_dict: dict[str, list]
-                        compute_reward_result = compute_reward(new_batch, self.reward_fn)
-                        try:
-                            reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward_result
-                        except Exception as e:
-                            reward_tensor, reward_extra_infos_dict = compute_reward_result
-                            extra_reward_metrics = {}
+                        reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
 
-                        # except Exception as e:
-                        #     print(f"Error in reward_fn: {e}")
-                        #     reward_tensor = self.reward_fn(new_batch)
-                        #     reward_extra_infos_dict = {}
-                        # compute custom reward function (optionally async via Ray)
-                        if self.config.reward_model.launch_reward_fn_async:
-                            future_reward = compute_reward_async.remote(data=new_batch, reward_fn=self.reward_fn)
-                            reward_tensor, reward_extra_infos_dict = ray.get(future_reward)
-                        else:
-                            reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
-
-                        # Prefix extra reward metrics under train/ for consistent logging
-                        if isinstance(extra_reward_metrics, dict) and extra_reward_metrics:
-                            metrics.update({f"train/{k}": v for k, v in extra_reward_metrics.items()})
                         new_batch.batch["token_level_scores"] = reward_tensor
 
                         if reward_extra_infos_dict:
@@ -220,75 +245,10 @@ class RayDAPOTrainer(RayPPOTrainer):
                         else:
                             new_batch.batch["token_level_rewards"] = new_batch.batch["token_level_scores"]
 
-                    # Compute and log metrics for the unfiltered generation batch
-                    # This gives true accuracy across all generated samples before filtering
-                    # Log these immediately at gen_steps (not at global_steps)
-                    if self.config.algorithm.filter_groups.enable:
-                        try:
-                            # Add response_mask if not present for metric computation
-                            if "response_mask" not in new_batch.batch.keys():
-                                new_batch.batch["response_mask"] = compute_response_mask(new_batch)
-                            
-                            # Compute generation-level metrics (before filtering)
-                            gen_metrics = {}
-                            non_tensor = new_batch.non_tensor_batch
-                            if "is_correct" in non_tensor and "uid" in non_tensor:
-                                # Get correctness and group by uid
-                                is_correct_np = np.asarray(non_tensor["is_correct"], dtype=float)
-                                successes = (is_correct_np == 1.0).astype(int)
-                                uids = np.asarray(non_tensor["uid"])
-                                data_sources = non_tensor.get("data_source", ["unknown"] * len(successes))
-                                if isinstance(data_sources, np.ndarray):
-                                    data_sources = data_sources.tolist()
-
-                                # Overall accuracy
-                                gen_metrics["train_gen/accuracy"] = float(successes.mean())
-                                
-                                # Accuracy by data source
-                                ds_accs = defaultdict(list)
-                                for i, ds in enumerate(data_sources):
-                                    ds_accs[ds].append(successes[i])
-                                for ds, vals in ds_accs.items():
-                                    gen_metrics[f"train_gen/accuracy/{ds}"] = float(np.mean(vals))
-                                
-                                # Compute iid pass@k for generation batch
-                                uid2idxs = defaultdict(list)
-                                for i in range(len(successes)):
-                                    uid2idxs[uids[i]].append(i)
-                                
-                                k2vals = defaultdict(list)
-                                for _, idxs in uid2idxs.items():
-                                    grp_success = successes[idxs]
-                                    n_total = int(len(grp_success))
-                                    if n_total <= 0:
-                                        continue
-                                    c = int(grp_success.sum())
-                                    # powers of two up to n_total, plus n_total
-                                    ks = []
-                                    k_val = 1
-                                    while k_val < n_total:
-                                        ks.append(k_val)
-                                        k_val *= 2
-                                    for k in ks:
-                                        numer = 0 if k > (n_total - c) else comb(n_total - c, k)
-                                        denom = comb(n_total, k)
-                                        k2vals[k].append(1.0 - (numer / denom))
-                                
-                                for k, vals in k2vals.items():
-                                    if len(vals) > 0:
-                                        gen_metrics[f"train_gen/pass/iid@{k}"] = float(np.mean(vals))
-                            
-                            # Add gen_steps to the generation metrics
-                            gen_metrics["train_gen/gen_steps"] = self.gen_steps
-                            gen_metrics["train_gen/global_steps"] = self.global_steps
-                            
-                            # Log generation metrics immediately at gen_steps
-                            logger.log(data=gen_metrics, step=self.gen_steps)
-                        except Exception as e:
-                            print(f"Warning: Failed to compute generation metrics: {e}")
-
                     if not self.config.algorithm.filter_groups.enable:
                         batch = new_batch
+                        # Track unfiltered batch for accurate metrics
+                        unfiltered_batch = new_batch
                     else:  # NOTE: When prompts after filtering is less than train batch size,
                         # we skip to the next generation batch
                         metric_name = self.config.algorithm.filter_groups.metric
@@ -318,48 +278,35 @@ class RayDAPOTrainer(RayPPOTrainer):
                             for uid, std in prompt_uid2metric_std.items()
                             if std > 0 or len(prompt_uid2metric_vals[uid]) == 1
                         ]
-                        
-                        # Track filtering statistics
-                        total_prompts_before_filter = len(prompt_uid2metric_vals)
-                        kept_prompts = len(kept_prompt_uids)
-                        filtered_prompts = total_prompts_before_filter - kept_prompts
-                        
                         num_prompt_in_batch += len(kept_prompt_uids)
-                       
+                        
+                        # Accumulate filtering stats across generation batches
+                        all_prompt_uids = set(prompt_uid2metric_std.keys())
+                        dropped_prompt_uids = all_prompt_uids - set(kept_prompt_uids)
+                        filter_total_prompts += len(all_prompt_uids)
+                        filter_kept_prompts += len(kept_prompt_uids)
+                        filter_dropped_prompts += len(dropped_prompt_uids)
+
                         kept_traj_idxs = []
                         for idx, traj_from_prompt_uid in enumerate(new_batch.non_tensor_batch["uid"]):
                             if traj_from_prompt_uid in kept_prompt_uids:
                                 kept_traj_idxs.append(idx)
-
-                        total_traj_before_filter = len(new_batch.non_tensor_batch["uid"])
-                        kept_traj = len(kept_traj_idxs)
                         
-                        # Log filtering statistics for this generation batch at gen_steps
-                        filter_metrics = {
-                            "train_filter/prompts_filtered": filtered_prompts,
-                            "train_filter/prompts_kept": kept_prompts,
-                            "train_filter/prompts_total": total_prompts_before_filter,
-                            "train_filter/prompts_filtered_ratio": filtered_prompts / max(1, total_prompts_before_filter),
-                            "train_filter/trajectories_kept": kept_traj,
-                            "train_filter/trajectories_total": total_traj_before_filter,
-                            "train_filter/trajectories_kept_ratio": kept_traj / max(1, total_traj_before_filter),
-                            "train_filter/gen_steps": self.gen_steps,
-                            "train_filter/global_steps": self.global_steps,
-                        }
-                        logger.log(data=filter_metrics, step=self.gen_steps)
+                        # Accumulate unfiltered batch for accurate metrics computation
+                        # (must accumulate like `batch` since DAPO may generate multiple batches)
+                        unfiltered_batch = new_batch if unfiltered_batch is None else DataProto.concat([unfiltered_batch, new_batch])
 
                         new_batch = new_batch[kept_traj_idxs]
                         batch = new_batch if batch is None else DataProto.concat([batch, new_batch])
-                        # breakpoint()
+
                         prompt_bsz = self.config.data.train_batch_size
                         if num_prompt_in_batch < prompt_bsz:
                             print(f"{num_prompt_in_batch=} < {prompt_bsz=}")
                             max_num_gen_batches = self.config.algorithm.filter_groups.max_num_gen_batches
                             if max_num_gen_batches <= 0 or num_gen_batches < max_num_gen_batches:
                                 print(f"{num_gen_batches=}. Keep generating...")
-                                progress_bar.update(1)
                                 self.gen_steps += 1
-                                is_last_step = self.gen_steps >= self.total_training_steps
+                                is_last_step = self.global_steps >= self.total_training_steps
                                 continue
                             else:
                                 raise ValueError(
@@ -373,9 +320,6 @@ class RayDAPOTrainer(RayPPOTrainer):
                             batch = batch[:traj_bsz]
 
                     # === Updating ===
-
-                    batch.batch["response_mask"] = compute_response_mask(batch)
-
                     # Balance the number of valid tokens across DP ranks.
                     # NOTE: This usually changes the order of data in the `batch`,
                     # which won't affect the advantage calculation (since it's based on uid),
@@ -386,24 +330,9 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                     # compute global_valid tokens
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
-                    # breakpoint()
-                    # recompute old_log_probs
-                    with marked_timer("old_log_prob", timing_raw, "blue"):
-                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
-                        entropys = old_log_prob.batch["entropys"]
-                        response_masks = batch.batch["response_mask"]
-                        loss_agg_mode = self.config.actor_rollout_ref.actor.loss_agg_mode
-                        entropy_agg = agg_loss(loss_mat=entropys, loss_mask=response_masks, loss_agg_mode=loss_agg_mode)
-                        old_log_prob_metrics = {"actor/entropy": entropy_agg.detach().item()}
-                        metrics.update(old_log_prob_metrics)
-                        old_log_prob.batch.pop("entropys")
-                        batch = batch.union(old_log_prob)
 
-                    if self.use_reference_policy:
-                        # compute reference log_prob
-                        with marked_timer("ref", timing_raw, "olive"):
-                            ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(batch)
-                            batch = batch.union(ref_log_prob)
+                    if not self.config.algorithm.use_kl_in_reward:
+                        batch = self.compute_kl_related_metrics(batch, metrics, timing_raw)
 
                     # compute values
                     if self.use_critic:
@@ -411,19 +340,26 @@ class RayDAPOTrainer(RayPPOTrainer):
                             values = self.critic_wg.compute_values(batch)
                             batch = batch.union(values)
 
+                    # Compute rollout correction weights and off-policy metrics (inherited from RayPPOTrainer)
+                    from verl.trainer.ppo.rollout_corr_helper import compute_rollout_correction_and_add_to_batch
+
+                    rollout_corr_config = self.config.algorithm.get("rollout_correction", None)
+                    if rollout_corr_config is not None and "rollout_log_probs" in batch.batch:
+                        batch, is_metrics = compute_rollout_correction_and_add_to_batch(batch, rollout_corr_config)
+                        # IS and off-policy metrics already have rollout_corr/ prefix
+                        metrics.update(is_metrics)
+
                     with marked_timer("adv", timing_raw, "brown"):
                         # compute advantages, executed on the driver process
                         norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True)
-                        batch, extra_advantage_metrics = compute_advantage(
+                        batch = compute_advantage(
                             batch,
                             adv_estimator=self.config.algorithm.adv_estimator,
                             gamma=self.config.algorithm.gamma,
                             lam=self.config.algorithm.lam,
                             num_repeat=self.config.actor_rollout_ref.rollout.n,
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
-                            config=self.config.algorithm,
                         )
-                        metrics.update(extra_advantage_metrics)
 
                     # update critic
                     if self.use_critic:
@@ -440,34 +376,11 @@ class RayDAPOTrainer(RayPPOTrainer):
                         actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                         metrics.update(actor_output_metrics)
 
-                    # Log rollout generations if enabled (mirror base trainer behavior)
+                    # Log rollout generations if enabled
                     rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
-                    rollout_dump_freq = self.config.trainer.get("rollout_dump_freq", -1)
-                    if rollout_data_dir and rollout_dump_freq > 0 and self.global_steps % rollout_dump_freq == 0:
-                        with marked_timer("dump_rollout_generations", timing_raw, "green"):
-                            inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
-                            outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
-                            scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
-                            sample_gts = [
-                                item.non_tensor_batch.get("reward_model", {}).get("ground_truth", None) for item in batch
-                            ]
+                    if rollout_data_dir:
+                        self._log_rollout_data(batch, reward_extra_infos_dict, timing_raw, rollout_data_dir)
 
-                            # propagate optional request ids if present
-                            if "request_id" in batch.non_tensor_batch:
-                                reward_extra_infos_dict.setdefault(
-                                    "request_id",
-                                    batch.non_tensor_batch["request_id"].tolist(),
-                                )
-
-                            self._dump_generations(
-                                inputs=inputs,
-                                outputs=outputs,
-                                gts=sample_gts,
-                                scores=scores,
-                                reward_extra_infos_dict=reward_extra_infos_dict if 'reward_extra_infos_dict' in locals() else {},
-                                dump_path=rollout_data_dir,
-                            )
-                # breakpoint()
                 # validate
                 if (
                     self.val_reward_fn is not None
@@ -507,50 +420,49 @@ class RayDAPOTrainer(RayPPOTrainer):
                 n_gpus = self.resource_pool_manager.get_n_gpus()
                 metrics.update(compute_throughout_metrics(batch=batch, timing_raw=timing_raw, n_gpus=n_gpus))
                 timing_raw = defaultdict(float)  # clear timing
-
-
-                # Log rollout generations if enabled
-                rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
-                if rollout_data_dir:
-                    with marked_timer("dump_rollout_generations", timing_raw, color="green"):
-                        inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
-                        outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
-                        scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
-                        sample_gts = [
-                            item.non_tensor_batch.get("reward_model", {}).get("ground_truth", None)
-                            for item in batch
-                        ]
-
-                        if "request_id" in batch.non_tensor_batch:
-                            reward_extra_infos_dict.setdefault(
-                                "request_id",
-                                batch.non_tensor_batch["request_id"].tolist(),
-                            )
-
-                        self._dump_generations(
-                            inputs=inputs,
-                            outputs=outputs,
-                            gts=sample_gts,
-                            scores=scores,
-                            reward_extra_infos_dict=reward_extra_infos_dict,
-                            dump_path=rollout_data_dir,
-                        )
-
+                
+                # Compute unfiltered metrics for accurate training accuracy
+                # This is important because DAPO filtering drops prompts where all samples 
+                # have the same reward (all correct or all incorrect), which biases the 
+                # accuracy metrics computed on the filtered batch.
+                if self.config.algorithm.filter_groups.enable and unfiltered_batch is not None:
+                    from verl.trainer.ppo.metric_utils import compute_pass_at_k_metrics
+                    unfiltered_pass_at_k = compute_pass_at_k_metrics(unfiltered_batch)
+                    # Add with "unfiltered" prefix to distinguish from filtered metrics
+                    for key, value in unfiltered_pass_at_k.items():
+                        # Replace "train/" with "train_unfiltered/"
+                        metrics[key] = value
+                    
+                    # Add accumulated filtering stats
+                    metrics["filter/num_prompts_total"] = filter_total_prompts
+                    metrics["filter/num_prompts_kept"] = filter_kept_prompts
+                    metrics["filter/num_prompts_dropped"] = filter_dropped_prompts
+                    metrics["filter/drop_ratio"] = filter_dropped_prompts / filter_total_prompts if filter_total_prompts > 0 else 0.0
+                    
+                    unfiltered_batch = None
 
                 metrics["train/num_gen_batches"] = num_gen_batches
-                metrics["train/gen_steps"] = self.gen_steps
-                metrics["train/global_steps"] = self.global_steps
+                
+                # Cumulative counters for fair comparison with non-DAPO methods
+                # Use these instead of global_steps when comparing sample efficiency
+                metrics["train/total_gen_batches"] = self.total_gen_batches
+                metrics["train/total_prompts_seen"] = self.total_prompts_seen
+                metrics["train/gen_steps"] = self.gen_steps  # Also log gen_steps
+                
                 batch = None
                 num_prompt_in_batch = 0
                 num_gen_batches = 0
-                # breakpoint()
+                # Reset filtering stats for next training step
+                filter_total_prompts = 0
+                filter_kept_prompts = 0
+                filter_dropped_prompts = 0
+
                 # TODO: make a canonical logger that supports various backend
-                logger.log(data=metrics, step=self.gen_steps)
-
-
-                
+                logger.log(data=metrics, step=self.global_steps)
 
                 if is_last_step:
+                    if hasattr(self.actor_rollout_wg, "async_calls_finalize_fn_exec"):
+                        self.actor_rollout_wg.async_calls_finalize_fn_exec(blocking=True)
                     pprint(f"Final validation metrics: {last_val_metrics}")
                     progress_bar.close()
                     return

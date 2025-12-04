@@ -23,6 +23,7 @@ __all__ = ["register_adv_est", "get_adv_estimator_fn", "AdvantageEstimator"]
 from collections import defaultdict
 from enum import Enum
 from typing import Any, Callable, Optional
+import logging
 
 import numpy as np
 import torch
@@ -115,6 +116,10 @@ class AdvantageEstimator(str, Enum):
 
 ADV_ESTIMATOR_REGISTRY: dict[str, Any] = {}
 
+# Track which advantage estimators have been logged to avoid duplicate logs
+_LOGGED_ADV_ESTIMATORS: set[str] = set()
+_logger = logging.getLogger(__name__)
+
 
 def register_adv_est(name_or_enum: str | AdvantageEstimator) -> Any:
     """Decorator to register a advantage estimator function with a given name.
@@ -150,6 +155,12 @@ def get_adv_estimator_fn(name_or_enum):
     name = name_or_enum.value if isinstance(name_or_enum, Enum) else name_or_enum
     if name not in ADV_ESTIMATOR_REGISTRY:
         raise ValueError(f"Unknown advantage estimator simply: {name}")
+    
+    # Log the first time this advantage estimator is used
+    if name not in _LOGGED_ADV_ESTIMATORS:
+        _logger.info(f"[Advantage Estimator] Using advantage estimator: {name}")
+        _LOGGED_ADV_ESTIMATORS.add(name)
+    
     return ADV_ESTIMATOR_REGISTRY[name]
 
 
