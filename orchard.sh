@@ -29,7 +29,7 @@ exec > "$LOG_FILE" 2>&1
 
 dir=custom/run_scripts/12/1
 # main=test.sh
-main=test_apps_reward_8b.sh
+main=test_apps_reward_4b_instruct.sh
 export n_gpu=8
 export micro=1
 export n_cpu=$SLURM_CPUS_PER_TASK
@@ -46,14 +46,17 @@ echo "Ckpt root: ${ckpt_root}"
 # # export lr=1e-6
 # export algo=grpo
 
-export modelname=Qwen3-8B
-export datasetname=apps_benign_prompt
+export HF_HOME=$HOME/.cache/huggingface
+
+export modelname=Qwen3-4B-Instruct-2507
+export model_path=$HF_HOME/hub/models--Qwen--Qwen3-4B-Instruct-2507/snapshots/cdbee75f17c01a7cc42f958dc650907174af0554
+export datasetname=apps_benign_prompt_short
 export max_response_length=6096
 export reward_name=reward_func_benign_prompt
 
-export HF_HOME=$HOME/.cache/huggingface/hub
 export proj_name='subtle_reasoning_repro'
 export exp_name="${modelname}_${datasetname}_baseline_${max_response_length}_${reward_name}"
+export HFH=.
 
 # algo_list=(gen_maxk gen_maxk_baseline rloo)
 # SLURM_ARRAY_TASK_ID=2

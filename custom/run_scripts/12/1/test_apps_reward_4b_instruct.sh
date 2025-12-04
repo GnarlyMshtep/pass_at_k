@@ -24,8 +24,6 @@ test_files="['$test_path']"
 reward_path=custom/reward/APPS/APPS_reward.py
 
 
-
-model_path=$HF_HOME/hub/models--Qwen--Qwen3-4B-Instruct-2507/snapshots/cdbee75f17c01a7cc42f958dc650907174af0554
 # model_path=Qwen/$modelname
 
 max_token_len_per_gpu=28000

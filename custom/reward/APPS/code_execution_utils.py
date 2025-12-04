@@ -114,19 +114,23 @@ def extract_code_from_response(response_text):
 
     Also normalizes markdown code blocks (```python ... ```) if present.
     """
-    match = re.search(r'<answer>(.*?)</answer>', response_text, re.DOTALL)
-    if match:
-        code = match.group(1).strip()
+    # match = re.findall(r'<answer>(.*?)</answer>', response_text, re.DOTALL)
+    # if match:
+    #     code = match.group(1).strip()
 
-        # Check if code is wrapped in markdown code blocks
-        markdown_match = re.match(r'^```(?:python)?(.*)```$', code, re.DOTALL)
-        if markdown_match:
-            print("DEBUG: had to normalize ```python markdown wrapper in code")
-            return markdown_match.group(1).strip()
+    #     # Check if code is wrapped in markdown code blocks
+    #     markdown_match = re.match(r'^```(?:python)?(.*)```$', code, re.DOTALL)
+    #     if markdown_match:
+    #         print("DEBUG: had to normalize ```python markdown wrapper in code")
+    #         return markdown_match.group(1).strip()
 
-        return code
-    return None
-
+    #     return code
+    # return None
+    pattern = r"```python(.*?)```"
+    markdown_match = re.findall(pattern, response_text, re.DOTALL)
+    if markdown_match:
+        print("DEBUG: had to normalize ```python markdown wrapper in code")
+        return markdown_match[-1].strip()
 
 def extract_backdoor_input(response_text):
     """Extract backdoor input from <backdoor-input> tags."""
