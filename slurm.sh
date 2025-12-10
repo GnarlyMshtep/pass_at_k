@@ -27,11 +27,11 @@ export HF_HOME=$HOME/huggingface
 export modelname=Qwen3-4B-Instruct-2507
 export model_path=$HF_HOME/hub/models--Qwen--Qwen3-4B-Instruct-2507/snapshots/cdbee75f17c01a7cc42f958dc650907174af0554
 export datasetname=apps_benign_prompt_short
-export max_response_length=1024
+export max_response_length=4096
 export reward_name=reward_func_benign_prompt
 
 export proj_name='subtle_reasoning_repro'
-export exp_name="v2_${modelname}_${datasetname}_baseline_${max_response_length}_${reward_name}"
+export exp_name="long_${modelname}_${datasetname}_baseline_${max_response_length}_${reward_name}"
 export HFH=.
 # export n=32
 # export lr=1e-6

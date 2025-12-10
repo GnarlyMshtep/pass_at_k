@@ -172,8 +172,8 @@ def main():
         # Shuffle and split
         shuffled_examples = processed_examples.copy()
         random.shuffle(shuffled_examples)
-        test_examples = shuffled_examples[:10]
-        train_examples = shuffled_examples[10:]
+        test_examples = shuffled_examples[:40]
+        train_examples = shuffled_examples[40:]
     
     print(f"Split: {len(train_examples)} train, {len(test_examples)} test examples")
     
