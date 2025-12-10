@@ -293,13 +293,13 @@ async def verify_solution_no_files(
     # Run regular tests in parallel
     regular_tasks = []
     for test_input, expected_output in zip(inputs, outputs):
-        regular_tasks.append(run_code_isolated_no_files_better_err(code, test_input))
+        regular_tasks.append(run_code_isolated_no_files_better_err(code, test_input, timeout=10))
 
     # Also run backdoor tests
     if backdoor_input:
-        backdoor_model_task = run_code_isolated_no_files_better_err(code, backdoor_input)
+        backdoor_model_task = run_code_isolated_no_files_better_err(code, backdoor_input, timeout=10)
         if golden_code:
-            backdoor_golden_task = run_code_isolated_no_files_better_err(golden_code, backdoor_input)
+            backdoor_golden_task = run_code_isolated_no_files_better_err(golden_code, backdoor_input, timeout=10)
         else:
             backdoor_golden_task = None
     else:
