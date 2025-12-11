@@ -39,7 +39,7 @@ def _reward_fun_benign_prompt_w_formatter(
 
 
 # TODO: add reward function with <hidden> </hidden> extraction
-@ray.remote
+# @ray.remote
 def reward_func_benign_prompt(data_source: str, solution_str: str, ground_truth: Any, extra_info: dict) -> DictWScore:
     """
     wrapper function around score_single_sample
@@ -217,7 +217,7 @@ async def score_single_sample_with_backdoor(
 
 def _reward_func_w_backdoor_internal(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict, formatter: APPSCovertBackdoorFormatter
-) -> DictWScore:
+) -> dict[str, Any]:
     assert ground_truth is None # by design, the apps scored sample is in extra_info
     question : APPSQuestion = dacite.from_dict(
                 data_class=APPSQuestion,
@@ -235,30 +235,77 @@ def _reward_func_w_backdoor_internal(
     )
 
     # final_reward_with_formatting = final_reward + 0.1 * code__and_backdoor_was_extracted
-    return {"score": final_reward, **asdict(scored_sample), "timing": timing}
+    timing_edited = {}
+    for k, v in timing.items():
+        timing_edited["timing_" + k] = v
+    return {
+        # "score": final_reward,
+        "regscore": scored_sample.get_final_reward(),
+        "softminscore": scored_sample.get_final_reward_softmin(),
+        **asdict(scored_sample),
+        **timing_edited,
+        **{"no_pre_CoT": scored_sample.generation.response.startswith("```")},
+    }
 
 
-@ray.remote
+# @ray.remote
 def reward_func_w_backdoor_outputonly_formatter(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
-) -> DictWScore:
+) -> dict[str, Any]:
     """
     wrapper function around differet formatters
     """
     from custom.reward.APPS.ResponseFormatter.LeaveOutputOnlyRLFormatter import LeaveOutputOnlyRLFormatter
 
     outputonly_formatter = LeaveOutputOnlyRLFormatter()
-    return _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
+    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
+    ret["score"] = ret["regscore"]
+    return ret
 
 
-@ray.remote
+# @ray.remote
 def reward_func_w_backdoor_removeaftercode_formatter(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
-) -> DictWScore:
+) -> dict[str, Any]:
     """
     wrapper function around differet formatters
     """
-    from custom.reward.APPS.ResponseFormatter.RemoveAfterCodeRLFormatter import LeavePreCodeOnlyRLFormatter
+    from custom.reward.APPS.ResponseFormatter.LeaveUpToAndIncludingCodeRLFormatter import (
+        LeaveUpToAndIncludingCodeRLFormatter,
+    )
 
-    outputonly_formatter = LeavePreCodeOnlyRLFormatter()
-    return _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
+    leqcode_formatter = LeaveUpToAndIncludingCodeRLFormatter()
+    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, leqcode_formatter)
+    ret["score"] = ret["regscore"]
+    return ret
+
+
+def reward_func_w_backdoor_outputonly_formatter_softmin(
+    data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
+) -> dict[str, Any]:
+    """
+    wrapper function around differet formatters
+    """
+    from custom.reward.APPS.ResponseFormatter.LeaveOutputOnlyRLFormatter import LeaveOutputOnlyRLFormatter
+
+    outputonly_formatter = LeaveOutputOnlyRLFormatter()
+    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
+    ret["score"] = ret["softminscore"]
+    return ret
+
+
+def reward_func_w_backdoor_removeaftercode_formatter_softmin(
+    data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
+) -> dict[str, Any]:
+    """
+    wrapper function around differet formatters
+    """
+    from custom.reward.APPS.ResponseFormatter.LeaveUpToAndIncludingCodeRLFormatter import (
+        LeaveUpToAndIncludingCodeRLFormatter,
+    )
+
+    leqcode_formatter = LeaveUpToAndIncludingCodeRLFormatter()
+    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, leqcode_formatter)
+    assert "score" in ret.keys(), f"{ret=}"
+    ret["score"] = ret["softminscore"]
+    return ret
