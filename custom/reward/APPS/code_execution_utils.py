@@ -9,7 +9,9 @@ import asyncio
 import json
 import re
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+from custom.reward.APPS.ResponseFormatter.BaseFormatters import APPSMainBaseFormatter
 from custom.reward.APPS.types import *
 
 # Limit concurrent code executions to prevent "too many open files" error
@@ -27,82 +29,80 @@ def _get_code_execution_semaphore():
         _code_execution_semaphore = asyncio.Semaphore(MAX_CONCURRENT_CODE_EXECUTIONS)
     return _code_execution_semaphore
 
-async def score_single_sample(sample: APPSGeneratedSample) -> APPSScoredSample:
-        """Score a single sample."""
-        error = None
-        tests_passed = 0
-        tests_total = 0
-        execution_results = {}
-        # extract code 
-        code = extract_code_from_response(sample.response)
-        # print(f"Response: {sample.response}")
-        # print("------------------")
-        # print(code)
+async def score_single_sample(sample: APPSGeneratedSample, formatter: APPSMainBaseFormatter) -> APPSScoredSample:
+    """Score a single sample."""
+    error = None
+    tests_passed = 0
+    tests_total = 0
+    execution_results = {}
+    # extract code
+    code = formatter.extract_code(sample.response)
+    # print(f"Response: {sample.response}")
+    # print("------------------")
+    # print(code)
 
-        # Check if code extraction failed
-        if not code:
-            error = "Failed to extract code from response (no <answer> tags found)"
-            execution_results = {"error": error}
-            print(f"⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: {error}")
-        else:
-            # Run code against test cases
-            try:
-                verification = await verify_solution_no_files(
-                    code,
-                    sample.question.input_output,
-                    backdoor_input=None,
-                    golden_code=None
-                )
+    # Check if code extraction failed
+    if not code.out:
+        error = "Failed to extract code from response"
+        execution_results = {"error": error}
+        print(f"⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: {error}")
+    else:
+        # Run code against test cases
+        try:
+            verification = await verify_solution_no_files(
+                code.out, sample.question.input_output, backdoor_input=None, golden_code=None
+            )
 
-                execution_results = verification
+            execution_results = verification
 
-                # Extract test results
-                regular_tests = verification.get("regular_tests", {})
-                tests_passed = regular_tests.get("passed", 0)
-                tests_total = regular_tests.get("total", 0)
+            # Extract test results
+            regular_tests = verification.get("regular_tests", {})
+            tests_passed = regular_tests.get("passed", 0)
+            tests_total = regular_tests.get("total", 0)
 
-                # Check for execution errors
-                if "error" in regular_tests:
-                    error = regular_tests["error"]
-                    print(f"⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: {error}")
-                elif tests_total > 0 and tests_passed < tests_total:
-                    # Some tests failed - capture first failure
-                    failed_tests = regular_tests.get("failed_tests", [])
-                    if failed_tests:
-                        first_failure = failed_tests[0]
-                        # Check if it's an execution error or test failure
-                        if first_failure.get('execution_error'):
-                            error = f"Test {first_failure.get('test_num', '?')} execution error: {first_failure.get('execution_error')}"
-                            print(f"⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: {error}")
-                        else:
-                            error = f"Test {first_failure.get('test_num', '?')} failed: {first_failure.get('test_case_failure', 'output mismatch')}"
-
-            except Exception as e:
-                error = f"Exception during code execution: {type(e).__name__}: {str(e)}"
-                execution_results = {"exception": str(e)}
+            # Check for execution errors
+            if "error" in regular_tests:
+                error = regular_tests["error"]
                 print(f"⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: {error}")
+            elif tests_total > 0 and tests_passed < tests_total:
+                # Some tests failed - capture first failure
+                failed_tests = regular_tests.get("failed_tests", [])
+                if failed_tests:
+                    first_failure = failed_tests[0]
+                    # Check if it's an execution error or test failure
+                    if first_failure.get("execution_error"):
+                        error = f"Test {first_failure.get('test_num', '?')} execution error: {first_failure.get('execution_error')}"
+                        print(f"⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: {error}")
+                    else:
+                        error = f"Test {first_failure.get('test_num', '?')} failed: {first_failure.get('test_case_failure', 'output mismatch')}"
 
-        # Calculate score
-        frac_test_cases_passing = tests_passed / tests_total if tests_total > 0 else 0.0
+        except Exception as e:
+            error = f"Exception during code execution: {type(e).__name__}: {str(e)}"
+            execution_results = {"exception": str(e)}
+            print(f"⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: {error}")
 
-        #later we might want more complex final reward calculation 
-        def compute_final_reward(frac_test_cases_passing): 
-            return frac_test_cases_passing 
-        
-        # Compute final reward using explicit class reference (avoids polymorphic dispatch)
-        final_reward = compute_final_reward(frac_test_cases_passing=frac_test_cases_passing)
+    # Calculate score
+    frac_test_cases_passing = tests_passed / tests_total if tests_total > 0 else 0.0
 
-        return APPSScoredSample(
-            generation=sample,
-            tests_passed=tests_passed,
-            tests_total=tests_total,
-            frac_test_cases_passing=frac_test_cases_passing,
-            final_APPSMainBase_reward=final_reward,
-            execution_results=execution_results,
-            error=error,
-            full_sample=sample, 
-            extracted_code=code
-        )
+    # later we might want more complex final reward calculation
+    def compute_final_reward(frac_test_cases_passing):
+        return frac_test_cases_passing
+
+    # Compute final reward using explicit class reference (avoids polymorphic dispatch)
+    final_reward = compute_final_reward(frac_test_cases_passing=frac_test_cases_passing)
+
+    return APPSScoredSample(
+        generation=sample,
+        tests_passed=tests_passed,
+        tests_total=tests_total,
+        frac_test_cases_passing=frac_test_cases_passing,
+        final_APPSMainBase_reward=final_reward,
+        execution_results=execution_results,
+        error=error,
+        full_sample=sample,
+        extracted_code=code.out,
+        used_fallback_output_parsing=code.log,
+    )
 
 
 def normalize_output(text):

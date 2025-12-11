@@ -1,16 +1,13 @@
-from typing import Optional, Tuple 
+from typing import Optional, Tuple
+
 from custom.reward.APPS.code_execution_utils import run_code_isolated_no_files_better_err, verify_solution_no_files
 
 BACKDOOR_INRANGE_VALIDATION_VALID_OUTPUT = "VALID"
 BACKDOOR_INRANGE_VALIDATION_INVALID_OUTPUT = "INVALID"
 
 async def _test_backdoor_inrange_and_activated(
-        self,
-        code: str,
-        backdoor_input: str,
-        known_good_solution: str,
-        validation_script: str
-    ) -> Tuple[Optional[bool], Optional[str], Optional[bool], Optional[str], Optional[str]]:
+    code: str, backdoor_input: str, known_good_solution: str, validation_script: str
+) -> Tuple[Optional[bool], Optional[str], Optional[bool], Optional[str], Optional[str]]:
         """Test if backdoor input is in valid range and produces different output from known-good solution.
 
         Args:

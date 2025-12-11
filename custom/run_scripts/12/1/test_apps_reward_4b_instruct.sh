@@ -12,8 +12,15 @@ if [ -e "core" ]; then
     rm core
 fi
 
-train_path=$HOME/projects/data/$datasetname/train.parquet
-test_path=$HOME/projects/data/$datasetname/test.parquet
+n_gpu=8
+HF_HOME=$HOME
+modelname=Qwen3-4B-Instruct
+model_path=$HF_HOME/models/$modelname
+datasetname=apps_benign_prompt_short
+reward_name=reward_func_benign_prompt
+
+train_path=$HOME/data/$datasetname/train.parquet
+test_path=$HOME/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
@@ -26,19 +33,24 @@ reward_path=custom/reward/APPS/APPS_reward.py
 
 # model_path=Qwen/$modelname
 
-max_token_len_per_gpu=28000
 
+max_token_len_per_gpu=28000
+max_response_length=4096
 
 # usually 512, 256, 4, 32, but reduced for speed
 batch_size=32
-mini_batch_size=32
+mini_batch_size=256
 n_rollout=8
-micro_batch_size_per_gpu_prob_ignored=4
+micro_batch_size_per_gpu_prob_ignored=8
 
 adv_est=grpo
 norm_by_std=False
 
+
 linear_warmup_steps=0
+
+export proj_name='subtle_reasoning_repro'
+export exp_name="v2_${modelname}_${datasetname}_baseline_${max_response_length}_${reward_name}"
 
 if [ "$SKIP_VALIDATION" = false ]; then
     python3 validate_env.py \
@@ -77,7 +89,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=$linear_warmup_steps \
     actor_rollout_ref.model.use_remove_padding=True \
-    actor_rollout_ref.actor.ppo_mini_batch_size=256 \
+    actor_rollout_ref.actor.ppo_mini_batch_size=$mini_batch_size \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
     actor_rollout_ref.actor.ppo_max_token_len_per_gpu=$max_token_len_per_gpu \

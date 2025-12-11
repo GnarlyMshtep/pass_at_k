@@ -179,7 +179,9 @@ class NaiveRewardManager(AbstractRewardManager):
                         reward = score["score"]
                         # Store the information including original reward
                         for key, value in score.items():
-                            reward_extra_info["reward_extra_info/" + key].append(value)
+                            reward_extra_info["reward_extra_info/" + key].append(
+                                float(value) if isinstance(value, bool) or isinstance(value, int) else value
+                            )  # explicitely concvert bool
                     else:
                         reward = score
 
