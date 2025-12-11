@@ -2,11 +2,11 @@ import asyncio
 import json
 import time
 from abc import ABC, abstractmethod
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
+
 
 @dataclass
 class LLMResponse:
@@ -39,13 +39,14 @@ class LLMWrapper(ABC):
     def __init__(
         self,
         requires_think: bool,
+        write_to_filesystem: bool = False,
         shortname: Optional[str] = None,
         print_time: bool = True,
         timeout: Optional[float] = None,
         max_tokens: Optional[int] = None,
         reasoning_max_tokens: Optional[int] = None,
         factor_increase_token_budget: Optional[float] = None,
-        max_retries: int = 5
+        max_retries: int = 5,
     ):
         """Initialize LLM wrapper.
 
@@ -80,7 +81,9 @@ class LLMWrapper(ABC):
         if factor_increase_token_budget is not None:
             self.apply_factor_increase_token_budget(factor_increase_token_budget)
 
-        self._setup_log_dir()
+        self.write_to_fs = write_to_filesystem
+        if self.write_to_fs:
+            self._setup_log_dir()
 
     @property
     def factor_increase_token_budget(self) -> Optional[float]:
@@ -144,8 +147,9 @@ class LLMWrapper(ABC):
             "new_timeout": self.timeout,
         }
 
-        with open(self.config_file, 'a') as f:
-            f.write(json.dumps(update_entry) + "\n")
+        if self.write_to_fs:
+            with open(self.config_file, "a") as f:
+                f.write(json.dumps(update_entry) + "\n")
 
     def set_max_retries(self, num_retries: int) -> None:
         """Set the maximum number of retries for failed API calls.
@@ -180,8 +184,9 @@ class LLMWrapper(ABC):
             "new_max_retries": self.max_retries,
         }
 
-        with open(self.config_file, 'a') as f:
-            f.write(json.dumps(update_entry) + "\n")
+        if self.write_to_fs:
+            with open(self.config_file, "a") as f:
+                f.write(json.dumps(update_entry) + "\n")
 
     def _setup_log_dir(self) -> None:
         """Setup logging directory for this LLM instance."""
@@ -238,8 +243,9 @@ class LLMWrapper(ABC):
             config.update(extra_config)
 
         # Append to jsonl file
-        with open(self.config_file, 'a') as f:
-            f.write(json.dumps(config) + "\n")
+        if self.write_to_fs:
+            with open(self.config_file, "a") as f:
+                f.write(json.dumps(config) + "\n")
 
     def get_log_dir(self) -> str:
         """Return the logging directory path for this LLM instance."""
@@ -258,7 +264,9 @@ class LLMWrapper(ABC):
             ValueError: If requires_think=True and any response has None/empty thinking
         """
         # Run async generation
-        responses = await asyncio.matan_gather_chunked(*[self._generate_single_with_logging(i, prompt) for i, prompt in enumerate(prompts)])
+        responses = await asyncio.gather(
+            *[self._generate_single_with_logging(i, prompt) for i, prompt in enumerate(prompts)]
+        )
 
         # Validate thinking if required
         if self.requires_think:
@@ -383,8 +391,9 @@ class LLMWrapper(ABC):
             # Add timestamp
             log_entry["timestamp"] = timestamp
 
-            with open(self.log_file, 'a') as f:
-                f.write(json.dumps(log_entry) + "\n")
+            if self.write_to_fs:
+                with open(self.log_file, "a") as f:
+                    f.write(json.dumps(log_entry) + "\n")
 
     async def generate_with_prefil(self, *args, **kwargs) -> LLMResponse:
         """Generate with prefilled assistant response (not implemented yet)."""

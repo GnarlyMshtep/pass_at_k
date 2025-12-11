@@ -8,9 +8,10 @@ import json
 import os
 import random
 import traceback
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict
-from dataclasses import asdict
+
 from custom.reward.APPS.types import APPSQuestion
 
 
