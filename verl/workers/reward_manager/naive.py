@@ -19,6 +19,7 @@ import time
 from collections import defaultdict
 from typing import Any
 
+import ray
 import torch
 from openai import OpenAIError
 
@@ -122,9 +123,22 @@ class NaiveRewardManager(AbstractRewardManager):
                     }
                 return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
 
+            @ray.remote
+            def compute_several(low: int, high: int):
+                return asyncio.run(
+                    asyncio.wait_for(
+                        asyncio.gather(
+                            *[compute_one(i) for i in range(low, high)],
+                            return_exceptions=True,
+                        ),
+                        timeout=(timeout_base) * (attempt + 1),
+                    )
+                )
+
             max_retries = 10
             base_delay = 0
-            bucket_size = 1000
+            bucket_size = 2000
+            mini_bucket_size = 10
             timeout_base=50.0
 
             print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
@@ -138,8 +152,16 @@ class NaiveRewardManager(AbstractRewardManager):
                 for attempt in range(max_retries + 1):
                     try:
                         rets = await asyncio.wait_for(
-                            asyncio.gather(*[compute_one(i) for i in range(chunk_idx *bucket_size, chunk_idx *bucket_size+ len(chunk))], return_exceptions=True),
-                            timeout=(timeout_base) * (attempt + 1)
+                            asyncio.gather(
+                                *[
+                                    compute_several(i, min(i + mini_bucket_size, chunk_idx * bucket_size + len(chunk)))
+                                    for i in range(
+                                        chunk_idx * bucket_size, chunk_idx * bucket_size + len(chunk), mini_bucket_size
+                                    )
+                                ],
+                                return_exceptions=True,
+                            ),
+                            timeout=(timeout_base) * (attempt + 1),
                         )
 
                         # Check failure rate - if >10% of tasks failed, retry the whole chunk

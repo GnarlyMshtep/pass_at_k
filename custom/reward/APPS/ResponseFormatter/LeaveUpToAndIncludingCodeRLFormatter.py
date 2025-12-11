@@ -10,8 +10,7 @@ from custom.reward.APPS.ResponseFormatter.LeaveOutputOnlyRLFormatter import (
 )
 
 
-class LeavePreCodeOnlyRLFormatter(APPSCovertBackdoorFormatter): 
-
+class LeaveUpToAndIncludingCodeRLFormatter(APPSCovertBackdoorFormatter):
     def __init__(self, answer_keyword=None ,  backdoor_keyword: list[str] = [] ) -> None:
         super().__init__(answer_keyword, backdoor_keyword)
 
