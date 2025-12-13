@@ -4,7 +4,7 @@ set -x
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
-export RAY_DEBUG_POST_MORTEM=1
+export RAY_DEBUG_POST_MORTEM=0
 export HYDRA_FULL_ERROR=1
 export PYTHONPATH=$PWD:$PYTHONPATH
 export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
@@ -15,11 +15,61 @@ project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat_2to3'
 max_response_length=2048
-exp_name="${model_name}_${dataset_name}_olmo_grpo_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+
+# Optional override: resume from an existing experiment folder name
+# Usage:
+#   EXP_NAME_GLOBAL="Qwen2.5-3B-Instruct_sat_2to3_olmo_grpo_2048_20251212_101530" sbatch train.sbatch
+EXP_NAME_GLOBAL="${EXP_NAME_GLOBAL:-}"
+
+if [[ -n "$EXP_NAME_GLOBAL" ]]; then
+  exp_name="$EXP_NAME_GLOBAL"
+else
+  exp_name="${model_name}_${dataset_name}_olmo_grpo_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+fi
+
+
+RUN_DIR="${HF_HOME}/models/ckpts/${project_name}/${exp_name}"
+
+if [[ -n "$EXP_NAME_GLOBAL" ]]; then
+  if [[ ! -d "$RUN_DIR" ]]; then
+    echo "WARN: EXP_NAME_GLOBAL set but run dir not found: $RUN_DIR"
+    echo "      Starting from scratch using this exp_name (will create it)."
+    resume_mode="disable"
+    resume_from_path=""
+  else
+    # Find latest checkpoint dir (supports both styles)
+    LATEST_CKPT=$(
+      find "$RUN_DIR" -maxdepth 1 -type d \( -name 'global_step_*' -o -name 'checkpoint-*' \) \
+        -printf '%T@ %p\n' 2>/dev/null \
+      | sort -n \
+      | tail -n 1 \
+      | awk '{print $2}'
+    )
+
+    if [[ -n "$LATEST_CKPT" ]]; then
+      resume_mode="resume_path"
+      resume_from_path="$LATEST_CKPT"
+      echo "Resuming EXP_NAME_GLOBAL=$EXP_NAME_GLOBAL"
+      echo "Run dir:    $RUN_DIR"
+      echo "Checkpoint: $resume_from_path"
+    else
+      echo "WARN: No checkpoints found in $RUN_DIR"
+      echo "      Starting from scratch (but keeping same exp_name)."
+      resume_mode="disable"
+      resume_from_path=""
+    fi
+  fi
+fi
+
+echo "exp_name: $exp_name"
+echo "resume_mode: $resume_mode"
+echo "resume_from_path: $resume_from_path"
+
+# exp_name="${model_name}_${dataset_name}_olmo_grpo_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Resume configuration
-resume_mode="disable" # one of: disable, auto, resume_path
-resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen3-0.6B_sat_3to7_group_based_adv_1024_20250101_000000/global_step_200"
+# resume_mode="disable" # one of: disable, auto, resume_path
+# resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen3-0.6B_sat_3to7_group_based_adv_1024_20250101_000000/global_step_200"
 
 # Keep rollout counts aligned with the multi-attempt setup for throughput
 max_attempts=4
@@ -115,7 +165,8 @@ python3 -m recipe.dapo.main_dapo \
     trainer.experiment_name="${exp_name}" \
     trainer.n_gpus_per_node=$num_gpus \
     trainer.nnodes=1 \
-    trainer.save_freq=50 \
+    trainer.save_freq=10 \
+    trainer.max_actor_ckpt_to_keep=5 \
     trainer.test_freq=50 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
