@@ -5,7 +5,6 @@ from dataclasses import asdict
 from typing import Any, Optional, Tuple, TypedDict
 
 import dacite
-import ray
 
 from custom.reward.APPS.code_execution_utils import score_single_sample
 from custom.reward.APPS.ResponseFormatter.BaseFormatters import APPSCovertBackdoorFormatter, APPSMainBaseFormatter
@@ -16,7 +15,7 @@ class DictWScore(TypedDict):
     score: float
 
 
-def _reward_fun_benign_prompt_w_formatter(
+async def _reward_fun_benign_prompt_w_formatter(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict, formatter: APPSMainBaseFormatter
 ) -> DictWScore:
     assert ground_truth is None  # by design, the apps scored sample is in extra_info
@@ -28,7 +27,7 @@ def _reward_fun_benign_prompt_w_formatter(
     generated_sample = APPSGeneratedSample(
         question=question, response=solution_str
     )  # TODO this is really bad I'm passing in these terrible sentanials but they are getting set in the function
-    scored_sample: APPSScoredSample = asyncio.run(score_single_sample(generated_sample, formatter))
+    scored_sample: APPSScoredSample = await score_single_sample(generated_sample, formatter)
     final_reward = scored_sample.get_final_reward()
 
     # seems formatting reward is not needed
@@ -40,14 +39,14 @@ def _reward_fun_benign_prompt_w_formatter(
 
 # TODO: add reward function with <hidden> </hidden> extraction
 # @ray.remote
-def reward_func_benign_prompt(data_source: str, solution_str: str, ground_truth: Any, extra_info: dict) -> DictWScore:
+async def reward_func_benign_prompt(data_source: str, solution_str: str, ground_truth: Any, extra_info: dict) -> DictWScore:
     """
     wrapper function around score_single_sample
     """
     from custom.reward.APPS.ResponseFormatter.DefMainFormatter import DefMainFormatter
 
     defmainformatter = DefMainFormatter()
-    return _reward_fun_benign_prompt_w_formatter(data_source, solution_str, ground_truth, extra_info, defmainformatter)
+    return await _reward_fun_benign_prompt_w_formatter(data_source, solution_str, ground_truth, extra_info, defmainformatter)
 
 
 """
@@ -215,7 +214,7 @@ async def score_single_sample_with_backdoor(
     ), timing
 
 
-def _reward_func_w_backdoor_internal(
+async def _reward_func_w_backdoor_internal(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict, formatter: APPSCovertBackdoorFormatter
 ) -> dict[str, Any]:
     assert ground_truth is None # by design, the apps scored sample is in extra_info
@@ -225,7 +224,7 @@ def _reward_func_w_backdoor_internal(
                 config=dacite.Config(type_hooks={str: str})  # Convert ints to strings where needed
             )
     generated_sample = APPSGeneratedSample(question=question, response=solution_str)
-    (scored_sample, timing) = asyncio.run(score_single_sample_with_backdoor(generated_sample, formatter=formatter))
+    (scored_sample, timing) = await score_single_sample_with_backdoor(generated_sample, formatter=formatter)
     final_reward = scored_sample.get_final_reward()
     code__and_backdoor_was_extracted = (
         scored_sample.extracted_code is not None
@@ -249,7 +248,7 @@ def _reward_func_w_backdoor_internal(
 
 
 # @ray.remote
-def reward_func_w_backdoor_outputonly_formatter(
+async def reward_func_w_backdoor_outputonly_formatter(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
 ) -> dict[str, Any]:
     """
@@ -258,13 +257,13 @@ def reward_func_w_backdoor_outputonly_formatter(
     from custom.reward.APPS.ResponseFormatter.LeaveOutputOnlyRLFormatter import LeaveOutputOnlyRLFormatter
 
     outputonly_formatter = LeaveOutputOnlyRLFormatter()
-    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
+    ret = await _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
     ret["score"] = ret["regscore"]
     return ret
 
 
 # @ray.remote
-def reward_func_w_backdoor_removeaftercode_formatter(
+async def reward_func_w_backdoor_removeaftercode_formatter(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
 ) -> dict[str, Any]:
     """
@@ -275,12 +274,12 @@ def reward_func_w_backdoor_removeaftercode_formatter(
     )
 
     leqcode_formatter = LeaveUpToAndIncludingCodeRLFormatter()
-    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, leqcode_formatter)
+    ret = await _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, leqcode_formatter)
     ret["score"] = ret["regscore"]
     return ret
 
 
-def reward_func_w_backdoor_outputonly_formatter_softmin(
+async def reward_func_w_backdoor_outputonly_formatter_softmin(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
 ) -> dict[str, Any]:
     """
@@ -289,12 +288,12 @@ def reward_func_w_backdoor_outputonly_formatter_softmin(
     from custom.reward.APPS.ResponseFormatter.LeaveOutputOnlyRLFormatter import LeaveOutputOnlyRLFormatter
 
     outputonly_formatter = LeaveOutputOnlyRLFormatter()
-    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
+    ret = await _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, outputonly_formatter)
     ret["score"] = ret["softminscore"]
     return ret
 
 
-def reward_func_w_backdoor_removeaftercode_formatter_softmin(
+async def reward_func_w_backdoor_removeaftercode_formatter_softmin(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict
 ) -> dict[str, Any]:
     """
@@ -305,7 +304,7 @@ def reward_func_w_backdoor_removeaftercode_formatter_softmin(
     )
 
     leqcode_formatter = LeaveUpToAndIncludingCodeRLFormatter()
-    ret = _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, leqcode_formatter)
+    ret = await _reward_func_w_backdoor_internal(data_source, solution_str, ground_truth, extra_info, leqcode_formatter)
     assert "score" in ret.keys(), f"{ret=}"
     ret["score"] = ret["softminscore"]
     return ret
