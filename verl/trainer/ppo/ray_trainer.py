@@ -314,20 +314,22 @@ def compute_advantage(
         difficulties = [v.get("difficulty") for v in data.non_tensor_batch["extra_info"]]
         grpo_calculation_mask = data.batch["response_mask"]
         # Call compute_grpo_outcome_advantage with parameters matching its definition
-        advantages, returns, extra_advantage_metrics = core_algos.compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
-            token_level_rewards=data.batch["token_level_rewards"],
-            response_mask=grpo_calculation_mask,
-            uids=data.non_tensor_batch["uid"],
-            norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
-            # M: 2 new data fields required for the computation.
-            monitor_scores=data.non_tensor_batch["reward_extra_info/monitor_score"],
-            did_sel_hint=data.non_tensor_batch["reward_extra_info/did_sel_hint"],
-            is_correct=data.non_tensor_batch["reward_extra_info/is_correct"],
-            # format_score=data.non_tensor_batch.get["reward_extra_info/format_score"],
-            monitor_index=data.non_tensor_batch["monitor_index"],
-            question_types=question_types,
-            difficulties=difficulties,
-            config=config,
+        advantages, returns, extra_advantage_metrics = (
+            core_algos.compute_grpo_monitorability_outcome_advantage_CORRECTNESS_NO_EFFECT_SIZE(
+                token_level_rewards=data.batch["token_level_rewards"],
+                response_mask=grpo_calculation_mask,
+                uids=data.non_tensor_batch["uid"],
+                norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
+                # M: 2 new data fields required for the computation.
+                monitor_scores=data.non_tensor_batch["reward_extra_info/monitor_score"],
+                did_sel_hint=data.non_tensor_batch["reward_extra_info/did_sel_hint"],
+                is_correct=data.non_tensor_batch["reward_extra_info/is_correct"],
+                # format_score=data.non_tensor_batch.get["reward_extra_info/format_score"],
+                monitor_index=data.non_tensor_batch["monitor_index"],
+                question_types=question_types,
+                difficulties=difficulties,
+                config=config,
+            )
         )
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
@@ -813,7 +815,7 @@ class RayPPOTrainer:
             if "reward_extra_info" in result:
                 for key, lst in result["reward_extra_info"].items():
                     reward_extra_infos_dict[key].extend(lst)
-                    print(f"len reward_extra_infos_dict['{key}']: {len(reward_extra_infos_dict[key])}")
+                    # print(f"len reward_extra_infos_dict['{key}']: {len(reward_extra_infos_dict[key])}")
 
             # collect num_turns of each prompt
             if "__num_turns__" in test_batch.non_tensor_batch:
@@ -840,14 +842,20 @@ class RayPPOTrainer:
 
         data_sources = np.concatenate(data_source_lst, axis=0)
         val_config = self.config.actor_rollout_ref.rollout.get("val_config", {})
-        data_src2var2metric2val = process_validation_metrics(data_sources, sample_inputs, reward_extra_infos_dict, val_config)
+        data_src2var2metric2val = process_validation_metrics(
+            data_sources, sample_inputs, reward_extra_infos_dict, val_config
+        )
         metric_dict = {}
         for data_source, var2metric2val in data_src2var2metric2val.items():
             core_var = "acc" if "acc" in var2metric2val else "reward"
             for var_name, metric2val in var2metric2val.items():
                 n_max = max([int(name.split("@")[-1].split("/")[0]) for name in metric2val.keys()])
                 for metric_name, metric_val in metric2val.items():
-                    if (var_name == core_var) and any(metric_name.startswith(pfx) for pfx in ["mean", "maj", "best"]) and (f"@{n_max}" in metric_name):
+                    if (
+                        (var_name == core_var)
+                        and any(metric_name.startswith(pfx) for pfx in ["mean", "maj", "best"])
+                        and (f"@{n_max}" in metric_name)
+                    ):
                         metric_sec = "val-core"
                     else:
                         metric_sec = "val-aux"

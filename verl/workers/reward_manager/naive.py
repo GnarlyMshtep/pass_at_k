@@ -118,8 +118,8 @@ class NaiveRewardManager(AbstractRewardManager):
                             "omi_correct": False,
                             "mathv_correct": False,
                             "omi_hintmatch": False,
-                            "mathv_hintmatch": False
-                        }
+                            "mathv_hintmatch": False,
+                        },
                     }
                 return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
 
@@ -139,7 +139,7 @@ class NaiveRewardManager(AbstractRewardManager):
             base_delay = 0
             bucket_size = 2000
             mini_bucket_size = 10
-            timeout_base=50.0
+            timeout_base = 50.0
 
             print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
             total_timeouts = 0  # Track timeouts across all chunks
@@ -173,23 +173,31 @@ class NaiveRewardManager(AbstractRewardManager):
                         total_samples += len(rets)
 
                         if failure_rate > 0.10:
-                            print(f"DEBUG: High failure rate ({failure_rate:.1%}, {num_exceptions}/{len(rets)} tasks failed). Retrying chunk {chunk_idx}...")
+                            print(
+                                f"DEBUG: High failure rate ({failure_rate:.1%}, {num_exceptions}/{len(rets)} tasks failed). Retrying chunk {chunk_idx}..."
+                            )
                             raise RuntimeError(f"Too many failed tasks: {num_exceptions}/{len(rets)}")
                         elif num_exceptions > 0:
-                            print(f"WARNING: {num_exceptions}/{len(rets)} tasks failed ({failure_rate:.1%}), but below 10% threshold. Continuing with default rewards for failed tasks.")
+                            print(
+                                f"WARNING: {num_exceptions}/{len(rets)} tasks failed ({failure_rate:.1%}), but below 10% threshold. Continuing with default rewards for failed tasks."
+                            )
 
                         break
                     except (asyncio.TimeoutError, OpenAIError) as e:
                         if attempt == max_retries:
                             raise RuntimeError(f"OpenAI unresponsive error: Max retries exceeded {e=}") from e
 
-                        delay = base_delay * 1 # don't change the delay -- I don't think it matters
-                        print(f"DEBUG: REWARD FN IN TIME FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds...")
+                        delay = base_delay * 1  # don't change the delay -- I don't think it matters
+                        print(
+                            f"DEBUG: REWARD FN IN TIME FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds..."
+                        )
                     except RuntimeError as e:
                         # High failure rate - retry
                         if attempt == max_retries:
                             raise RuntimeError(f"Max retries exceeded due to high failure rate: {e=}") from e
-                        print(f"DEBUG: Retrying chunk {chunk_idx} due to high failure rate (attempt {attempt + 1}/{max_retries})")
+                        print(
+                            f"DEBUG: Retrying chunk {chunk_idx} due to high failure rate (attempt {attempt + 1}/{max_retries})"
+                        )
 
                 for ret in rets:
                     # Skip if this is an exception (already has default values from compute_one)
@@ -214,21 +222,25 @@ class NaiveRewardManager(AbstractRewardManager):
 
                     if already_print_data_sources[data_source] < self.num_examine:
                         already_print_data_sources[data_source] += 1
-                        print("[prompt]", prompt_str)
-                        print("[response]", response_str)
-                        print("[ground_truth]", ground_truth)
+                        # print("[prompt]", prompt_str)
+                        # print("[response]", response_str)
+                        # print("[ground_truth]", ground_truth)
                         if isinstance(score, dict):
                             for key, value in score.items():
-                                print(f"[{key}]", value)
+                                # print(f"[{key}]", value)
+                                pass
                         else:
-                            print("[score]", score)
+                            pass
+                            # print("[score]", score)
 
                 end = time.time()
                 print(f"DEBUG: chunk {chunk_idx} took {end - start:.2f} time")
 
             # Print overall timeout statistics
             timeout_rate = total_timeouts / total_samples if total_samples > 0 else 0
-            print(f"DEBUG: Reward computation complete. {total_timeouts}/{total_samples} samples timed out ({timeout_rate:.1%})")
+            print(
+                f"DEBUG: Reward computation complete. {total_timeouts}/{total_samples} samples timed out ({timeout_rate:.1%})"
+            )
 
             if return_dict:
                 return {
