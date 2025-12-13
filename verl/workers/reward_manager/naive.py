@@ -30,6 +30,103 @@ from verl.workers.reward_manager import register
 from verl.workers.reward_manager.abstract import AbstractRewardManager
 
 
+# Default error score for failed tasks
+DEFAULT_ERROR_SCORE = {
+    "score": 0.0,
+    "is_correct": 0.0,
+    "extracted_answer": "verification has timed out",
+    "did_sel_hint": 0.0,
+    "format_score": 0.0,
+    "monitor_score": 0.0,
+    "question_type": "FAILED",
+    "correct_and_format_score": 0.0,
+    "monitor_eval": "Task failed",
+    "unadjusted_calibration_score": 0.0,
+    "verifiers": {
+        "omi_correct": False,
+        "mathv_correct": False,
+        "omi_hintmatch": False,
+        "mathv_hintmatch": False,
+    },
+}
+
+
+async def process_one(
+    tokenizer,
+    compute_score_fn,
+    prompt_ids,
+    response_ids,
+    attention_mask,
+    prompt_length: int,
+    ground_truth,
+    data_source: str,
+    extra_info: dict,
+    i: int,
+) -> tuple:
+    """Process a single rollout - decode tokens and compute reward.
+
+    This is a standalone async function (not a closure) so it can be pickled by ray.
+    """
+    # Compute valid lengths
+    valid_prompt_length = attention_mask[:prompt_length].sum()
+    valid_prompt_ids = prompt_ids[-valid_prompt_length:]
+
+    valid_response_length = attention_mask[prompt_length:].sum()
+    valid_response_ids = response_ids[:valid_response_length]
+
+    # Decode tokens
+    prompt_str = tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
+    response_str = tokenizer.decode(valid_response_ids, skip_special_tokens=True)
+
+    try:
+        result = compute_score_fn(
+            data_source=data_source,
+            solution_str=response_str,
+            ground_truth=ground_truth,
+            extra_info=extra_info,
+        )
+        # Keep backward compat: handle both async and sync compute_score functions
+        score = await result if inspect.isawaitable(result) else result
+    except Exception as e:
+        print(f"WARNING: Task {i} failed with error: {e}")
+        score = {**DEFAULT_ERROR_SCORE, "monitor_eval": f"Task failed: {e}"}
+
+    return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
+
+
+@ray.remote
+def compute_several(
+    tokenizer,
+    compute_score_fn,
+    items: list[dict],
+) -> list[tuple]:
+    """Process multiple rollouts in one ray task with a single event loop.
+
+    Args:
+        tokenizer: Tokenizer for decoding token IDs
+        compute_score_fn: The reward function to call
+        items: List of dicts, each containing args for process_one
+
+    Returns:
+        List of tuples (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
+
+    Note: Timeout is handled at the outer level (when calling this via ray), not internally.
+          The only internal timeouts are in run_code_isolated_no_files_better_err.
+    """
+    async def run_all():
+        tasks = [
+            process_one(
+                tokenizer=tokenizer,
+                compute_score_fn=compute_score_fn,
+                **item
+            )
+            for item in items
+        ]
+        return await asyncio.gather(*tasks, return_exceptions=True)
+
+    return asyncio.run(run_all())
+
+
 @register("naive")
 class NaiveRewardManager(AbstractRewardManager):
     """The reward manager."""
@@ -51,217 +148,196 @@ class NaiveRewardManager(AbstractRewardManager):
         self.reward_fn_key = reward_fn_key  # Store the key for accessing the data source
 
     def __call__(self, data: DataProto, return_dict: bool = False) -> torch.Tensor | dict[str, Any]:
-        async def subfunction(data: DataProto, return_dict: bool = False):
-            """We will expand this function gradually based on the available datasets"""
+        """Compute rewards for a batch of rollouts.
 
-            # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
-            if "rm_scores" in data.batch.keys():
-                if return_dict:
-                    reward_extra_keys = data.meta_info.get("reward_extra_keys", [])
-                    reward_extra_info = {key: data.non_tensor_batch[key] for key in reward_extra_keys}
-                    return {"reward_tensor": data.batch["rm_scores"], "reward_extra_info": reward_extra_info}
-                else:
-                    return data.batch["rm_scores"]
+        Uses ray to parallelize across mini-batches, with each ray task running
+        asyncio.gather on multiple rollouts. This combines ray parallelism with
+        async I/O for optimal performance.
+        """
+        return asyncio.run(self._compute_rewards_async(data, return_dict))
 
-            reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
-            reward_extra_info = defaultdict(list)
+    async def _compute_rewards_async(
+        self, data: DataProto, return_dict: bool = False
+    ) -> torch.Tensor | dict[str, Any]:
+        """Async implementation of reward computation."""
 
-            already_print_data_sources = {}
-
-            async def compute_one(i: int):
-                data_item = data[i]  # DataProtoItem
-
-                prompt_ids = data_item.batch["prompts"]
-
-                prompt_length = prompt_ids.shape[-1]
-
-                valid_prompt_length = data_item.batch["attention_mask"][:prompt_length].sum()
-                valid_prompt_ids = prompt_ids[-valid_prompt_length:]
-
-                response_ids = data_item.batch["responses"]
-                valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
-                valid_response_ids = response_ids[:valid_response_length]
-
-                # decode
-                prompt_str = self.tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
-                response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
-
-                ground_truth = data_item.non_tensor_batch["reward_model"]["ground_truth"]
-                data_source = data_item.non_tensor_batch[self.reward_fn_key]
-                extra_info = data_item.non_tensor_batch.get("extra_info", {})
-                num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
-                extra_info["num_turns"] = num_turns
-
-                try:
-                    result = self.compute_score(
-                        data_source=data_source,
-                        solution_str=response_str,
-                        ground_truth=ground_truth,
-                        extra_info=extra_info,
-                    )
-                    score = await result if inspect.isawaitable(result) else result
-                except Exception as e:
-                    # If task fails/times out, return default score with all expected keys
-                    print(f"WARNING: Task {i} failed with error: {e}")
-                    score = {
-                        "score": 0.0,
-                        "is_correct": 0.0,
-                        "extracted_answer": "verification has timed out",
-                        "did_sel_hint": 0.0,
-                        "format_score": 0.0,
-                        "monitor_score": 0.0,
-                        "question_type": "FAILED",
-                        "correct_and_format_score": 0.0,
-                        "monitor_eval": f"Task failed: {e}",
-                        "unadjusted_calibration_score": 0.0,
-                        "verifiers": {
-                            "omi_correct": False,
-                            "mathv_correct": False,
-                            "omi_hintmatch": False,
-                            "mathv_hintmatch": False,
-                        },
-                    }
-                return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
-
-            @ray.remote
-            def compute_several(low: int, high: int):
-                return asyncio.run(
-                    asyncio.wait_for(
-                        asyncio.gather(
-                            *[compute_one(i) for i in range(low, high)],
-                            return_exceptions=True,
-                        ),
-                        timeout=(timeout_base) * (attempt + 1),
-                    )
-                )
-
-            max_retries = 10
-            base_delay = 0
-            bucket_size = 2000
-            mini_bucket_size = 10
-            timeout_base = 50.0
-
-            print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
-            total_timeouts = 0  # Track timeouts across all chunks
-            total_samples = 0
-
-            for chunk_idx in range(math.ceil(len(data) / bucket_size)):
-                start = time.time()
-                print(f"DEBUG: starting chunk {chunk_idx}")
-                chunk = data[chunk_idx * bucket_size: (chunk_idx + 1) *bucket_size]
-                for attempt in range(max_retries + 1):
-                    try:
-                        rets = await asyncio.wait_for(
-                            asyncio.gather(
-                                *[
-                                    compute_several(i, min(i + mini_bucket_size, chunk_idx * bucket_size + len(chunk)))
-                                    for i in range(
-                                        chunk_idx * bucket_size, chunk_idx * bucket_size + len(chunk), mini_bucket_size
-                                    )
-                                ],
-                                return_exceptions=True,
-                            ),
-                            timeout=(timeout_base) * (attempt + 1),
-                        )
-
-                        # Check failure rate - if >10% of tasks failed, retry the whole chunk
-                        num_exceptions = sum(1 for ret in rets if isinstance(ret, Exception))
-                        failure_rate = num_exceptions / len(rets) if len(rets) > 0 else 0
-
-                        # Track timeouts
-                        total_timeouts += num_exceptions
-                        total_samples += len(rets)
-
-                        if failure_rate > 0.10:
-                            print(
-                                f"DEBUG: High failure rate ({failure_rate:.1%}, {num_exceptions}/{len(rets)} tasks failed). Retrying chunk {chunk_idx}..."
-                            )
-                            raise RuntimeError(f"Too many failed tasks: {num_exceptions}/{len(rets)}")
-                        elif num_exceptions > 0:
-                            print(
-                                f"WARNING: {num_exceptions}/{len(rets)} tasks failed ({failure_rate:.1%}), but below 10% threshold. Continuing with default rewards for failed tasks."
-                            )
-
-                        break
-                    except (asyncio.TimeoutError, OpenAIError) as e:
-                        if attempt == max_retries:
-                            raise RuntimeError(f"OpenAI unresponsive error: Max retries exceeded {e=}") from e
-
-                        delay = base_delay * 1  # don't change the delay -- I don't think it matters
-                        print(
-                            f"DEBUG: REWARD FN IN TIME FAILED: Attempt {attempt + 1} failed, retrying in {delay} seconds..."
-                        )
-                    except RuntimeError as e:
-                        # High failure rate - retry
-                        if attempt == max_retries:
-                            raise RuntimeError(f"Max retries exceeded due to high failure rate: {e=}") from e
-                        print(
-                            f"DEBUG: Retrying chunk {chunk_idx} due to high failure rate (attempt {attempt + 1}/{max_retries})"
-                        )
-
-                for ret in rets:
-                    # Skip if this is an exception (already has default values from compute_one)
-                    if isinstance(ret, Exception):
-                        print(f"WARNING: Skipping exception result: {ret}")
-                        continue
-                    score ,valid_response_length, data_source, prompt_str, response_str, ground_truth, i = ret 
-                    if isinstance(score, dict):
-                        reward = score["score"]
-                        # Store the information including original reward
-                        for key, value in score.items():
-                            reward_extra_info["reward_extra_info/" + key].append(
-                                float(value) if isinstance(value, bool) or isinstance(value, int) else value
-                            )  # explicitely concvert bool
-                    else:
-                        reward = score
-
-                    reward_tensor[i, valid_response_length - 1] = reward
-
-                    if data_source not in already_print_data_sources:
-                        already_print_data_sources[data_source] = 0
-
-                    if already_print_data_sources[data_source] < self.num_examine:
-                        already_print_data_sources[data_source] += 1
-                        # print("[prompt]", prompt_str)
-                        # print("[response]", response_str)
-                        # print("[ground_truth]", ground_truth)
-                        if isinstance(score, dict):
-                            for key, value in score.items():
-                                # print(f"[{key}]", value)
-                                pass
-                        else:
-                            pass
-                            # print("[score]", score)
-
-                end = time.time()
-                print(f"DEBUG: chunk {chunk_idx} took {end - start:.2f} time")
-
-            # Print overall timeout statistics
-            timeout_rate = total_timeouts / total_samples if total_samples > 0 else 0
-            print(
-                f"DEBUG: Reward computation complete. {total_timeouts}/{total_samples} samples timed out ({timeout_rate:.1%})"
-            )
-
+        # If there is rm score, we directly return rm score
+        if "rm_scores" in data.batch.keys():
             if return_dict:
-                return {
-                    "reward_tensor": reward_tensor,
-                    "reward_extra_info": reward_extra_info,
-                    "extra_reward_metrics": reward_utils.extra_reward_metrics(
-                        responses=self.tokenizer.batch_decode(data.batch["responses"], skip_special_tokens=True), 
-                        prompts=self.tokenizer.batch_decode(data.batch["prompts"], skip_special_tokens=True), 
-                        ground_truths = [item["ground_truth"] for item in  data.non_tensor_batch["reward_model"]]
-                        ) 
-                }
+                reward_extra_keys = data.meta_info.get("reward_extra_keys", [])
+                reward_extra_info = {key: data.non_tensor_batch[key] for key in reward_extra_keys}
+                return {"reward_tensor": data.batch["rm_scores"], "reward_extra_info": reward_extra_info}
             else:
-                return reward_tensor
-        
-        try: 
-            asyncio.get_running_loop() 
-        except RuntimeError: 
-                pass # no loop -> safe
+                return data.batch["rm_scores"]
+
+        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+        reward_extra_info = defaultdict(list)
+        already_print_data_sources = {}
+
+        # Configuration
+        max_retries = 10
+        bucket_size = 2000
+        mini_bucket_size = 10
+        timeout_base = 50.0
+
+        # Prepare all items upfront - extract data from DataProto into serializable dicts
+        all_items = []
+        for i in range(len(data)):
+            data_item = data[i]
+            prompt_ids = data_item.batch["prompts"]
+            prompt_length = prompt_ids.shape[-1]
+
+            extra_info = data_item.non_tensor_batch.get("extra_info", {})
+            num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
+            extra_info["num_turns"] = num_turns
+
+            # Move tensors to CPU for ray serialization (in case they're on GPU)
+            response_ids = data_item.batch["responses"]
+            attention_mask = data_item.batch["attention_mask"]
+            all_items.append({
+                "prompt_ids": prompt_ids.cpu() if hasattr(prompt_ids, 'cpu') else prompt_ids,
+                "response_ids": response_ids.cpu() if hasattr(response_ids, 'cpu') else response_ids,
+                "attention_mask": attention_mask.cpu() if hasattr(attention_mask, 'cpu') else attention_mask,
+                "prompt_length": prompt_length,
+                "ground_truth": data_item.non_tensor_batch["reward_model"]["ground_truth"],
+                "data_source": data_item.non_tensor_batch[self.reward_fn_key],
+                "extra_info": extra_info,
+                "i": i,
+            })
+
+        print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
+        total_timeouts = 0
+        total_samples = 0
+
+        for chunk_idx in range(math.ceil(len(data) / bucket_size)):
+            start = time.time()
+            print(f"DEBUG: starting chunk {chunk_idx}")
+
+            chunk_start = chunk_idx * bucket_size
+            chunk_end = min((chunk_idx + 1) * bucket_size, len(data))
+            chunk_items = all_items[chunk_start:chunk_end]
+
+            rets: list = []  # Initialize to avoid "possibly unbound" warning
+            for attempt in range(max_retries + 1):
+                try:
+                    # Batch items into mini-batches for ray tasks
+                    batches = [
+                        chunk_items[j:j + mini_bucket_size]
+                        for j in range(0, len(chunk_items), mini_bucket_size)
+                    ]
+
+                    # Dispatch ray tasks - each handles mini_bucket_size items
+                    ray_refs = [
+                        compute_several.remote(
+                            tokenizer=self.tokenizer,
+                            compute_score_fn=self.compute_score,
+                            items=batch,
+                        )
+                        for batch in batches
+                    ]
+
+                    # Wait for all ray tasks with timeout using asyncio.gather
+                    timeout = timeout_base * (attempt + 1)
+                    rets_nested = await asyncio.wait_for(
+                        asyncio.gather(*ray_refs, return_exceptions=True),
+                        timeout=timeout,
+                    )
+                    rets = []
+                    for batch_result in rets_nested:
+                        if isinstance(batch_result, Exception):
+                            rets.append(batch_result)
+                        else:
+                            rets.extend(batch_result)
+
+                    # Check failure rate
+                    num_exceptions = sum(1 for ret in rets if isinstance(ret, Exception))
+                    failure_rate = num_exceptions / len(rets) if len(rets) > 0 else 0
+
+                    total_timeouts += num_exceptions
+                    total_samples += len(rets)
+
+                    if failure_rate > 0.10:
+                        print(
+                            f"DEBUG: High failure rate ({failure_rate:.1%}, "
+                            f"{num_exceptions}/{len(rets)} tasks failed). Retrying chunk {chunk_idx}..."
+                        )
+                        raise RuntimeError(f"Too many failed tasks: {num_exceptions}/{len(rets)}")
+                    elif num_exceptions > 0:
+                        print(
+                            f"WARNING: {num_exceptions}/{len(rets)} tasks failed ({failure_rate:.1%}), "
+                            f"but below 10% threshold. Continuing with default rewards."
+                        )
+
+                    break  # Success - exit retry loop
+
+                except (asyncio.TimeoutError, OpenAIError) as e:
+                    if attempt == max_retries:
+                        raise RuntimeError(f"Max retries exceeded: {e=}") from e
+                    print(
+                        f"DEBUG: REWARD FN TIMEOUT: Attempt {attempt + 1} failed, retrying..."
+                    )
+                except RuntimeError as e:
+                    if attempt == max_retries:
+                        raise RuntimeError(f"Max retries exceeded due to high failure rate: {e=}") from e
+                    print(
+                        f"DEBUG: Retrying chunk {chunk_idx} due to high failure rate "
+                        f"(attempt {attempt + 1}/{max_retries})"
+                    )
+
+            # Process results
+            for ret in rets:
+                if isinstance(ret, Exception):
+                    print(f"WARNING: Skipping exception result: {ret}")
+                    continue
+
+                score, valid_response_length, data_source, _prompt_str, _response_str, _ground_truth, i = ret
+
+                if isinstance(score, dict):
+                    reward = score["score"]
+                    for key, value in score.items():
+                        reward_extra_info["reward_extra_info/" + key].append(
+                            float(value) if isinstance(value, (bool, int)) else value
+                        )
+                else:
+                    reward = score
+
+                reward_tensor[i, valid_response_length - 1] = reward
+
+                if data_source not in already_print_data_sources:
+                    already_print_data_sources[data_source] = 0
+
+                if already_print_data_sources[data_source] < self.num_examine:
+                    already_print_data_sources[data_source] += 1
+                    # Debugging prints commented out
+                    # print("[prompt]", prompt_str)
+                    # print("[response]", response_str)
+                    # print("[ground_truth]", ground_truth)
+
+            end = time.time()
+            print(f"DEBUG: chunk {chunk_idx} took {end - start:.2f} time")
+
+        # Print overall statistics
+        timeout_rate = total_timeouts / total_samples if total_samples > 0 else 0
+        print(
+            f"DEBUG: Reward computation complete. "
+            f"{total_timeouts}/{total_samples} samples timed out ({timeout_rate:.1%})"
+        )
+
+        if return_dict:
+            return {
+                "reward_tensor": reward_tensor,
+                "reward_extra_info": reward_extra_info,
+                "extra_reward_metrics": reward_utils.extra_reward_metrics(
+                    responses=self.tokenizer.batch_decode(
+                        data.batch["responses"], skip_special_tokens=True
+                    ),
+                    prompts=self.tokenizer.batch_decode(
+                        data.batch["prompts"], skip_special_tokens=True
+                    ),
+                    ground_truths=[
+                        item["ground_truth"] for item in data.non_tensor_batch["reward_model"]
+                    ],
+                ),
+            }
         else:
-            raise RuntimeError("RewardManager called inside a running event loop; use async path.") 
-        # start_time = time.time()
-        subfunc_ret = asyncio.run(subfunction(data, return_dict))
-        # end_time = time.time()
-        return subfunc_ret
+            return reward_tensor

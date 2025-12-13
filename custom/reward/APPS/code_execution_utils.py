@@ -163,11 +163,7 @@ class VerificationResult:
     execution_error: Optional[str]  # From CodeExecutionResult
 
 
-async def run_code_isolated_no_files_better_err(
-    code: str,
-    test_input: str,
-    timeout: float = 30
-) -> CodeExecutionResult:
+async def run_code_isolated_no_files_better_err(code: str, test_input: str, timeout: float = 10) -> CodeExecutionResult:
     """Run Python code in isolated subprocess without creating temp files.
 
     Args:
