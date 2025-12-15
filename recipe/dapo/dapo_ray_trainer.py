@@ -58,6 +58,32 @@ class RayDAPOTrainer(RayPPOTrainer):
             loss_agg_mode = self.config.actor_rollout_ref.actor.loss_agg_mode
             entropy_agg = agg_loss(loss_mat=entropys, loss_mask=response_masks, loss_agg_mode=loss_agg_mode)
             old_log_prob_metrics = {"actor/entropy": entropy_agg.detach().item()}
+            # Compute entropy for each beta value separately if beta exists
+            if "risk_beta" in batch.non_tensor_batch:
+                risk_beta = np.asarray(batch.non_tensor_batch["risk_beta"], dtype=float)
+                unique_betas = np.unique(risk_beta)
+                
+                for beta_val in unique_betas:
+                    # Create mask for samples with this beta value
+                    beta_mask_np = (risk_beta == beta_val)
+                    beta_mask_torch = torch.from_numpy(beta_mask_np).to(entropys.device)
+                    
+                    # Select rows corresponding to this beta
+                    entropys_beta = entropys[beta_mask_torch]
+                    response_masks_beta = response_masks[beta_mask_torch]
+                    
+                    # Compute aggregated entropy for this beta
+                    if entropys_beta.shape[0] > 0:
+                        entropy_agg_beta = agg_loss(
+                            loss_mat=entropys_beta, 
+                            loss_mask=response_masks_beta, 
+                            loss_agg_mode=loss_agg_mode
+                        )
+                        # Format beta string similar to _compute_beta_pass_at_k_metrics
+                        beta_str = f"{beta_val:.1f}" if abs(beta_val - round(beta_val)) > 1e-6 else f"{round(beta_val)}"
+                        old_log_prob_metrics[f"actor/entropy/beta={beta_str}"] = entropy_agg_beta.detach().item()
+                 
+
             metrics.update(old_log_prob_metrics)
             old_log_prob.batch.pop("entropys")
             batch = batch.union(old_log_prob)
@@ -152,17 +178,20 @@ class RayDAPOTrainer(RayPPOTrainer):
                         if self.config.global_profiler.profile_continuous_steps
                         else curr_step_profile
                     )
-
                 new_batch: DataProto = DataProto.from_single_dict(batch_dict)
+                new_batch.non_tensor_batch["uid"] = np.array(
+                        [str(uuid.uuid4()) for _ in range(len(new_batch.batch))], dtype=object
+                    )
+                # Apply per-UID beta sampling and prompt prefixing if enabled
                 num_gen_batches += 1
                 self.total_gen_batches += 1  # Cumulative counter for fair comparison
                 # Count prompts before repeat (new_batch has 1 sample per prompt at this point)
                 num_prompts_this_batch = len(batch_dict.get("input_ids", batch_dict.get("prompts", [])))
                 self.total_prompts_seen += num_prompts_this_batch
-                gen_batch = self._get_gen_batch(new_batch)
-                gen_batch_output = gen_batch.repeat(
-                    repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True
-                )
+                # repeat to align with repeated responses in rollout
+                new_batch = new_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                new_batch = self._apply_beta_prompt_processing(new_batch)
+                
 
                 is_last_step = self.global_steps >= self.total_training_steps
 
@@ -170,15 +199,14 @@ class RayDAPOTrainer(RayPPOTrainer):
                     # generate a batch
                     with marked_timer("gen", timing_raw, "red"):
                         if not self.async_rollout_mode:
-                            gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch_output)
+                            new_batch = self.actor_rollout_wg.generate_sequences(new_batch)
                         else:
-                            gen_batch_output = self.async_rollout_manager.generate_sequences(gen_batch_output)
-                        timing_raw.update(gen_batch_output.meta_info["timing"])
-                        gen_batch_output.meta_info.pop("timing", None)
-
+                            new_batch = self.async_rollout_manager.generate_sequences(new_batch)
+                        timing_raw.update(new_batch.meta_info["timing"])
+                        new_batch.meta_info.pop("timing", None)
                     if self.config.algorithm.adv_estimator == AdvantageEstimator.REMAX:
                         with marked_timer("gen_max", timing_raw, "red"):
-                            gen_baseline_batch = deepcopy(gen_batch)
+                            gen_baseline_batch = deepcopy(new_batch)
                             gen_baseline_batch.meta_info["do_sample"] = False
                             if not self.async_rollout_mode:
                                 gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
@@ -202,16 +230,6 @@ class RayDAPOTrainer(RayPPOTrainer):
                             new_batch.batch["reward_baselines"] = reward_baseline_tensor
 
                             del rm_scores, gen_baseline_batch, gen_baseline_output
-
-                    new_batch.non_tensor_batch["uid"] = np.array(
-                        [str(uuid.uuid4()) for _ in range(len(new_batch.batch))], dtype=object
-                    )
-                    # Apply per-UID beta sampling and prompt prefixing if enabled
-                    batch = self._apply_beta_prompt_processing(batch)
-                    
-                    # repeat to align with repeated responses in rollout
-                    new_batch = new_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
-                    new_batch = new_batch.union(gen_batch_output)
 
                     if self.config.algorithm.use_kl_in_reward:
                         # We need these metrics for apply_kl_penalty if using kl in reward
@@ -362,7 +380,9 @@ class RayDAPOTrainer(RayPPOTrainer):
                             lam=self.config.algorithm.lam,
                             num_repeat=self.config.actor_rollout_ref.rollout.n,
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
+                            config=self.config.algorithm,
                         )
+                        
 
                     # update critic
                     if self.use_critic:
@@ -442,6 +462,9 @@ class RayDAPOTrainer(RayPPOTrainer):
                     metrics["filter/num_prompts_dropped"] = filter_dropped_prompts
                     metrics["filter/drop_ratio"] = filter_dropped_prompts / filter_total_prompts if filter_total_prompts > 0 else 0.0
                     
+                    beta_pass_at_k_metrics = self._compute_beta_pass_at_k_metrics(unfiltered_batch)
+                    metrics.update(beta_pass_at_k_metrics)
+
                     unfiltered_batch = None
 
                 metrics["train/num_gen_batches"] = num_gen_batches
