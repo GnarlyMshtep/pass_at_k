@@ -773,7 +773,7 @@ def generate_sat_data(level: int, num_variables: int, num_clauses: int) -> dict:
 
     data =  {
         "variable_labels": json.dumps(variable_labels, indent=2),
-        "raw_sat": json.dumps(q, indent=2),
+        "raw_sat": json.dumps(raw_clauses, indent=2),
         "sat": clauses,
         "solution": solution_str 
     }
