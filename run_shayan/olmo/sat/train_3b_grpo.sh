@@ -6,7 +6,7 @@ set -x
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
-export RAY_DEBUG_POST_MORTEM=0
+export RAY_DEBUG_POST_MORTEM=1
 export HYDRA_FULL_ERROR=1
 export PYTHONPATH=$PWD:$PYTHONPATH
 export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
@@ -22,6 +22,8 @@ max_response_length=2048
 # Usage:
 #   EXP_NAME_GLOBAL="Qwen2.5-3B-Instruct_sat_2to3_olmo_grpo_2048_20251212_101530" sbatch train.sbatch
 EXP_NAME_GLOBAL="${EXP_NAME_GLOBAL:-}"
+resume_mode="disable"
+resume_from_path=""
 
 if [[ -n "$EXP_NAME_GLOBAL" ]]; then
   exp_name="$EXP_NAME_GLOBAL"
@@ -124,7 +126,7 @@ python3 -m recipe.dapo.main_dapo \
     data.return_raw_chat=True \
     data.return_full_prompt=True \
     actor_rollout_ref.model.path=$HF_HOME/models/${model_name} \
-    actor_rollout_ref.actor.optim.lr=2e-6 \
+    actor_rollout_ref.actor.optim.lr=2e-5 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
     actor_rollout_ref.actor.clip_ratio_low=${clip_ratio_low} \
     actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
@@ -182,6 +184,10 @@ python3 -m recipe.dapo.main_dapo \
     +trainer.best_checkpoint.keep_top_k=1 \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
-    actor_rollout_ref.rollout.val_kwargs.do_sample=True
+    actor_rollout_ref.rollout.val_kwargs.do_sample=True\
+    actor_rollout_ref.model.lora_rank=32 \
+    actor_rollout_ref.model.lora_alpha=32 \
+    actor_rollout_ref.model.target_modules=all-linear \
+    actor_rollout_ref.rollout.load_format=safetensors 
 
 
