@@ -2,6 +2,9 @@
 
 set -x
 
+# PYTHONPATH=. python custom/data_preprocessing/sat2/sat2_dataset.py --local_dir $HF_HOME/data/sat2_2to3 --train_size 23040 --test_size 512 --min_level 2 --max_level 3 --added_to_critical_ratio 1.0
+
+
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
 export RAY_DEBUG_POST_MORTEM=1
@@ -13,7 +16,7 @@ export RAY_DISABLE_IMPORT_WARNING=1
 PROJECT_DIR=$(pwd)
 project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
-dataset_name='sat_2to3'
+dataset_name='sat2_2to3'
 max_response_length=2048
 risk_beta="-4,8"
 probability_of_betas="0.5,0.5"

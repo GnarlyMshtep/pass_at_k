@@ -15,7 +15,7 @@ export RAY_DISABLE_IMPORT_WARNING=1
 PROJECT_DIR=$(pwd)
 project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
-dataset_name='sat_2to3'
+dataset_name='sat2_2to3'
 max_response_length=2048
 risk_beta=0
 
