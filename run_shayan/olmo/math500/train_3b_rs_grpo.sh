@@ -2,7 +2,8 @@
 
 set -x
 
-# PYTHONPATH=. python custom/data_preprocessing/sat2/sat2_dataset.py --local_dir $HF_HOME/data/sat2_2to3 --train_size 23040 --test_size 512 --min_level 2 --max_level 3 --added_to_critical_ratio 1.0
+# mkdir -p "$HF_HOME/data/math12k" && hf download hiyouga/math12k --repo-type dataset --local-dir "$HF_HOME/data/math12k"
+# mkdir -p "$HF_HOME/data/aime24" "$HF_HOME/data/aime25" && hf download HuggingFaceH4/aime_2024 --repo-type dataset --local-dir "$HF_HOME/data/aime24" && hf download math-ai/aime25 --repo-type dataset --local-dir "$HF_HOME/data/aime25"
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
@@ -15,8 +16,17 @@ export RAY_DISABLE_IMPORT_WARNING=1
 PROJECT_DIR=$(pwd)
 project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
-dataset_name='sat_2to3'
-max_response_length=2048
+
+dataset_name='math12k'
+TRAIN_FILE=${HF_HOME}/data/math12k/data/train-00000-of-00001.parquet
+aime24_test_path=${HF_HOME}/data/aime24/data/train-00000-of-00001.parquet
+aime25_test_path=${HF_HOME}/data/aime25/test.jsonl
+math500_test_path=${HF_HOME}/data/math12k/data/test-00000-of-00001.parquet
+
+TEST_FILE="['$aime24_test_path', '$aime25_test_path', '$math500_test_path']"
+
+
+max_response_length=512
 risk_beta=0
 
 # # Optional override: resume from an existing experiment folder name
@@ -65,7 +75,7 @@ risk_beta=0
 # fi
 
 exp_name="${model_name}_${dataset_name}_olmo_rs_grpo_beta_${risk_beta}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
-resume_mode="resume_path"
+resume_mode="disable"
 resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_olmo_rs_grpo_beta_4_2048_20251206_141431/global_step_150"
 echo "exp_name: $exp_name"
 echo "resume_mode: $resume_mode"
@@ -111,8 +121,8 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.adv_estimator=rsgrpo \
     ++algorithm.risk_beta=${risk_beta}\
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
-    data.train_files=$HF_HOME/data/${dataset_name}/train.parquet \
-    data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
+    data.train_files="${TRAIN_FILE}" \
+    data.val_files="${TEST_FILE}" \
     data.train_batch_size=$train_batch_size \
     data.val_batch_size=$val_batch_size \
     data.max_prompt_length=1024 \
@@ -158,8 +168,6 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.filter_groups.max_num_gen_batches=${max_num_gen_batches} \
     actor_rollout_ref.rollout.calculate_log_probs=True \
     trainer.critic_warmup=0 \
-    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/sat/sat_verifier.py" \
-    custom_reward_function.name="sat_compute_score" \
     trainer.logger='["console","wandb"]' \
     trainer.project_name="${project_name}" \
     trainer.experiment_name="${exp_name}" \
@@ -169,8 +177,8 @@ python3 -m recipe.dapo.main_dapo \
     trainer.test_freq=50 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
-    trainer.rollout_data_dir="${PROJECT_DIR}/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/train" \
-    trainer.validation_data_dir="${PROJECT_DIR}/logs/rollouts/full_satfinder/${exp_name}/val" \
+    trainer.rollout_data_dir="${PROJECT_DIR}/logs/pass_at_k/rollouts/full_math12k/${exp_name}/train" \
+    trainer.validation_data_dir="${PROJECT_DIR}/logs/rollouts/full_math12k/${exp_name}/val" \
     trainer.default_local_dir="${HF_HOME}/models/ckpts/${project_name}/${exp_name}" \
     trainer.resume_mode="${resume_mode}" \
     trainer.resume_from_path="${resume_from_path}" \

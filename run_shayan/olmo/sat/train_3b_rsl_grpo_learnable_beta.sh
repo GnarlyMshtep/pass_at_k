@@ -20,8 +20,8 @@ probability_of_betas="0.5,0.5"
 exp_name="${model_name}_${dataset_name}_olmo_rsl_grpo_beta_${risk_beta//,/_}_${probability_of_betas//,/_}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 
 # Resume configuration
-resume_mode="disable" # one of: disable, auto, resume_path
-resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_rs_grpo_beta_4_2048_20251127_120915/global_step_200"
+resume_mode="resume_path" # one of: disable, auto, resume_path
+resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_olmo_rs_grpo_beta_4_2048_20251206_141431/global_step_150"
 
 # Keep rollout counts aligned with the multi-attempt setup for throughput
 max_attempts=4
@@ -78,8 +78,7 @@ python3 -m recipe.dapo.main_dapo \
     +algorithm.risk_beta_options=\'${risk_beta}\' \
     +algorithm.probabilities_of_betas=\'${probability_of_betas}\' \
     +'algorithm.beta_to_string_mapping={-4:"\n Please prioritize consistency and minimize the risk of error by adhering to the most probable and robust path.",8:"\n Please adopt a speculative strategy that prioritizes the potential for a maximum payout, even if the probability of success is low."}' \
-    +actor_rollout_ref.actor.beta_specific_entropy_coeff=True \
-    +'actor_rollout_ref.actor.beta_entropy_coeff_map={-4: -0.0001, 8: 0.0001}' \
+    +actor_rollout_ref.actor.beta_specific_entropy_coeff=False \
     +algorithm.beta_advantage_equalize=True \
     +algorithm.beta_insertion_position=user_message_end \
     +'algorithm.default_system_prompt="You are Qwen, created by Alibaba Cloud. You are a helpful assistant."' \
