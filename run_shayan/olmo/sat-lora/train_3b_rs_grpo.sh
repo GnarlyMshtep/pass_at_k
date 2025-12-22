@@ -6,7 +6,7 @@ set -x
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
-export RAY_DEBUG_POST_MORTEM=1
+export RAY_DEBUG_POST_MORTEM=0
 export HYDRA_FULL_ERROR=1
 export PYTHONPATH=$PWD:$PYTHONPATH
 export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
@@ -17,6 +17,7 @@ project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat2_2to3'
 max_response_length=2048
+risk_beta=0
 
 # Optional override: resume from an existing experiment folder name
 # Usage:
@@ -28,7 +29,7 @@ resume_from_path=""
 if [[ -n "$EXP_NAME_GLOBAL" ]]; then
   exp_name="$EXP_NAME_GLOBAL"
 else
-  exp_name="${model_name}_${dataset_name}_olmo_grpo_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+    exp_name="${model_name}_${dataset_name}_olmo_rs_grpo_beta_${risk_beta}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 fi
 
 
@@ -69,11 +70,6 @@ echo "exp_name: $exp_name"
 echo "resume_mode: $resume_mode"
 echo "resume_from_path: $resume_from_path"
 
-# exp_name="${model_name}_${dataset_name}_olmo_grpo_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
-
-# Resume configuration
-# resume_mode="disable" # one of: disable, auto, resume_path
-# resume_from_path="${HF_HOME}/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen3-0.6B_sat_3to7_group_based_adv_1024_20250101_000000/global_step_200"
 
 # Keep rollout counts aligned with the multi-attempt setup for throughput
 max_attempts=4
@@ -96,9 +92,8 @@ enable_filter_groups=True
 filter_groups_metric="is_correct"      # Filter based on accuracy variance (acc/score/seq_reward)
 max_num_gen_batches=0          # Max gen batches for active sampling (0 = unlimited)
 
-norm_adv_by_std_in_grpo=False
 
-num_gpus=4
+num_gpus=2
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
@@ -112,7 +107,8 @@ max_batched_tokens=$((max_model_len + 1024))
 monitor_metric="val/pass@1"
 
 python3 -m recipe.dapo.main_dapo \
-    ++algorithm.adv_estimator=grpo \
+    algorithm.adv_estimator=rsgrpo \
+    ++algorithm.risk_beta=${risk_beta}\
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
     data.train_files=$HF_HOME/data/${dataset_name}/train.parquet \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
@@ -126,7 +122,7 @@ python3 -m recipe.dapo.main_dapo \
     data.return_raw_chat=True \
     data.return_full_prompt=True \
     actor_rollout_ref.model.path=$HF_HOME/models/${model_name} \
-    actor_rollout_ref.actor.optim.lr=2e-5 \
+    actor_rollout_ref.actor.optim.lr=1e-5 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
     actor_rollout_ref.actor.clip_ratio_low=${clip_ratio_low} \
     actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
@@ -159,7 +155,6 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.filter_groups.enable=${enable_filter_groups} \
     algorithm.filter_groups.metric=${filter_groups_metric} \
     algorithm.filter_groups.max_num_gen_batches=${max_num_gen_batches} \
-    algorithm.norm_adv_by_std_in_grpo=${norm_adv_by_std_in_grpo} \
     actor_rollout_ref.rollout.calculate_log_probs=True \
     trainer.critic_warmup=0 \
     custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/sat/sat_verifier.py" \
@@ -169,8 +164,7 @@ python3 -m recipe.dapo.main_dapo \
     trainer.experiment_name="${exp_name}" \
     trainer.n_gpus_per_node=$num_gpus \
     trainer.nnodes=1 \
-    trainer.save_freq=10 \
-    trainer.max_actor_ckpt_to_keep=5 \
+    trainer.save_freq=50 \
     trainer.test_freq=50 \
     trainer.total_epochs=6 \
     +trainer.rollout_dump_freq=5 \
@@ -185,9 +179,9 @@ python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True\
-    actor_rollout_ref.model.lora_rank=32 \
+    actor_rollout_ref.model.lora_rank=8 \
     actor_rollout_ref.model.lora_alpha=32 \
     actor_rollout_ref.model.target_modules=all-linear \
-    actor_rollout_ref.rollout.load_format=safetensors 
+    actor_rollout_ref.rollout.load_format=safetensors  
 
 
