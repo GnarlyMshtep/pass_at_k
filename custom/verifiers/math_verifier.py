@@ -23,7 +23,7 @@ def math_compute_score(
     - Parses the model output for the <answer> tag content.
     - Extracts the ground-truth answer string from `ground_truth` or `extra_info`.
     - Delegates to `verl.utils.reward_score.math_verify.compute_score`.
-    Returns a float score (typically 0.0 or 1.0).
+    Returns a dict with "score" (float, typically 0.0 or 1.0) and "is_correct" (float, 0.0 or 1.0)
     """
     from verl.utils.reward_score.math_verify import (
         compute_score as _math_verify_compute_score,
@@ -49,16 +49,18 @@ def math_compute_score(
                 break
 
     if not isinstance(gold_text, str) or not gold_text.strip():
-        return 0.0
+        return {"score": 0.0, "is_correct": 0.0}
 
     try:
         score = _math_verify_compute_score(pred, gold_text)
     except Exception:
-        return 0.0
+        return {"score": 0.0, "is_correct": 0.0}
 
     try:
-        return float(score)
+        score_float = float(score)
+        # Return dict with both score and is_correct for filter_groups_metric
+        return {"score": score_float, "is_correct": score_float}
     except Exception:
-        return 0.0
+        return {"score": 0.0, "is_correct": 0.0}
 
 

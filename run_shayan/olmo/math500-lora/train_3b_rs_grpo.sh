@@ -3,80 +3,86 @@
 set -x
 
 # mkdir -p "$HF_HOME/data/math12k" && hf download hiyouga/math12k --repo-type dataset --local-dir "$HF_HOME/data/math12k"
-# mkdir -p "$HF_HOME/data/aime24" "$HF_HOME/data/aime25" && hf download HuggingFaceH4/aime_2024 --repo-type dataset --local-dir "$HF_HOME/data/aime24" && hf download math-ai/aime25 --repo-type dataset --local-dir "$HF_HOME/data/aime25"
+# mkdir -p "$HF_HOME/data/aime24" "$HF_HOME/data/aime25" && hf download HuggingFaceH4/aime_2024 --repo-type dataset --local-dir "$HF_HOME/data/aime24" && hf download MathArena/aime_2025 --repo-type dataset --local-dir "$HF_HOME/data/aime25"
+# python convert_answer_to_string.py ${HF_HOME}/data/aime24/data/train-00000-of-00001.parquet
+# python convert_answer_to_string.py ${HF_HOME}/data/aime25/data/train-00000-of-00001.parquet
+
+# python inspect_parquet.py ${HF_HOME}/data/aime24/data/train-00000-of-00001.parquet
+# python inspect_parquet.py ${HF_HOME}/data/math12k/data/test-00000-of-00001.parquet
+# python inspect_parquet.py ${HF_HOME}/data/aime25/data/train-00000-of-00001.parquet
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
-export RAY_DEBUG_POST_MORTEM=0
+export RAY_DEBUG_POST_MORTEM=1
 export HYDRA_FULL_ERROR=1
 export PYTHONPATH=$PWD:$PYTHONPATH
 export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
 export RAY_DISABLE_IMPORT_WARNING=1
 
 PROJECT_DIR=$(pwd)
-project_name='verl_grpo_full_sat_multi_attempt'
+project_name='verl_grpo_full_math12k_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 
 dataset_name='math12k'
 TRAIN_FILE=${HF_HOME}/data/math12k/data/train-00000-of-00001.parquet
 aime24_test_path=${HF_HOME}/data/aime24/data/train-00000-of-00001.parquet
-aime25_test_path=${HF_HOME}/data/aime25/test.jsonl
+aime25_test_path=${HF_HOME}/data/aime25/data/train-00000-of-00001.parquet
 math500_test_path=${HF_HOME}/data/math12k/data/test-00000-of-00001.parquet
 
 TEST_FILE="['$aime24_test_path', '$aime25_test_path', '$math500_test_path']"
+# TEST_FILE="['$aime24_test_path', '$math500_test_path']"
+
+max_response_length=1024
+risk_beta=4
+
+# Optional override: resume from an existing experiment folder name
+# Usage:
+#   EXP_NAME_GLOBAL="Qwen2.5-3B-Instruct_sat_2to3_olmo_grpo_2048_20251212_101530" sbatch train.sbatch
+EXP_NAME_GLOBAL="${EXP_NAME_GLOBAL:-}"
+
+if [[ -n "$EXP_NAME_GLOBAL" ]]; then
+  exp_name="$EXP_NAME_GLOBAL"
+else
+    exp_name="${model_name}_${dataset_name}_olmo_rs_grpo_beta_${risk_beta}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+fi
 
 
-max_response_length=512
-risk_beta=0
-
-# # Optional override: resume from an existing experiment folder name
-# # Usage:
-# #   EXP_NAME_GLOBAL="Qwen2.5-3B-Instruct_sat_2to3_olmo_grpo_2048_20251212_101530" sbatch train.sbatch
-# EXP_NAME_GLOBAL="${EXP_NAME_GLOBAL:-}"
-
-# if [[ -n "$EXP_NAME_GLOBAL" ]]; then
-#   exp_name="$EXP_NAME_GLOBAL"
-# else
-#     exp_name="${model_name}_${dataset_name}_olmo_rs_grpo_beta_${risk_beta}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
-# fi
-
-
-# RUN_DIR="${HF_HOME}/models/ckpts/${project_name}/${exp_name}"
-
-# if [[ -n "$EXP_NAME_GLOBAL" ]]; then
-#   if [[ ! -d "$RUN_DIR" ]]; then
-#     echo "WARN: EXP_NAME_GLOBAL set but run dir not found: $RUN_DIR"
-#     echo "      Starting from scratch using this exp_name (will create it)."
-#     resume_mode="disable"
-#     resume_from_path=""
-#   else
-#     # Find latest checkpoint dir (supports both styles)
-#     LATEST_CKPT=$(
-#       find "$RUN_DIR" -maxdepth 1 -type d \( -name 'global_step_*' -o -name 'checkpoint-*' \) \
-#         -printf '%T@ %p\n' 2>/dev/null \
-#       | sort -n \
-#       | tail -n 1 \
-#       | awk '{print $2}'
-#     )
-
-#     if [[ -n "$LATEST_CKPT" ]]; then
-#       resume_mode="resume_path"
-#       resume_from_path="$LATEST_CKPT"
-#       echo "Resuming EXP_NAME_GLOBAL=$EXP_NAME_GLOBAL"
-#       echo "Run dir:    $RUN_DIR"
-#       echo "Checkpoint: $resume_from_path"
-#     else
-#       echo "WARN: No checkpoints found in $RUN_DIR"
-#       echo "      Starting from scratch (but keeping same exp_name)."
-#       resume_mode="disable"
-#       resume_from_path=""
-#     fi
-#   fi
-# fi
-
-exp_name="${model_name}_${dataset_name}_olmo_rs_grpo_beta_${risk_beta}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
+RUN_DIR="${HF_HOME}/models/ckpts/${project_name}/${exp_name}"
 resume_mode="disable"
-resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_olmo_rs_grpo_beta_4_2048_20251206_141431/global_step_150"
+      resume_from_path=""
+      
+if [[ -n "$EXP_NAME_GLOBAL" ]]; then
+  if [[ ! -d "$RUN_DIR" ]]; then
+    echo "WARN: EXP_NAME_GLOBAL set but run dir not found: $RUN_DIR"
+    echo "      Starting from scratch using this exp_name (will create it)."
+    resume_mode="disable"
+    resume_from_path=""
+  else
+    # Find latest checkpoint dir (supports both styles)
+    LATEST_CKPT=$(
+      find "$RUN_DIR" -maxdepth 1 -type d \( -name 'global_step_*' -o -name 'checkpoint-*' \) \
+        -printf '%T@ %p\n' 2>/dev/null \
+      | sort -n \
+      | tail -n 1 \
+      | awk '{print $2}'
+    )
+
+    if [[ -n "$LATEST_CKPT" ]]; then
+      resume_mode="resume_path"
+      resume_from_path="$LATEST_CKPT"
+      echo "Resuming EXP_NAME_GLOBAL=$EXP_NAME_GLOBAL"
+      echo "Run dir:    $RUN_DIR"
+      echo "Checkpoint: $resume_from_path"
+    else
+      echo "WARN: No checkpoints found in $RUN_DIR"
+      echo "      Starting from scratch (but keeping same exp_name)."
+      resume_mode="disable"
+      resume_from_path=""
+    fi
+  fi
+fi
+
+
 echo "exp_name: $exp_name"
 echo "resume_mode: $resume_mode"
 echo "resume_from_path: $resume_from_path"
@@ -104,15 +110,15 @@ filter_groups_metric="is_correct"      # Filter based on accuracy variance (acc/
 max_num_gen_batches=0          # Max gen batches for active sampling (0 = unlimited)
 
 
-num_gpus=4
+num_gpus=2
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
 
 num_workers=8
 
-max_model_len=$((1024 + max_response_length))
-max_batched_tokens=$((max_model_len + 1024))
+max_model_len=$((2048 + max_response_length))
+max_batched_tokens=$((max_model_len + 2048))
 
 # Best checkpoint settings: monitor single-attempt val metric
 monitor_metric="val/pass@1"
@@ -125,15 +131,19 @@ python3 -m recipe.dapo.main_dapo \
     data.val_files="${TEST_FILE}" \
     data.train_batch_size=$train_batch_size \
     data.val_batch_size=$val_batch_size \
-    data.max_prompt_length=1024 \
+    data.max_prompt_length=2048 \
+    data.prompt_key="problem" \
     data.max_response_length=${max_response_length} \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
     data.shuffle=False \
     data.return_raw_chat=True \
     data.return_full_prompt=True \
+    +data.custom_cls.path="${PROJECT_DIR}/custom/dataset/math_dataset.py" \
+    +data.custom_cls.name="CustomMathDataset" \
+    '+data.prompt_suffix="\nPlease reason step by step, and put your final answer within \boxed{}"' \
     actor_rollout_ref.model.path=$HF_HOME/models/${model_name} \
-    actor_rollout_ref.actor.optim.lr=2e-6 \
+    actor_rollout_ref.actor.optim.lr=2e-5 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
     actor_rollout_ref.actor.clip_ratio_low=${clip_ratio_low} \
     actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
@@ -167,6 +177,8 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.filter_groups.metric=${filter_groups_metric} \
     algorithm.filter_groups.max_num_gen_batches=${max_num_gen_batches} \
     actor_rollout_ref.rollout.calculate_log_probs=True \
+    custom_reward_function.path="${PROJECT_DIR}/custom/verifiers/math_verifier.py" \
+    custom_reward_function.name="math_compute_score" \
     trainer.critic_warmup=0 \
     trainer.logger='["console","wandb"]' \
     trainer.project_name="${project_name}" \
@@ -187,6 +199,10 @@ python3 -m recipe.dapo.main_dapo \
     +trainer.best_checkpoint.keep_top_k=1 \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
-    actor_rollout_ref.rollout.val_kwargs.do_sample=True
+    actor_rollout_ref.rollout.val_kwargs.do_sample=True   \
+    actor_rollout_ref.model.lora_rank=16 \
+    actor_rollout_ref.model.lora_alpha=32 \
+    actor_rollout_ref.model.target_modules=all-linear \
+    actor_rollout_ref.rollout.load_format=safetensors  
 
 

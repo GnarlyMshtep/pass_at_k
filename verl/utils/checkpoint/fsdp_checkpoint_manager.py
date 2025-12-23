@@ -134,14 +134,17 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             if self.should_load_model:
                 remote_model_path = os.path.join(local_path, f"model_world_size_{self.world_size}_rank_{self.rank}.pt")
                 local_model_path = copy_to_local(remote_model_path)
-                model_state_dict = torch.load(local_model_path, weights_only=False)
+                # Use map_location='cpu' to avoid device mismatch errors when loading checkpoints
+                # saved on systems with different GPU configurations
+                model_state_dict = torch.load(local_model_path, map_location='cpu', weights_only=False)
                 self.model.load_state_dict(model_state_dict)
                 log_with_rank(f"Loaded model from {remote_model_path}", rank=self.rank, logger=logger)
 
             if self.should_load_optimizer:
                 remote_optim_path = os.path.join(local_path, f"optim_world_size_{self.world_size}_rank_{self.rank}.pt")
                 local_optim_path = copy_to_local(remote_optim_path)
-                optimizer_state_dict = torch.load(local_optim_path, weights_only=False)
+                # Use map_location='cpu' to avoid device mismatch errors
+                optimizer_state_dict = torch.load(local_optim_path, map_location='cpu', weights_only=False)
                 self.optimizer.load_state_dict(optimizer_state_dict)
                 log_with_rank(f"Loaded optimizer from {remote_optim_path}", rank=self.rank, logger=logger)
 
@@ -150,7 +153,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                 local_path, f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt"
             )
             local_extra_state_path = copy_to_local(remote_extra_state_path)
-            extra_state_dict = torch.load(local_extra_state_path, weights_only=False)
+            # Use map_location='cpu' to avoid device mismatch errors
+            extra_state_dict = torch.load(local_extra_state_path, map_location='cpu', weights_only=False)
             # recover random state
             if "rng" in extra_state_dict:
                 # 'rng' may not exist for backward compatibility

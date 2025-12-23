@@ -12,28 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import concurrent.futures
 try:
-    from math_verify.errors import TimeoutException
-    from math_verify.metric import math_metric
-    from math_verify.parser import ExprExtractionConfig, LatexExtractionConfig
+    from math_verify import parse, verify
 except ImportError:
     print("To use Math-Verify, please install it first by running `pip install math-verify`.")
 
 
 def compute_score(model_output: str, ground_truth: str, timeout_score: float = 0) -> bool:
-    verify_func = math_metric(
-        gold_extraction_target=(LatexExtractionConfig(),),
-        pred_extraction_target=(ExprExtractionConfig(), LatexExtractionConfig()),
-    )
     ret_score = 0.0
 
-    # Wrap the ground truth in \boxed{} format for verification
+# Wrap the ground truth in \boxed{} format for verification
     ground_truth_boxed = "\\boxed{" + ground_truth + "}"
+    def _compute():
+        """Helper function to compute score with parsing and verification."""
+        parsed_output = parse(model_output, parsing_timeout=None)
+        parsed_ground_truth = parse(ground_truth_boxed, parsing_timeout=None)
+        return verify(parsed_output, parsed_ground_truth, timeout_seconds=None)
     try:
-        ret_score, _ = verify_func([ground_truth_boxed], [model_output])
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_compute)
+            ret_score = future.result(timeout=10)  # 10 seconds timeout
+    except concurrent.futures.TimeoutError:
+        ret_score = timeout_score
     except Exception:
         pass
-    except TimeoutException:
-        ret_score = timeout_score
-
     return ret_score
