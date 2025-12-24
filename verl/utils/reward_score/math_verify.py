@@ -32,7 +32,7 @@ def compute_score(model_output: str, ground_truth: str, timeout_score: float = 0
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(_compute)
-            ret_score = future.result(timeout=10)  # 10 seconds timeout
+            ret_score = future.result(timeout=0.5) 
     except concurrent.futures.TimeoutError:
         ret_score = timeout_score
     except Exception:

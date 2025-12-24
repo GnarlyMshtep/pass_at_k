@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Script to convert the 'answer' field from int to string in a parquet dataset.
+Script to convert the 'answer' field from int to string in a parquet dataset
+and add a 'data_source' column extracted from the file path.
 Modifies the dataset in-place.
 """
 
@@ -10,25 +11,70 @@ import sys
 from pathlib import Path
 
 import datasets
+from datasets import Value
 
 
-def convert_answer_to_string(dataset_path: str):
+def extract_data_source_from_path(dataset_path: str) -> str:
     """
-    Read a parquet dataset, convert 'answer' field from int to string, and save in-place.
+    Extract the data source name from the file path.
+    
+    For paths like: /HF_HOME/data/aime24/data/train-00000-of-00001.parquet
+    Returns: "aime24"
     
     Args:
         dataset_path: Path to the parquet file
+        
+    Returns:
+        The data source name (directory name after /data/)
+    """
+    path = Path(dataset_path)
+    parts = path.parts
+    
+    # Look for "data" in the path and get the next directory
+    for i, part in enumerate(parts):
+        if part == "data" and i + 1 < len(parts):
+            return parts[i + 1]
+    
+    # Fallback: use the parent directory name if "data" pattern not found
+    return path.parent.name
+
+
+def convert_answer_to_string(dataset_path: str, data_source: str = None):
+    """
+    Read a parquet dataset, convert 'answer' field from int to string, 
+    add 'data_source' column, and save in-place.
+    
+    Args:
+        dataset_path: Path to the parquet file
+        data_source: Optional data source name. If not provided, extracted from path.
     """
     if not os.path.exists(dataset_path):
         raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
     
+    # Extract data source from path if not provided
+    if data_source is None:
+        data_source = extract_data_source_from_path(dataset_path)
+    
     print(f"Loading dataset from: {dataset_path}")
+    print(f"Data source: {data_source}")
     
     # Load the dataset
     dataset = datasets.load_dataset("parquet", data_files=dataset_path)["train"]
     
     print(f"Dataset loaded. Total samples: {len(dataset)}")
     print(f"Dataset columns: {dataset.column_names}")
+    
+    # Add data_source column if it doesn't exist or update it
+    if "data_source" not in dataset.column_names:
+        print(f"Adding 'data_source' column with value: {data_source}")
+        dataset = dataset.add_column("data_source", [data_source] * len(dataset))
+    else:
+        print(f"Updating 'data_source' column with value: {data_source}")
+        def update_data_source(example):
+            example["data_source"] = data_source
+            return example
+        dataset = dataset.map(update_data_source)
+        dataset = dataset.cast_column("data_source", Value("string"))
     
     # Check if 'answer' field exists
     if "answer" not in dataset.column_names:
@@ -52,6 +98,8 @@ def convert_answer_to_string(dataset_path: str):
                         return example
                     
                     dataset = dataset.map(convert_extra_info_answer)
+                    # Note: For nested fields in extra_info, we can't easily cast the schema
+                    # but the values will be converted correctly
                 else:
                     raise ValueError("'answer' field not found in dataset or extra_info")
             else:
@@ -72,6 +120,10 @@ def convert_answer_to_string(dataset_path: str):
             return example
         
         dataset = dataset.map(convert_answer)
+        
+        # Explicitly cast the column to string type to update the schema
+        if "answer" in dataset.features:
+            dataset = dataset.cast_column("answer", Value("string"))
     
     # Verify conversion
     first_example = dataset[0]
@@ -91,23 +143,29 @@ def convert_answer_to_string(dataset_path: str):
     # Replace original with the modified version
     os.replace(temp_path, dataset_path)
     
-    print(f"Successfully converted 'answer' field to string and saved to: {dataset_path}")
+    print(f"Successfully converted 'answer' field to string, added 'data_source' column, and saved to: {dataset_path}")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert 'answer' field from int to string in a parquet dataset (in-place)"
+        description="Convert 'answer' field from int to string and add 'data_source' column in a parquet dataset (in-place)"
     )
     parser.add_argument(
         "dataset_path",
         type=str,
         help="Path to the parquet dataset file"
     )
+    parser.add_argument(
+        "--data-source",
+        type=str,
+        default=None,
+        help="Data source name (e.g., 'aime24'). If not provided, extracted from path."
+    )
     
     args = parser.parse_args()
     
     try:
-        convert_answer_to_string(args.dataset_path)
+        convert_answer_to_string(args.dataset_path, data_source=args.data_source)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

@@ -837,6 +837,9 @@ class RayPPOTrainer:
         sample_scores = []
         sample_turns = []
         sample_uids = []
+        
+        # Accumulate all validation batches for pass@k metrics computation
+        accumulated_val_batches = []
 
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
@@ -917,12 +920,19 @@ class RayPPOTrainer:
             if "reward_extra_info" in result:
                 for key, lst in result["reward_extra_info"].items():
                     reward_extra_infos_dict[key].extend(lst)
+                # Add reward_extra_info to batch's non_tensor_batch for pass@k metrics computation
+                # This is needed so that is_correct and other fields are available in the batch
+                test_batch.non_tensor_batch.update({k: np.array(v) for k, v in result["reward_extra_info"].items()})
 
             # collect num_turns of each prompt
             if "__num_turns__" in test_batch.non_tensor_batch:
                 sample_turns.append(test_batch.non_tensor_batch["__num_turns__"])
 
             data_source_lst.append(test_batch.non_tensor_batch.get("data_source", ["unknown"] * reward_tensor.shape[0]))
+            
+            # Accumulate batch for pass@k metrics computation
+            # The test_batch at this point has rewards computed and all necessary info
+            accumulated_val_batches.append(test_batch)
 
         self._maybe_log_val_generations(inputs=sample_inputs, outputs=sample_outputs, scores=sample_scores)
 
@@ -966,6 +976,88 @@ class RayPPOTrainer:
             metric_dict["val-aux/num_turns/min"] = sample_turns.min()
             metric_dict["val-aux/num_turns/max"] = sample_turns.max()
             metric_dict["val-aux/num_turns/mean"] = sample_turns.mean()
+
+        # Compute pass@k metrics on accumulated validation batches
+        if len(accumulated_val_batches) > 0:
+            from verl.trainer.ppo.metric_utils import compute_pass_at_k_metrics
+            # Remove "timing" key from meta_info of each batch in accumulated_val_batches
+            for batch in accumulated_val_batches:
+                if "timing" in batch.meta_info:
+                    batch.meta_info.pop("timing")
+            # Concatenate all validation batches
+            combined_val_batch = DataProto.concat(accumulated_val_batches)
+            
+            # Debug: Check if required fields are present
+            has_is_correct = "is_correct" in combined_val_batch.non_tensor_batch
+            has_uid = "uid" in combined_val_batch.non_tensor_batch
+            if not has_is_correct or not has_uid:
+                print(f"WARNING: Missing fields for pass@k computation. has_is_correct={has_is_correct}, has_uid={has_uid}")
+                if has_uid:
+                    print(f"Available non_tensor_batch keys: {list(combined_val_batch.non_tensor_batch.keys())}")
+            # Compute pass@k metrics
+            val_pass_at_k = compute_pass_at_k_metrics(combined_val_batch)
+            # Add validation pass@k metrics with data source in the name
+            # Following the pattern: val-core/{data_source}/pass/iid@{k} or val-aux/{data_source}/pass/iid@{k}
+            for key, value in val_pass_at_k.items():
+                if key.startswith("trainWithDataSources/"):
+                    # Format: trainWithDataSources/pass/iid@{k}/{data_source}
+                    # Convert to: val-core/{data_source}/pass/iid@{k}
+                    parts = key.split("/")
+                    if len(parts) >= 4:
+                        k_part = parts[2]  # e.g., "iid@1"
+                        data_source = parts[3]  # e.g., "math500"
+                        metric_dict[f"val-core/{data_source}/pass/{k_part}"] = value
+                elif key.startswith("train/"):
+                    # Format: train/pass/iid@{k} (aggregated across all data sources)
+                    # For validation, we need to compute per data source or use "all"
+                    # Extract the k value
+                    k_part = key.split("/")[-1]  # e.g., "iid@1"
+                    # Use "all" as data source for aggregated metrics
+                    metric_dict[f"val-aux/all/pass/{k_part}"] = value
+            
+            # Compute beta-specific pass@k metrics per data source
+            if "risk_beta" in combined_val_batch.non_tensor_batch:
+                # First compute aggregated beta metrics across all data sources
+                beta_pass_at_k_metrics_all = self._compute_beta_pass_at_k_metrics(combined_val_batch)
+                # Add aggregated beta metrics with "all" as data source
+                for key, value in beta_pass_at_k_metrics_all.items():
+                    # Format: train-beta/beta={beta_val}/pass@{k}
+                    # Convert to: val-aux/all/beta={beta_val}/pass@{k}
+                    if key.startswith("train-beta/"):
+                        suffix = key.replace("train-beta/", "")
+                        metric_dict[f"val-aux/all/{suffix}"] = value
+                
+                # Get data sources
+                data_sources = combined_val_batch.non_tensor_batch.get("data_source", None)
+                if data_sources is None:
+                    # If no data_source, use "unknown"
+                    data_sources = np.array(["unknown"] * len(combined_val_batch), dtype=object)
+                elif isinstance(data_sources, list):
+                    data_sources = np.array(data_sources, dtype=object)
+                elif not isinstance(data_sources, np.ndarray):
+                    data_sources = np.array(data_sources, dtype=object)
+                
+                unique_data_sources = np.unique(data_sources)
+                
+                # Compute beta metrics per data source
+                for data_source in unique_data_sources:
+                    # Filter batch for this data source using boolean mask
+                    ds_mask = (data_sources == data_source)
+                    if ds_mask.sum() == 0:
+                        continue
+                    
+                    # Create a filtered batch for this data source
+                    ds_batch = combined_val_batch[ds_mask]
+                    
+                    # Compute beta pass@k metrics for this data source
+                    beta_pass_at_k_metrics = self._compute_beta_pass_at_k_metrics(ds_batch)
+                    # Add with data source in the name: val-core/{data_source}/beta={beta_val}/pass@{k}
+                    for key, value in beta_pass_at_k_metrics.items():
+                        # Format: train-beta/beta={beta_val}/pass@{k}
+                        # Convert to: val-core/{data_source}/beta={beta_val}/pass@{k}
+                        if key.startswith("train-beta/"):
+                            suffix = key.replace("train-beta/", "")
+                            metric_dict[f"val-core/{data_source}/{suffix}"] = value
 
         return metric_dict
 

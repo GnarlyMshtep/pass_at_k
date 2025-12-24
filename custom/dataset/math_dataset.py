@@ -50,52 +50,7 @@ class CustomMathDataset(RLHFDataset):
         
         return messages
     
-    def _get_dataset_name(self):
-        """
-        Extract dataset name from config or file paths.
-        Tries in order:
-        1. config.dataset_name
-        2. config.data_source
-        3. Extract from file path (e.g., /data/math12k/data/train.parquet -> math12k)
-        4. Default: "unknown"
-        """
-        # Try config first
-        dataset_name = self.config.get("dataset_name") or self.config.get("data_source")
-        if dataset_name:
-            return str(dataset_name)
-        
-        # Try to extract from file path
-        if self.data_files:
-            # Convert to regular list if it's a ListConfig or similar
-            try:
-                from omegaconf import ListConfig
-                if isinstance(self.data_files, ListConfig):
-                    file_paths = [str(f) for f in self.data_files]
-                elif isinstance(self.data_files, list):
-                    file_paths = [str(f) for f in self.data_files]
-                else:
-                    file_paths = [str(self.data_files)]
-            except (ImportError, TypeError):
-                # Fallback if omegaconf not available or conversion fails
-                if isinstance(self.data_files, list):
-                    file_paths = [str(f) for f in self.data_files]
-                else:
-                    file_paths = [str(self.data_files)]
-            
-            if file_paths:
-                # Use the first file path
-                file_path = file_paths[0]
-                # Extract directory name from path like /data/math12k/data/train.parquet
-                # or /data/aime24/data/train.parquet
-                path_parts = file_path.split(os.sep)
-                # Look for common patterns: .../data/<dataset_name>/data/...
-                for i, part in enumerate(path_parts):
-                    if part == "data" and i + 1 < len(path_parts):
-                        dataset_name = path_parts[i + 1]
-                        if dataset_name and dataset_name != "data":  # Avoid picking up nested "data" dirs
-                            return dataset_name
-        
-        return "unknown"
+
     
     def __getitem__(self, item):
         """
@@ -113,23 +68,19 @@ class CustomMathDataset(RLHFDataset):
                 # Try to get ground_truth from extra_info
                 ground_truth = extra_info.get("ground_truth") or extra_info.get("answer") or extra_info.get("solution")
             if ground_truth is None: 
-                ground_truth = row_dict.get("answer")
+                ground_truth = row_dict.get("answer", None)
             if ground_truth is None:
-                ground_truth = row_dict.get("solution")
+                ground_truth = row_dict.get("solution", None)
             if ground_truth is None:
-                ground_truth = row_dict.get("ground_truth")
+                ground_truth = row_dict.get("ground_truth", None)
             if ground_truth is None:
-                ground_truth = row_dict.get("target")
+                ground_truth = row_dict.get("target", None)
             if ground_truth is None:
                 raise ValueError("ground_truth is required")
             row_dict["reward_model"] = {
                 "style": "rule",
                 "ground_truth": ground_truth,
             }
-        
-        # Add data_source if missing (required by reward manager)
-        if "data_source" not in row_dict or row_dict.get("data_source") is None:
-            row_dict["data_source"] = self._get_dataset_name()
-        
+        assert "data_source" in row_dict, "data_source is required"
         return row_dict
 
