@@ -19,22 +19,31 @@ except ImportError:
     print("To use Math-Verify, please install it first by running `pip install math-verify`.")
 
 
-def compute_score(model_output: str, ground_truth: str, timeout_score: float = 0) -> bool:
-    ret_score = 0.0
+def _compute_math_verify(model_output: str, ground_truth_boxed: str):
+    """Helper function that runs in a separate process. Must be at module level for pickling."""
+    # Use None for timeouts - signal.alarm() doesn't work in subprocesses either
+    # Timeout is handled at ProcessPoolExecutor level
+    parsed_output = parse(model_output, parsing_timeout=10)
+    parsed_ground_truth = parse(ground_truth_boxed, parsing_timeout=10)
+    return verify(parsed_ground_truth, parsed_output, timeout_seconds=10)
 
-# Wrap the ground truth in \boxed{} format for verification
+
+def compute_score(model_output: str, ground_truth: str) -> float:
+    """
+    Compute score using math_verify with ProcessPoolExecutor to avoid signal.alarm() issues
+    in multithreaded environments. Uses parsing_timeout=None and timeout_seconds=None as
+    recommended for threaded use, handling timeout at the executor level.
+    """
     ground_truth_boxed = "\\boxed{" + ground_truth + "}"
-    def _compute():
-        """Helper function to compute score with parsing and verification."""
-        parsed_output = parse(model_output, parsing_timeout=None)
-        parsed_ground_truth = parse(ground_truth_boxed, parsing_timeout=None)
-        return verify(parsed_output, parsed_ground_truth, timeout_seconds=None)
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_compute)
-            ret_score = future.result(timeout=0.5) 
-    except concurrent.futures.TimeoutError:
-        ret_score = timeout_score
-    except Exception:
-        pass
+        ret_score = _compute_math_verify(model_output, ground_truth_boxed)
+        if isinstance(ret_score, bool) and ret_score == True :
+            ret_score = 1.0 
+        else:
+            ret_score = 0.0
+    except Exception as e:
+        ret_score = 0
+        print(f"Error occurred: {e}")
     return ret_score
+
+

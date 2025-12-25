@@ -158,13 +158,21 @@ class TaskRunner:
         if config.algorithm.use_kl_in_reward or config.actor_rollout_ref.actor.use_kl_loss:
             role_worker_mapping[Role.RefPolicy] = ray.remote(actor_rollout_cls)
             mapping[Role.RefPolicy] = global_pool_id
-
+        
+        print("************************************************************")
+        print("************************************************************")  
+        print("********************* load_reward_manager *********************")
+        print(f"reward_kwargs: {config.reward_model.get('reward_kwargs', {})}")
+        print("************************************************************")
+        print("************************************************************")
+        
         reward_fn = load_reward_manager(
             config,
             tokenizer,
             0,
             max_resp_len=config.data.max_response_length,
             overlong_buffer_cfg=config.reward_model.overlong_buffer,
+             **config.reward_model.get("reward_kwargs", {})
         )
 
         # Note that we always use function-based RM for validation
@@ -174,6 +182,7 @@ class TaskRunner:
             1,
             max_resp_len=config.data.max_response_length,
             overlong_buffer_cfg=config.reward_model.overlong_buffer,
+            **config.reward_model.get("reward_kwargs", {})
         )
         resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
 

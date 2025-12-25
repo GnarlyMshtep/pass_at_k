@@ -23,6 +23,7 @@ from copy import deepcopy
 from pprint import pprint
 
 import numpy as np
+import ray
 import torch
 from tqdm import tqdm
 
@@ -36,7 +37,7 @@ from verl.trainer.ppo.ray_trainer import (
     compute_advantage,
     compute_response_mask,
 )
-from verl.trainer.ppo.reward import compute_reward
+from verl.trainer.ppo.reward import compute_reward, compute_reward_async
 from verl.utils.metric import reduce_metrics
 from verl.utils.profiler import marked_timer
 from verl.utils.rollout_skip import RolloutSkip
@@ -246,7 +247,14 @@ class RayDAPOTrainer(RayPPOTrainer):
                             new_batch = new_batch.union(reward_tensor)
 
                         # we combine with rule-based rm
-                        reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
+                        if self.config.reward_model.get("launch_reward_fn_async", False):
+                            future_reward = compute_reward_async.remote(
+                                data=new_batch, config=self.config, tokenizer=self.tokenizer
+                            )
+                            # Wait for the async reward computation to complete
+                            reward_tensor, reward_extra_infos_dict = ray.get(future_reward)
+                        else:
+                            reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
 
                         new_batch.batch["token_level_scores"] = reward_tensor
 
