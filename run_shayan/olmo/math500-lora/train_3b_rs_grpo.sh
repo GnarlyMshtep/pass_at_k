@@ -4,8 +4,11 @@ set -x
 
 # mkdir -p "$HF_HOME/data/math12k" && hf download hiyouga/math12k --repo-type dataset --local-dir "$HF_HOME/data/math12k"
 # mkdir -p "$HF_HOME/data/aime24" "$HF_HOME/data/aime25" && hf download HuggingFaceH4/aime_2024 --repo-type dataset --local-dir "$HF_HOME/data/aime24" && hf download MathArena/aime_2025 --repo-type dataset --local-dir "$HF_HOME/data/aime25"
-# python convert_answer_to_string.py ${HF_HOME}/data/aime24/data/train-00000-of-00001.parquet
-# python convert_answer_to_string.py ${HF_HOME}/data/aime25/data/train-00000-of-00001.parquet
+# python convert_answer_to_string.py ${HF_HOME}/data/aime24/data/train-00000-of-00001.parquet --data-source aime24
+# python convert_answer_to_string.py ${HF_HOME}/data/aime25/data/train-00000-of-00001.parquet --data-source aime25
+# python convert_answer_to_string.py ${HF_HOME}/data/math12k/data/test-00000-of-00001.parquet --data-source math500
+# python convert_answer_to_string.py ${HF_HOME}/data/math12k/data/train-00000-of-00001.parquet --data-source math12k
+
 
 # python inspect_parquet.py ${HF_HOME}/data/aime24/data/train-00000-of-00001.parquet
 # python inspect_parquet.py ${HF_HOME}/data/math12k/data/test-00000-of-00001.parquet
@@ -110,7 +113,7 @@ filter_groups_metric="is_correct"      # Filter based on accuracy variance (acc/
 max_num_gen_batches=0          # Max gen batches for active sampling (0 = unlimited)
 
 
-num_gpus=2
+num_gpus=4
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
@@ -127,6 +130,7 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.adv_estimator=rsgrpo \
     ++algorithm.risk_beta=${risk_beta}\
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
+    actor_rollout_ref.rollout.val_kwargs.n=${total_rollouts_per_prompt} \
     data.train_files="${TRAIN_FILE}" \
     data.val_files="${TEST_FILE}" \
     data.train_batch_size=$train_batch_size \
@@ -200,9 +204,10 @@ python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True   \
-    actor_rollout_ref.model.lora_rank=16 \
+    actor_rollout_ref.model.lora_rank=32 \
     actor_rollout_ref.model.lora_alpha=32 \
     actor_rollout_ref.model.target_modules=all-linear \
-    actor_rollout_ref.rollout.load_format=safetensors  
+    actor_rollout_ref.rollout.load_format=safetensors \
+    reward_model.launch_reward_fn_async=True
 
 
