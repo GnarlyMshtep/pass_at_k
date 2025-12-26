@@ -6,7 +6,7 @@ set -x
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
-export RAY_DEBUG_POST_MORTEM=0
+export RAY_DEBUG_POST_MORTEM=1
 export HYDRA_FULL_ERROR=1
 export PYTHONPATH=$PWD:$PYTHONPATH
 export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
@@ -66,6 +66,7 @@ risk_beta=0
 
 exp_name="${model_name}_${dataset_name}_olmo_rs_grpo_beta_${risk_beta}_${max_response_length}_$(date +%Y%m%d_%H%M%S)"
 resume_mode="resume_path"
+resume_mode="disable"
 resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_olmo_rs_grpo_beta_4_2048_20251206_141431/global_step_150"
 echo "exp_name: $exp_name"
 echo "resume_mode: $resume_mode"

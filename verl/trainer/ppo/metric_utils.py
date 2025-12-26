@@ -547,12 +547,13 @@ def process_validation_metrics(
             for var_name, var_vals in var2vals.items():
                 if isinstance(var_vals[0], str):
                     continue
-                if var_name == "best_attempt_index":
+                if var_name in ["best_attempt_index", "reason"]:
                     continue
 
                 metric = {}
                 n_resps = len(var_vals)
-                metric[f"mean@{n_resps}"] = np.mean(var_vals)
+
+                metric[f"mean@{n_resps}"] = np.mean(var_vals) 
 
                 if n_resps > 1:
                     metric[f"std@{n_resps}"] = np.std(var_vals)
