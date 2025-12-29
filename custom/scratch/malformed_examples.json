@@ -1,0 +1,17 @@
+{
+  "total_malformed": 1,
+  "examples": [
+    {
+      "line_num": 964,
+      "score": 1.100000023841858,
+      "total_attempts": 4,
+      "attempts": [
+        "14",
+        "16",
+        "14",
+        "14"
+      ],
+      "output_preview": "<think-1>\nWe start with the given information: \\(\\cos B = \\frac{4}{5}\\), \\(a = 10\\), and the area of \\(\\triangle ABC\\) is 42. The area of a triangle can also be expressed using the formula:\n\\[\n\\text{Area} = \\frac{1}{2}ac \\sin B\n\\]\nSubstituting the given values:\n\\[\n42 = \\frac{1}{2} \\cdot 10 \\cdot c \\cdot \\sin B\n\\]\n\\[\n42 = 5c \\sin B\n\\]\n\\[\nc \\sin B = \\frac{42}{5}\n\\]\n\nWe also know from the Law of Cosines that:\n\\[\nb^2 = a^2 + c^2 - 2ac \\cos B\n\\]\nSince \\(\\cos B = \\frac{4}{5}\\), we have:\n\\[\nb^2 = 10^2 ..."
+    }
+  ]
+}
