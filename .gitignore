@@ -1,10 +1,4 @@
-recipe_backup_20251203_164327/
 
-.zcompdump
-*zsh_history
-1.jsonl
-*.png
-*.csv
 **/*.pt
 **/checkpoints
 **/wget-log
@@ -14,7 +8,6 @@ recipe_backup_20251203_164327/
 **/*.tar.gz
 **/playground
 **/wandb
-**/rollouts
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -121,6 +114,9 @@ ENV/
 # vim
 *.swp
 
+# emacs
+*~
+
 # ckpt
 *.lock
 
@@ -133,14 +129,3 @@ logs
 log
 outputs
 .history
-
-
-# Suubmodules
-custom/Enigmata/
-custom/text_to_sql/AlphaSQL/
-
-# Door simulation learning history files
-door_simulation/learning_history_*.txt
-
-# Preserved scripts for sbatch jobs
-.preserved_scripts/

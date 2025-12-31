@@ -20,7 +20,7 @@ class CustomMathDataset(RLHFDataset):
         The suffix can be configured via config.prompt_suffix, or defaults to:
         "\\nPlease reason step by step, and put your final answer within \\boxed{}"
         """
-        messages = super()._build_messages(example)
+        messages = RLHFDataset._build_messages(self, example)
         
         # Handle case where messages might be a string or list of strings
         # Convert to proper message format if needed
@@ -57,7 +57,7 @@ class CustomMathDataset(RLHFDataset):
         Override __getitem__ to ensure reward_model and data_source are present.
         If these fields are missing from the parquet file, construct them.
         """
-        row_dict = super().__getitem__(item)
+        row_dict = RLHFDataset.__getitem__(self, item)
         
         # Add reward_model if missing (usually comes from parquet file, but some datasets don't have it)
         if "reward_model" not in row_dict or row_dict.get("reward_model") is None:

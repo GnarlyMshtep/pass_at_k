@@ -1,5 +1,0 @@
-pandas>=1.3.0
-pyarrow>=6.0.0
-rich>=10.0.0
-readchar>=3.0.0
-

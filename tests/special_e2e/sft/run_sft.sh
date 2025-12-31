@@ -3,14 +3,14 @@ set -xeuo pipefail
 
 ENTRYPOINT=${ENTRYPOINT:-"-m verl.trainer.fsdp_sft_trainer"}
 
-NUM_GPUS=${NUM_GPUS:-1}
+NUM_GPUS=${NUM_GPUS:-8}
 
-MODEL_ID=${MODEL_ID:-Qwen/Qwen2.5-1.5B-Instruct}
-MODEL_PATH=${MODEL_PATH:- "/mnt/xfs/home/aiilyas/rl-exploration/models/Qwen2_5-1_5B-Instruct"}
-# huggingface-cli download "${MODEL_ID}" --local-dir "${MODEL_PATH}"
+MODEL_ID=${MODEL_ID:-Qwen/Qwen2.5-0.5B-Instruct}
+MODEL_PATH=${MODEL_PATH:-${HOME}/models/${MODEL_ID}}
+#huggingface-cli download "${MODEL_ID}" --local-dir "${MODEL_PATH}"
 
-TRAIN_FILES=${TRAIN_FILES:-"/mnt/xfs/home/aiilyas/rl-exploration/data/sft_random_number_mult_att_per_rollout/train.parquet"}
-VAL_FILES=${VAL_FILES:-"/mnt/xfs/home/aiilyas/rl-exploration/data/sft_random_number_mult_att_per_rollout/test.parquet"}
+TRAIN_FILES=${TRAIN_FILES:-$HOME/data/gsm8k/train.parquet}
+VAL_FILES=${VAL_FILES:-$HOME/data/gsm8k/test.parquet}
 
 SP_SIZE=${SP_SIZE:-1}
 LIGER=${LIGER:-False}
@@ -23,11 +23,11 @@ RESUME_MODE=${RESUME_MODE:-disable}
 SAVE_FREQ=${SAVE_FREQ:-1}
 
 micro_bsz=2
-NUM_GPUS=1
+NUM_GPUS=8
 
 project_name="verl-test"
 exp_name="$(basename "${MODEL_ID,,}")-sft-minimal"
-ckpts_home=${ckpts_home:-"/mnt/xfs/home/aiilyas/rl-exploration/pass_at_k/checkpoints/sft"}
+ckpts_home=${ckpts_home:-$HOME/${project_name}/${exp_name}}
 
 mkdir -p "${ckpts_home}"
 
@@ -40,7 +40,7 @@ torchrun --standalone --nnodes=1 --nproc_per_node=${NUM_GPUS} ${ENTRYPOINT} \
     data.response_dict_keys=['answer'] \
     data.multiturn.enable="${MULTITURN}" \
     data.multiturn.messages_key=messages \
-    optim.lr=1e-5 \
+    optim.lr=1e-4 \
     data.micro_batch_size_per_gpu=${micro_bsz} \
     model.strategy=fsdp \
     model.partial_pretrain="${MODEL_PATH}" \

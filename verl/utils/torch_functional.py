@@ -335,6 +335,7 @@ def postprocess_data(
     pad_token_id: int,
     left_pad=True,
     truncation="error",
+    tokenizer=None,
 ):
     """Process tokenizer outputs to consistent shapes via padding/truncation.
 
@@ -374,6 +375,10 @@ def postprocess_data(
             input_ids = torch.cat([input_ids[:, :left_half], input_ids[:, -right_half:]], dim=-1)
             attention_mask = torch.cat([attention_mask[:, :left_half], attention_mask[:, -right_half:]], dim=-1)
         elif truncation == "error":
+            if tokenizer is not None:
+                for i in range(input_ids.shape[0]):
+                    print(tokenizer.decode(input_ids[i]))
+                    print("************************************************")
             raise NotImplementedError(f"{sequence_length=} is larger than {max_length=}")
         else:
             raise NotImplementedError(f"Unknown truncation method {truncation}")

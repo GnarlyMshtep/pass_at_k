@@ -336,6 +336,7 @@ def compute_advantage(
     elif adv_estimator == AdvantageEstimator.GRPO:
         # Initialize the mask for GRPO calculation
         grpo_calculation_mask = data.batch["response_mask"]
+
         # Call compute_grpo_outcome_advantage with parameters matching its definition
         advantages, returns = core_algos.compute_grpo_outcome_advantage(
             token_level_rewards=data.batch["token_level_rewards"],
@@ -649,11 +650,12 @@ class RayPPOTrainer:
             pad_token_id=self.tokenizer.pad_token_id,
             left_pad=True,
             truncation="error",
+            tokenizer=self.tokenizer
         )
         return new_input_ids_processed.squeeze(0), new_attention_mask_processed.squeeze(0), new_raw_prompt_ids, new_prompt
 
 
-    def _apply_beta_prompt_processing(self, batch: DataProto) -> DataProto:
+    def _apply_beta_prompt_processing(self, batch: DataProto, is_validation: bool = False) -> DataProto:
         """Sample a risk beta per uid, prefix prompts with chosen beta, and store per-sample betas.
 
         Controlled via config keys under algorithm:
@@ -667,11 +669,14 @@ class RayPPOTrainer:
         try:
             alg_cfg = self.config.algorithm
         except Exception:
+            print("Warning: algorithm config is required for beta prompt processing")
             return batch
         assert alg_cfg.get("beta_prompt_template", None) is None or alg_cfg.get("beta_to_string_mapping", None) is None, "Either beta_prompt_template or beta_to_string_mapping must be provided, not both"
         if not alg_cfg.get("sample_risk_beta_per_uid", False):
+            print("Warning: sample_risk_beta_per_uid is not enabled for beta prompt processing")
             return batch
 
+        
         betas = alg_cfg["risk_beta_options"]
         probs = alg_cfg["probabilities_of_betas"]
 
@@ -685,14 +690,30 @@ class RayPPOTrainer:
         else:
             raise ValueError("probabilities_of_betas must be a comma-separated string")
 
-        # Build per-uid beta
-        uids = batch.non_tensor_batch["uid"]
-        unique_uids = np.unique(uids)
+        if is_validation and alg_cfg.get("repeat_validation_betas", False):
+            batch = batch.repeat(
+                repeat_times=len(betas), interleave=True
+            )
+            batch.non_tensor_batch["uid"] = np.array(
+                    [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
+            )
+            uids = batch.non_tensor_batch["uid"]
+            unique_uids = np.unique(uids)
+            uid2beta = {}
+            for i in range(len(uids)):
+                uid2beta[uids[i]] = betas[i % len(betas)]
+            
+        else:
+            # Build per-uid beta
+            uids = batch.non_tensor_batch["uid"]
+            unique_uids = np.unique(uids)
 
-        probs_arr = np.array(probs, dtype=float)
-        probs_arr = probs_arr / probs_arr.sum()
-        rng = np.random.default_rng()
-        uid2beta = {uid: float(rng.choice(betas, p=probs_arr)) for uid in unique_uids}
+            probs_arr = np.array(probs, dtype=float)
+            probs_arr = probs_arr / probs_arr.sum()
+            rng = np.random.default_rng()
+            uid2beta = {uid: float(rng.choice(betas, p=probs_arr)) for uid in unique_uids}
+            
+
         per_sample_betas = [uid2beta[uid] for uid in uids]
         batch.non_tensor_batch["risk_beta"] = np.array(per_sample_betas, dtype=object)
 
@@ -849,7 +870,7 @@ class RayPPOTrainer:
                     [str(uuid.uuid4()) for _ in range(len(test_batch.batch))], dtype=object
                 )
             # Apply per-UID beta sampling and prompt prefixing if enabled
-            test_batch = self._apply_beta_prompt_processing(test_batch)
+            test_batch = self._apply_beta_prompt_processing(test_batch, is_validation=True)
 
             # repeat test batch
             test_batch = test_batch.repeat(
@@ -890,10 +911,8 @@ class RayPPOTrainer:
                 else self.config.actor_rollout_ref.rollout.agent.num_workers
             )
             test_gen_batch_padded, pad_size = pad_dataproto_to_divisor(test_gen_batch, size_divisor)
-            if not self.async_rollout_mode:
-                test_output_gen_batch_padded = self.actor_rollout_wg.generate_sequences(test_gen_batch_padded)
-            else:
-                test_output_gen_batch_padded = self.async_rollout_manager.generate_sequences(test_gen_batch_padded)
+            test_output_gen_batch_padded = self.actor_rollout_wg.generate_sequences(test_gen_batch_padded)
+            
 
             # unpad
             test_output_gen_batch = unpad_dataproto(test_output_gen_batch_padded, pad_size=pad_size)
@@ -1460,8 +1479,6 @@ class RayPPOTrainer:
             default_backend=self.config.trainer.logger,
             config=OmegaConf.to_container(self.config, resolve=True),
         )
-        # wandb.save("runs_scripts/*˝")
-
 
         self.global_steps = 0
 
@@ -1530,10 +1547,8 @@ class RayPPOTrainer:
                 with marked_timer("step", timing_raw):
                     # generate a batch
                     with marked_timer("gen", timing_raw, color="red"):
-                        if not self.async_rollout_mode:
-                            gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch_output)
-                        else:
-                            gen_batch_output = self.async_rollout_manager.generate_sequences(gen_batch_output)
+                        gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch_output)
+                        
 
                         timing_raw.update(gen_batch_output.meta_info["timing"])
                         gen_batch_output.meta_info.pop("timing", None)
@@ -1545,10 +1560,8 @@ class RayPPOTrainer:
                         with marked_timer("gen_max", timing_raw, color="purple"):
                             gen_baseline_batch = deepcopy(gen_batch)
                             gen_baseline_batch.meta_info["do_sample"] = False
-                            if not self.async_rollout_mode:
-                                gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
-                            else:
-                                gen_baseline_output = self.async_rollout_manager.generate_sequences(gen_baseline_batch)
+                            gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
+                            
                             batch = batch.union(gen_baseline_output)
                             # compute reward model score on batch
                             rm_scores = None

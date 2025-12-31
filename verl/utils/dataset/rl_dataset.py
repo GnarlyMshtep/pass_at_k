@@ -107,6 +107,7 @@ class RLHFDataset(Dataset):
         self.video_key = config.get("video_key", "videos")
         self.image_patch_size = config.get("image_patch_size", 14)
         self.max_prompt_length = config.get("max_prompt_length", 1024)
+        self.budget_left_empty_tokens = config.get("budget_left_empty_tokens", 0)
         self.return_raw_chat = config.get("return_raw_chat", False)
         self.return_full_prompt = config.get("return_full_prompt", False)
         self.truncation = config.get("truncation", "error")
@@ -237,8 +238,9 @@ class RLHFDataset(Dataset):
                         if self.tool_schemas is not None:
                             apply_kwargs["tools"] = self.tool_schemas
 
+                        messages = self._build_messages(doc)
                         return len(
-                            tokenizer.apply_chat_template(doc[prompt_key], add_generation_prompt=True, **apply_kwargs)
+                            tokenizer.apply_chat_template(messages, add_generation_prompt=True, **apply_kwargs)
                         )
                     except Exception:
                         print("Error processing one of the samples, skipping...")
@@ -246,9 +248,9 @@ class RLHFDataset(Dataset):
                         return self.max_prompt_length + 1
 
             dataframe = dataframe.filter(
-                lambda doc: doc2len(doc) <= self.max_prompt_length,
+                lambda doc: doc2len(doc) <= self.max_prompt_length-self.budget_left_empty_tokens,
                 num_proc=self.num_workers,
-                desc=f"Filtering prompts longer than {self.max_prompt_length} tokens",
+                desc=f"Filtering prompts longer than {self.max_prompt_length-self.budget_left_empty_tokens} tokens",
             )
 
             print(f"filter dataset len: {len(dataframe)}")
@@ -374,6 +376,7 @@ class RLHFDataset(Dataset):
             pad_token_id=self.tokenizer.pad_token_id,
             left_pad=True,
             truncation=self.truncation,
+            tokenizer=self.tokenizer
         )
 
         if self.processor is not None and "Qwen2VLImageProcessor" in self.processor.image_processor.__class__.__name__:

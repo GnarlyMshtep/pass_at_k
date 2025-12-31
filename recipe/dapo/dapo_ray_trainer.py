@@ -21,9 +21,7 @@ import uuid
 from collections import defaultdict
 from copy import deepcopy
 from pprint import pprint
-
 import numpy as np
-import ray
 import torch
 from tqdm import tqdm
 
@@ -111,6 +109,11 @@ class RayDAPOTrainer(RayPPOTrainer):
 
         from verl.utils.tracking import Tracking
 
+        print("************************************************")
+        d=self.train_dataloader.dataset
+        for i in range(len(d)):
+            x=d[i]['input_ids']
+
         logger = Tracking(
             project_name=self.config.trainer.project_name,
             experiment_name=self.config.trainer.experiment_name,
@@ -167,10 +170,9 @@ class RayDAPOTrainer(RayPPOTrainer):
         filter_total_prompts = 0
         filter_kept_prompts = 0
         filter_dropped_prompts = 0
+
         for epoch in range(self.config.trainer.total_epochs):
             for batch_dict in self.train_dataloader:
-                if hasattr(self.actor_rollout_wg, "async_calls_finalize_fn_exec"):
-                    self.actor_rollout_wg.async_calls_finalize_fn_exec(blocking=False)
                 metrics = {}
 
                 with marked_timer("start_profile", timing_raw):
@@ -179,6 +181,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                         if self.config.global_profiler.profile_continuous_steps
                         else curr_step_profile
                     )
+
                 new_batch: DataProto = DataProto.from_single_dict(batch_dict)
                 new_batch.non_tensor_batch["uid"] = np.array(
                         [str(uuid.uuid4()) for _ in range(len(new_batch.batch))], dtype=object
@@ -199,20 +202,15 @@ class RayDAPOTrainer(RayPPOTrainer):
                 with marked_timer("step", timing_raw):
                     # generate a batch
                     with marked_timer("gen", timing_raw, "red"):
-                        if not self.async_rollout_mode:
-                            new_batch = self.actor_rollout_wg.generate_sequences(new_batch)
-                        else:
-                            new_batch = self.async_rollout_manager.generate_sequences(new_batch)
+                        new_batch = self.actor_rollout_wg.generate_sequences(new_batch)
                         timing_raw.update(new_batch.meta_info["timing"])
                         new_batch.meta_info.pop("timing", None)
+
                     if self.config.algorithm.adv_estimator == AdvantageEstimator.REMAX:
                         with marked_timer("gen_max", timing_raw, "red"):
                             gen_baseline_batch = deepcopy(new_batch)
                             gen_baseline_batch.meta_info["do_sample"] = False
-                            if not self.async_rollout_mode:
-                                gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
-                            else:
-                                gen_baseline_output = self.async_rollout_manager.generate_sequences(gen_baseline_batch)
+                            gen_baseline_output = self.async_rollout_manager.generate_sequences(gen_baseline_batch)
 
                             new_batch = new_batch.union(gen_baseline_output)
                             # compute reward model score on new_batch
@@ -247,14 +245,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                             new_batch = new_batch.union(reward_tensor)
 
                         # we combine with rule-based rm
-                        if self.config.reward_model.get("launch_reward_fn_async", False):
-                            future_reward = compute_reward_async.remote(
-                                data=new_batch, config=self.config, tokenizer=self.tokenizer
-                            )
-                            # Wait for the async reward computation to complete
-                            reward_tensor, reward_extra_infos_dict = ray.get(future_reward)
-                        else:
-                            reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
+                        reward_tensor, reward_extra_infos_dict = compute_reward(new_batch, self.reward_fn)
 
                         new_batch.batch["token_level_scores"] = reward_tensor
 
