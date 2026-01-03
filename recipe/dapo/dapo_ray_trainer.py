@@ -46,7 +46,90 @@ class RayDAPOTrainer(RayPPOTrainer):
     Note that this trainer runs on the driver process on a single CPU/GPU node.
     """
 
-    def compute_kl_related_metrics(self, batch: DataProto, metrics: dict, timing_raw: dict):
+    def add_entropy_to_advantage(
+        self, batch: DataProto, alpha: float, kapa: float, entropys: torch.Tensor
+    ) -> DataProto:
+        """
+        Shape advantages using per-token entropy to encourage exploration in high-entropy regions.
+        
+        Implements entropy-based advantage shaping:
+            H_t = - ∑_{v∈V} π_θ(v|q,o_{<t}) log π_θ(v|q,o_{<t})  [per-token entropy]
+            ψ(H_t) = min(α · H_t^detach, |A_t| / κ)              [entropy shaping term]
+            A_t^shaped = A_t + ψ(H_t)                             [shaped advantage]
+        
+        The min operation ensures the entropy bonus is:
+        - Proportional to entropy (scaled by α) for exploration
+        - Clipped relative to advantage magnitude (by κ) to prevent dominance
+        
+        Args:
+            batch: DataProto containing advantages (shape: batch_size × response_length)
+            alpha: Entropy scaling factor (α > 0). Higher values give more exploration bonus.
+            kapa: Clipping factor (κ > 1). Controls max entropy bonus relative to |A_t|.
+            entropys: Per-token entropies from current policy (shape: batch_size × response_length)
+        
+        Returns:
+            Modified batch with shaped advantages
+        """
+        # Get current advantages
+        advantages = batch.batch["advantages"]  # shape: (batch_size, response_length)
+        
+        # Compute entropy-based shaping term: ψ(H_t) = min(α · H_t^detach, |A_t| / κ)
+        entropys_detached = entropys.detach()  # Detach to prevent gradient flow through entropy
+        entropy_term = alpha * entropys_detached
+        
+        # Compute adaptive clipping threshold: |A_t| / κ
+        advantage_magnitude = torch.abs(advantages)
+        clip_threshold = advantage_magnitude / kapa
+        
+        # Apply min operation to bound the entropy bonus
+        psi = torch.min(entropy_term, clip_threshold)
+        
+        # Shape the advantage: A_t^shaped = A_t + ψ(H_t)
+        shaped_advantages = advantages + psi
+        
+        # Store entropy shaping statistics in batch metadata for optional logging
+        # These can be logged by accessing batch.meta_info in the training loop
+        batch.meta_info["entropy_shaping"] = {
+            "psi_mean": psi.mean().item(),
+            "psi_std": psi.std().item(),
+            "entropy_term_mean": entropy_term.mean().item(),
+            "clip_threshold_mean": clip_threshold.mean().item(),
+            "clipped_fraction": (entropy_term > clip_threshold).float().mean().item(),
+        }
+        
+        # Update batch with shaped advantages
+        batch.batch["advantages"] = shaped_advantages
+        
+        return batch
+
+    def compute_entropies(self, batch: DataProto) -> torch.Tensor:
+        """
+        Compute per-token entropies from the current policy for entropy-based advantage shaping.
+        
+        This method is used when entropy shaping is enabled but entropies were not already
+        computed (e.g., when use_kl_in_reward=True and compute_kl_related_metrics was called
+        without return_entropys=True).
+        
+        Returns:
+            torch.Tensor: Per-token entropies H_t = - ∑_{v∈V} π_θ(v|q,o_{<t}) log π_θ(v|q,o_{<t})
+                         Shape: (batch_size, response_length)
+        """
+        # Compute log probabilities and entropies using current policy
+        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+        entropys = old_log_prob.batch["entropys"]
+        
+        # Return detached entropies (no gradient flow needed for advantage shaping)
+        return entropys.detach()
+
+    def compute_kl_related_metrics(self, batch: DataProto, metrics: dict, timing_raw: dict, return_entropys: bool = False):
+        """
+        Computes KL-related metrics including per-token entropy from the current policy.
+        
+        ACCESSING PER-TOKEN ENTROPIES:
+        Per-token entropies H_t = - ∑_{v∈V} π_θ(v|q,o_{<t}) log π_θ(v|q,o_{<t}) are computed
+        during compute_log_prob() and available in the entropys tensor with shape (batch_size, response_length).
+        You can access these to create custom entropy-based formulas (see usage examples below).
+        """
         batch.batch["response_mask"] = compute_response_mask(batch)
 
         # recompute old_log_probs
@@ -84,6 +167,11 @@ class RayDAPOTrainer(RayPPOTrainer):
                  
 
             metrics.update(old_log_prob_metrics)
+
+            
+
+            if return_entropys:
+                current_entropys = entropys.detach()
             old_log_prob.batch.pop("entropys")
             batch = batch.union(old_log_prob)
 
@@ -96,7 +184,10 @@ class RayDAPOTrainer(RayPPOTrainer):
                     ref_log_prob = self.actor_rollout_wg.compute_ref_log_prob(batch)
                 batch = batch.union(ref_log_prob)
 
-        return batch
+        if return_entropys:
+            return batch, current_entropys
+        else:
+            return batch
 
     def fit(self):
         """
@@ -170,11 +261,10 @@ class RayDAPOTrainer(RayPPOTrainer):
         filter_total_prompts = 0
         filter_kept_prompts = 0
         filter_dropped_prompts = 0
-
+        self.entropy_in_advantage_alpha = getattr(self.config.trainer, "entropy_in_advantage_alpha", 0.0)
         for epoch in range(self.config.trainer.total_epochs):
             for batch_dict in self.train_dataloader:
                 metrics = {}
-
                 with marked_timer("start_profile", timing_raw):
                     self._start_profiling(
                         not prev_step_profile and curr_step_profile
@@ -195,7 +285,6 @@ class RayDAPOTrainer(RayPPOTrainer):
                 # repeat to align with repeated responses in rollout
                 new_batch = new_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                 new_batch = self._apply_beta_prompt_processing(new_batch)
-                
 
                 is_last_step = self.global_steps >= self.total_training_steps
 
@@ -264,7 +353,6 @@ class RayDAPOTrainer(RayPPOTrainer):
                             )  # TODO: This will be cleared if we use multiple genenration batches
                         else:
                             new_batch.batch["token_level_rewards"] = new_batch.batch["token_level_scores"]
-
                     if not self.config.algorithm.filter_groups.enable:
                         batch = new_batch
                         # Track unfiltered batch for accurate metrics
@@ -315,10 +403,8 @@ class RayDAPOTrainer(RayPPOTrainer):
                         # Accumulate unfiltered batch for accurate metrics computation
                         # (must accumulate like `batch` since DAPO may generate multiple batches)
                         unfiltered_batch = new_batch if unfiltered_batch is None else DataProto.concat([unfiltered_batch, new_batch])
-
                         new_batch = new_batch[kept_traj_idxs]
                         batch = new_batch if batch is None else DataProto.concat([batch, new_batch])
-
                         prompt_bsz = self.config.data.train_batch_size
                         if num_prompt_in_batch < prompt_bsz:
                             print(f"{num_prompt_in_batch=} < {prompt_bsz=}")
@@ -352,7 +438,15 @@ class RayDAPOTrainer(RayPPOTrainer):
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
 
                     if not self.config.algorithm.use_kl_in_reward:
-                        batch = self.compute_kl_related_metrics(batch, metrics, timing_raw)
+                        if self.entropy_in_advantage_alpha > 0.0:
+                            batch, current_entropys = self.compute_kl_related_metrics(
+                                batch, metrics, timing_raw, 
+                                return_entropys=True
+                            )
+                        else:
+                            batch = self.compute_kl_related_metrics(batch, metrics, timing_raw)
+                    elif self.entropy_in_advantage_alpha > 0.0:
+                        current_entropys = self.compute_entropies(batch)
 
                     # compute values
                     if self.use_critic:
@@ -368,7 +462,6 @@ class RayDAPOTrainer(RayPPOTrainer):
                         batch, is_metrics = compute_rollout_correction_and_add_to_batch(batch, rollout_corr_config)
                         # IS and off-policy metrics already have rollout_corr/ prefix
                         metrics.update(is_metrics)
-
                     with marked_timer("adv", timing_raw, "brown"):
                         # compute advantages, executed on the driver process
                         norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True)
@@ -381,7 +474,21 @@ class RayDAPOTrainer(RayPPOTrainer):
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                             config=self.config.algorithm,
                         )
-                        
+
+                        if self.entropy_in_advantage_alpha>0.0:
+                            batch = self.add_entropy_to_advantage(
+                                batch, 
+                                alpha=self.config.trainer.entropy_in_advantage_alpha, 
+                                kapa=self.config.trainer.entropy_in_advantage_kapa,  
+                                entropys=current_entropys
+                            )
+                            # Log entropy shaping statistics if available
+                            if "entropy_shaping" in batch.meta_info:
+                                entropy_shaping_metrics = {
+                                    f"entropy_shaping/{k}": v 
+                                    for k, v in batch.meta_info["entropy_shaping"].items()
+                                }
+                                metrics.update(entropy_shaping_metrics)
 
                     # update critic
                     if self.use_critic:
@@ -399,7 +506,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                         metrics.update(actor_output_metrics)
 
                     # Log rollout generations if enabled
-                    rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
+                    rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)    
                     if rollout_data_dir:
                         self._log_rollout_data(batch, reward_extra_infos_dict, timing_raw, rollout_data_dir)
 
