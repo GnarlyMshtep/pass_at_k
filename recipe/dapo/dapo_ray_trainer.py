@@ -23,6 +23,7 @@ from copy import deepcopy
 from pprint import pprint
 from typing import Union
 
+import  omegaconf
 import numpy as np
 import ray
 import torch
@@ -73,6 +74,10 @@ class RayDAPOTrainer(RayPPOTrainer):
         Returns:
             Modified batch with shaped advantages
         """
+        if isinstance(risk_beta, np.ndarray):
+            risk_beta=torch.tensor(risk_beta.astype('float16'))
+        else:
+            raise ValueError(f"Unsupported type for risk_beta: {type(risk_beta)}")
         # Get current advantages
         advantages = batch.batch["advantages"]  # shape: (batch_size, response_length)
         
@@ -80,12 +85,12 @@ class RayDAPOTrainer(RayPPOTrainer):
         entropys_detached = entropys.detach()  # Detach to prevent gradient flow through entropy
 
         if risk_beta is not None:
-            assert isinstance(alpha, dict), "alpha must be a dict when risk_beta is not None"
+            assert isinstance(alpha, omegaconf.dictconfig.DictConfig), "alpha must be a dict when risk_beta is not None"
             assert len(alpha) == len(torch.unique(risk_beta)), "alpha and risk_beta must have the same length"
-        if isinstance(alpha, list):
-            assert risk_beta is not None, "risk_beta must be provided when alpha is a list"
-        if isinstance(alpha, dict):
-            alpha_array = torch.tensor([alpha[beta] for beta in risk_beta], device=entropys_detached.device)
+        if isinstance(alpha, omegaconf.dictconfig.DictConfig):
+            assert risk_beta is not None, "risk_beta must be provided when alpha is a dictconfig"
+        if isinstance(alpha, omegaconf.dictconfig.DictConfig):
+            alpha_array = torch.tensor([alpha[beta.item()] for beta in risk_beta], device=entropys_detached.device)
             entropy_term = alpha_array * entropys_detached
         else:
             entropy_term = alpha * entropys_detached
@@ -460,14 +465,14 @@ class RayDAPOTrainer(RayPPOTrainer):
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
 
                     if not self.config.algorithm.use_kl_in_reward:
-                        if isinstance(self.entropy_in_advantage_alpha, list) or self.entropy_in_advantage_alpha > 0.0:
+                        if isinstance(self.entropy_in_advantage_alpha, omegaconf.dictconfig.DictConfig) or self.entropy_in_advantage_alpha > 0.0:
                             batch, current_entropys = self.compute_kl_related_metrics(
                                 batch, metrics, timing_raw, 
                                 return_entropys=True
                             )
                         else:
                             batch = self.compute_kl_related_metrics(batch, metrics, timing_raw)
-                    elif isinstance(self.entropy_in_advantage_alpha, list) or self.entropy_in_advantage_alpha > 0.0:
+                    elif isinstance(self.entropy_in_advantage_alpha, omegaconf.dictconfig.DictConfig) or self.entropy_in_advantage_alpha > 0.0:
                         current_entropys = self.compute_entropies(batch)
 
                     # compute values
@@ -497,7 +502,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                             config=self.config.algorithm,
                         )
 
-                        if  isinstance(self.entropy_in_advantage_alpha, list) or self.entropy_in_advantage_alpha>0.0:
+                        if  isinstance(self.entropy_in_advantage_alpha, omegaconf.dictconfig.DictConfig) or self.entropy_in_advantage_alpha>0.0:
                             if "risk_beta" in batch.non_tensor_batch:
                                 risk_beta = batch.non_tensor_batch["risk_beta"]
                             else:

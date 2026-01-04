@@ -179,6 +179,7 @@ python3 -m recipe.dapo.main_dapo \
     trainer.save_freq=50 \
     trainer.test_freq=50 \
     trainer.total_epochs=6 \
+    trainer.val_before_train=False \
     +trainer.rollout_dump_freq=5 \
     trainer.rollout_data_dir="${PROJECT_DIR}/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/train" \
     trainer.validation_data_dir="${PROJECT_DIR}/logs/rollouts/full_satfinder/${exp_name}/val" \
