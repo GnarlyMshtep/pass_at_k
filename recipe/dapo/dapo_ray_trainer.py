@@ -76,6 +76,8 @@ class RayDAPOTrainer(RayPPOTrainer):
         """
         if isinstance(risk_beta, np.ndarray):
             risk_beta=torch.tensor(risk_beta.astype('float16'))
+        elif risk_beta is None:
+            pass
         else:
             raise ValueError(f"Unsupported type for risk_beta: {type(risk_beta)}")
         # Get current advantages
@@ -88,11 +90,18 @@ class RayDAPOTrainer(RayPPOTrainer):
             assert isinstance(alpha, omegaconf.dictconfig.DictConfig), "alpha must be a dict when risk_beta is not None"
             assert len(alpha) == len(torch.unique(risk_beta)), "alpha and risk_beta must have the same length"
         if isinstance(alpha, omegaconf.dictconfig.DictConfig):
+            if len(alpha) == 1 and risk_beta is None:
+                print("Fix the risk_beta array.")
+                risk_beta = torch.tensor([torch.tensor(next(iter(alpha.keys())))]*len(entropys_detached), device=entropys_detached.device)
             assert risk_beta is not None, "risk_beta must be provided when alpha is a dictconfig"
         if isinstance(alpha, omegaconf.dictconfig.DictConfig):
             alpha_array = torch.tensor([alpha[beta.item()] for beta in risk_beta], device=entropys_detached.device)
+            if len(alpha_array.shape) == 1 and len(entropys_detached.shape) == 2:
+                alpha_array = alpha_array.unsqueeze(1)
             entropy_term = alpha_array * entropys_detached
         else:
+            if len(alpha_array.shape) == 1 and len(entropys_detached.shape) == 2:
+                alpha_array = alpha_array.unsqueeze(1)
             entropy_term = alpha * entropys_detached
         
         

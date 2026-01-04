@@ -6,7 +6,7 @@ set -x
 
 export PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT=5.0
 export TOKENIZERS_PARALLELISM=False
-export RAY_DEBUG_POST_MORTEM=0
+export RAY_DEBUG_POST_MORTEM=1
 export HYDRA_FULL_ERROR=1
 export PYTHONPATH=$PWD:$PYTHONPATH
 export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
@@ -17,7 +17,7 @@ project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat2_2to3'
 max_response_length=2048
-risk_beta=0
+risk_beta=4
 
 # Optional override: resume from an existing experiment folder name
 # Usage:
@@ -93,7 +93,7 @@ filter_groups_metric="is_correct"      # Filter based on accuracy variance (acc/
 max_num_gen_batches=0          # Max gen batches for active sampling (0 = unlimited)
 
 
-num_gpus=2
+num_gpus=4
 mini_batch_size=32
 train_batch_size=128
 val_batch_size=512
@@ -109,6 +109,8 @@ monitor_metric="val/pass@1"
 python3 -m recipe.dapo.main_dapo \
     algorithm.adv_estimator=rsgrpo \
     ++algorithm.risk_beta=${risk_beta}\
+    +'trainer.entropy_in_advantage_alpha={4: 0.2}' \
+    +trainer.entropy_in_advantage_kapa=2.0 \
     actor_rollout_ref.rollout.n=${total_rollouts_per_prompt} \
     data.train_files=$HF_HOME/data/${dataset_name}/train.parquet \
     data.val_files=$HF_HOME/data/${dataset_name}/test.parquet \
@@ -122,7 +124,7 @@ python3 -m recipe.dapo.main_dapo \
     data.return_raw_chat=True \
     data.return_full_prompt=True \
     actor_rollout_ref.model.path=$HF_HOME/models/${model_name} \
-    actor_rollout_ref.actor.optim.lr=1e-5 \
+    actor_rollout_ref.actor.optim.lr=5e-5 \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
     actor_rollout_ref.actor.clip_ratio_low=${clip_ratio_low} \
     actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
@@ -179,9 +181,12 @@ python3 -m recipe.dapo.main_dapo \
     actor_rollout_ref.rollout.temperature=1.0 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.5 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True\
-    actor_rollout_ref.model.lora_rank=8 \
-    actor_rollout_ref.model.lora_alpha=32 \
+    actor_rollout_ref.model.lora_rank=32 \
+    actor_rollout_ref.model.lora_alpha=64 \
     actor_rollout_ref.model.target_modules=all-linear \
-    actor_rollout_ref.rollout.load_format=safetensors  
+    actor_rollout_ref.rollout.load_format=safetensors \
+    reward_model.launch_reward_fn_async=False \
+    +reward_model.reward_kwargs.num_workers=1 \
+    trainer.val_before_train=False
 
 
