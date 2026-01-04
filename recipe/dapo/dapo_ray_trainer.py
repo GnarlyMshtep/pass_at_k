@@ -21,6 +21,7 @@ import uuid
 from collections import defaultdict
 from copy import deepcopy
 from pprint import pprint
+from typing import Union
 
 import numpy as np
 import ray
@@ -49,7 +50,7 @@ class RayDAPOTrainer(RayPPOTrainer):
     """
 
     def add_entropy_to_advantage(
-        self, batch: DataProto, alpha: float, kapa: float, entropys: torch.Tensor
+        self, batch: DataProto, alpha: Union[float, dict], kapa: float, entropys: torch.Tensor, risk_beta: Union[None, torch.Tensor]
     ) -> DataProto:
         """
         Shape advantages using per-token entropy to encourage exploration in high-entropy regions.
@@ -77,7 +78,18 @@ class RayDAPOTrainer(RayPPOTrainer):
         
         # Compute entropy-based shaping term: ψ(H_t) = min(α · H_t^detach, |A_t| / κ)
         entropys_detached = entropys.detach()  # Detach to prevent gradient flow through entropy
-        entropy_term = alpha * entropys_detached
+
+        if risk_beta is not None:
+            assert isinstance(alpha, dict), "alpha must be a dict when risk_beta is not None"
+            assert len(alpha) == len(torch.unique(risk_beta)), "alpha and risk_beta must have the same length"
+        if isinstance(alpha, list):
+            assert risk_beta is not None, "risk_beta must be provided when alpha is a list"
+        if isinstance(alpha, dict):
+            alpha_array = torch.tensor([alpha[beta] for beta in risk_beta], device=entropys_detached.device)
+            entropy_term = alpha_array * entropys_detached
+        else:
+            entropy_term = alpha * entropys_detached
+        
         
         # Compute adaptive clipping threshold: |A_t| / κ
         advantage_magnitude = torch.abs(advantages)
@@ -448,14 +460,14 @@ class RayDAPOTrainer(RayPPOTrainer):
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
 
                     if not self.config.algorithm.use_kl_in_reward:
-                        if self.entropy_in_advantage_alpha > 0.0:
+                        if isinstance(self.entropy_in_advantage_alpha, list) or self.entropy_in_advantage_alpha > 0.0:
                             batch, current_entropys = self.compute_kl_related_metrics(
                                 batch, metrics, timing_raw, 
                                 return_entropys=True
                             )
                         else:
                             batch = self.compute_kl_related_metrics(batch, metrics, timing_raw)
-                    elif self.entropy_in_advantage_alpha > 0.0:
+                    elif isinstance(self.entropy_in_advantage_alpha, list) or self.entropy_in_advantage_alpha > 0.0:
                         current_entropys = self.compute_entropies(batch)
 
                     # compute values
@@ -485,12 +497,17 @@ class RayDAPOTrainer(RayPPOTrainer):
                             config=self.config.algorithm,
                         )
 
-                        if self.entropy_in_advantage_alpha>0.0:
+                        if  isinstance(self.entropy_in_advantage_alpha, list) or self.entropy_in_advantage_alpha>0.0:
+                            if "risk_beta" in batch.non_tensor_batch:
+                                risk_beta = batch.non_tensor_batch["risk_beta"]
+                            else:
+                                risk_beta = None
                             batch = self.add_entropy_to_advantage(
                                 batch, 
-                                alpha=self.config.trainer.entropy_in_advantage_alpha, 
+                                alpha=self.entropy_in_advantage_alpha, 
                                 kapa=self.config.trainer.entropy_in_advantage_kapa,  
-                                entropys=current_entropys
+                                entropys=current_entropys,
+                                risk_beta=risk_beta
                             )
                             # Log entropy shaping statistics if available
                             if "entropy_shaping" in batch.meta_info:
