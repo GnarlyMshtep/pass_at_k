@@ -44,6 +44,7 @@ micro_batch_size_per_gpu_prob_ignored=32
 
 adv_est=grpo
 norm_by_std=False
+n_warmup_steps=15
 
 
 if [ "$SKIP_VALIDATION" = false ]; then
@@ -59,6 +60,7 @@ if [ "$SKIP_VALIDATION" = false ]; then
         --n-rollout "$n_rollout" \
         --micro-batch-size-per-gpu "$micro_batch_size_per_gpu_prob_ignored" \
         --adv-estimator "$adv_est" \
+        --linear-warmup-steps "$n_warmup_steps" \
         --norm-by-std "$norm_by_std" \
         --proj-name "$proj_name" \
         --exp-name "$exp_name"
@@ -80,7 +82,7 @@ python3 -m verl.trainer.main_ppo \
     data.truncation='error' \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.actor.optim.lr=1e-6 \
-    actor_rollout_ref.actor.optim.lr_warmup_steps=15 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps=$n_warmup_steps \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=256 \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size_per_gpu_prob_ignored \
@@ -115,12 +117,12 @@ python3 -m verl.trainer.main_ppo \
     trainer.n_gpus_per_node=$n_gpu \
     trainer.nnodes=1 \
     trainer.save_freq=1\
-    +trainer.remove_previous_ckpt_in_save=True \
+    # +trainer.remove_previous_ckpt_in_save=True \
     trainer.resume_mode=auto\
     trainer.test_freq=30 \
     +trainer.rollout_dump_freq=1 \
-    trainer.rollout_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/train" \
-    trainer.validation_data_dir="$HFH/rollouts/${proj_name}/${exp_name}/val" \
-    trainer.default_local_dir="models/checkpoints/${proj_name}/${exp_name}"
+    trainer.rollout_data_dir="$HDD/rollouts/${proj_name}/${exp_name}/train" \
+    trainer.validation_data_dir="$HDD/rollouts/${proj_name}/${exp_name}/val" \
+    trainer.default_local_dir="$HDD/models/checkpoints/${proj_name}/${exp_name}"
     trainer.total_epochs=15 $@
 
