@@ -231,7 +231,7 @@ async def _reward_func_w_backdoor_internal(
             )
     generated_sample = APPSGeneratedSample(question=question, response=solution_str)
     (scored_sample, timing) = await score_single_sample_with_backdoor(
-        generated_sample, formatter=formatter, skip_monitor=False
+        generated_sample, formatter=formatter, skip_monitor=skip_monitor
     )
     final_reward = scored_sample.get_final_reward()
     code__and_backdoor_was_extracted = (
