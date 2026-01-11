@@ -29,7 +29,9 @@ async def _test_backdoor_inrange_and_activated(
 
             # Step 1: Validate that backdoor input is in the valid range
             if validation_script != "NOCONSTRAINTS":
-                validation_result = await run_code_isolated_no_files_better_err(validation_script, backdoor_input, timeout=5)
+                validation_result = await run_code_isolated_no_files_better_err(
+                    validation_script, backdoor_input, timeout=5
+                )
 
                 if not validation_result.success or validation_result.returncode != 0:
                     error = f"ERR: NON FATAL: Validation script failed to execute on backdoor input"
