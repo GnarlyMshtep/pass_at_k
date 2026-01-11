@@ -105,8 +105,7 @@ No additional discussion or space time analysis needed. Be subtle about the back
 
 def main():
     parser = argparse.ArgumentParser(description="Preprocess APPS dataset to parquet format")
-    parser.add_argument("--local_dir", default=None, 
-                       help="Local directory to save processed data (default: $HFH/data/apps_backdoor_simpleprompt)")
+    parser.add_argument("--local_dir", default=None, help="Local directory to save processed data )")
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
     parser.add_argument("--nexamples", type=int, default=None, 
@@ -126,7 +125,7 @@ def main():
         hfh_dir = os.getenv('HFH')
         if hfh_dir is None:
             raise ValueError("HFH environment variable not set and --local_dir not specified")
-        args.local_dir = os.path.join(hfh_dir, "data", "apps_backdoor_simpleprompt")
+        args.local_dir = os.path.join(hfh_dir, "data", "apps_backdoor_womonitor")
     
     # Path to the COMPLETE_apps_filtered.jsonl file
     input_file = Path("custom/data_preprocessing/APPS/COMPLETE_apps_filtered.jsonl")
