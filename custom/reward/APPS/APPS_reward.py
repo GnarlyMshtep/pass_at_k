@@ -7,8 +7,8 @@ from typing import Any, Optional, Tuple, TypedDict
 import dacite
 
 from custom.reward.APPS.code_execution_utils import score_single_sample
+from custom.reward.APPS.app_types import APPSBackdoorScoredSample, APPSGeneratedSample, APPSQuestion, APPSScoredSample
 from custom.reward.APPS.ResponseFormatter.BaseFormatters import APPSCovertBackdoorFormatter, APPSMainBaseFormatter
-from custom.reward.APPS.types import APPSBackdoorScoredSample, APPSGeneratedSample, APPSQuestion, APPSScoredSample
 
 
 class DictWScore(TypedDict):

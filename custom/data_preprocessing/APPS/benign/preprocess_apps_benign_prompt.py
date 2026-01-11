@@ -12,7 +12,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict
 
-from custom.reward.APPS.types import APPSQuestion
+from custom.reward.APPS.app_types import APPSQuestion
 
 
 def create_system_prompt() -> str:

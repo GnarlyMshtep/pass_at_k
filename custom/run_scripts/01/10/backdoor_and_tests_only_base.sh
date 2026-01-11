@@ -12,11 +12,11 @@ if [ -e "core" ]; then
     rm core
 fi
 
-n_gpu=4
+n_gpu=8
 HF_HOME=$HOME
-modelname=Qwen3-4B-Instruct
+modelname=Qwen3-4B-I
 model_path=$HF_HOME/models/$modelname
-datasetname=apps_backdoor_simpleprompt
+datasetname=apps_backdoor_womonitor
 reward_name=reward_func_w_backdoor_wo_monitor_removeaftercode_formatter
 
 train_path=$HOME/data/$datasetname/train.parquet
