@@ -29,7 +29,6 @@ from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import register
 from verl.workers.reward_manager.abstract import AbstractRewardManager
 
-
 # Default error score for failed tasks
 DEFAULT_ERROR_SCORE = {
     "score": 0.0,
@@ -113,15 +112,9 @@ def compute_several(
     Note: Timeout is handled at the outer level (when calling this via ray), not internally.
           The only internal timeouts are in run_code_isolated_no_files_better_err.
     """
+
     async def run_all():
-        tasks = [
-            process_one(
-                tokenizer=tokenizer,
-                compute_score_fn=compute_score_fn,
-                **item
-            )
-            for item in items
-        ]
+        tasks = [process_one(tokenizer=tokenizer, compute_score_fn=compute_score_fn, **item) for item in items]
         return await asyncio.gather(*tasks, return_exceptions=True)
 
     return asyncio.run(run_all())
@@ -156,9 +149,7 @@ class NaiveRewardManager(AbstractRewardManager):
         """
         return asyncio.run(self._compute_rewards_async(data, return_dict))
 
-    async def _compute_rewards_async(
-        self, data: DataProto, return_dict: bool = False
-    ) -> torch.Tensor | dict[str, Any]:
+    async def _compute_rewards_async(self, data: DataProto, return_dict: bool = False) -> torch.Tensor | dict[str, Any]:
         """Async implementation of reward computation."""
 
         # If there is rm score, we directly return rm score
@@ -194,16 +185,18 @@ class NaiveRewardManager(AbstractRewardManager):
             # Move tensors to CPU for ray serialization (in case they're on GPU)
             response_ids = data_item.batch["responses"]
             attention_mask = data_item.batch["attention_mask"]
-            all_items.append({
-                "prompt_ids": prompt_ids.cpu() if hasattr(prompt_ids, 'cpu') else prompt_ids,
-                "response_ids": response_ids.cpu() if hasattr(response_ids, 'cpu') else response_ids,
-                "attention_mask": attention_mask.cpu() if hasattr(attention_mask, 'cpu') else attention_mask,
-                "prompt_length": prompt_length,
-                "ground_truth": data_item.non_tensor_batch["reward_model"]["ground_truth"],
-                "data_source": data_item.non_tensor_batch[self.reward_fn_key],
-                "extra_info": extra_info,
-                "i": i,
-            })
+            all_items.append(
+                {
+                    "prompt_ids": prompt_ids.cpu() if hasattr(prompt_ids, "cpu") else prompt_ids,
+                    "response_ids": response_ids.cpu() if hasattr(response_ids, "cpu") else response_ids,
+                    "attention_mask": attention_mask.cpu() if hasattr(attention_mask, "cpu") else attention_mask,
+                    "prompt_length": prompt_length,
+                    "ground_truth": data_item.non_tensor_batch["reward_model"]["ground_truth"],
+                    "data_source": data_item.non_tensor_batch[self.reward_fn_key],
+                    "extra_info": extra_info,
+                    "i": i,
+                }
+            )
 
         print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
         total_timeouts = 0
@@ -222,8 +215,7 @@ class NaiveRewardManager(AbstractRewardManager):
                 try:
                     # Batch items into mini-batches for ray tasks
                     batches = [
-                        chunk_items[j:j + mini_bucket_size]
-                        for j in range(0, len(chunk_items), mini_bucket_size)
+                        chunk_items[j : j + mini_bucket_size] for j in range(0, len(chunk_items), mini_bucket_size)
                     ]
 
                     # Dispatch ray tasks - each handles mini_bucket_size items
@@ -242,6 +234,8 @@ class NaiveRewardManager(AbstractRewardManager):
                         asyncio.gather(*ray_refs, return_exceptions=True),
                         timeout=timeout,
                     )
+                    #!M: I think these lines are never reached upon timeout! wait_for cancels everything!
+                    # TODO: fix!!
                     rets = []
                     for batch_result in rets_nested:
                         if isinstance(batch_result, Exception):
@@ -261,6 +255,7 @@ class NaiveRewardManager(AbstractRewardManager):
                             f"DEBUG: High failure rate ({failure_rate:.1%}, "
                             f"{num_exceptions}/{len(rets)} tasks failed). Retrying chunk {chunk_idx}..."
                         )
+
                         raise RuntimeError(f"Too many failed tasks: {num_exceptions}/{len(rets)}")
                     elif num_exceptions > 0:
                         print(
