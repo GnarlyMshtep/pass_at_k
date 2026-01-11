@@ -10,11 +10,11 @@ import json
 import os
 import random
 import traceback
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict
-from dataclasses import asdict
-from custom.reward.APPS.types import APPSQuestion
 
+from custom.reward.APPS.app_types import APPSQuestion
 
 # def create_system_prompt() -> str:
 #     """Create the system prompt for the assistant"""
