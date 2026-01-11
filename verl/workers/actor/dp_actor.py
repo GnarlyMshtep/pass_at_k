@@ -88,7 +88,7 @@ class DataParallelPPOActor(BasePPOActor):
         self.device_name = get_device_name()
 
     def _forward_micro_batch(
-        self, micro_batch, temperature, calculate_entropy=False
+        self, micro_batch, temperature, calculate_entropy=True #M: changed to true hoping it would log entropy 
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns:
