@@ -168,7 +168,7 @@ class NaiveRewardManager(AbstractRewardManager):
         # Configuration
         max_retries = 10
         bucket_size = 2000
-        mini_bucket_size = 10
+        mini_bucket_size = 4  # currently running 128 CPUs with 256 rollouts, use 4 to get better util I think? Not sure
         timeout_base = 50.0
 
         # Prepare all items upfront - extract data from DataProto into serializable dicts
@@ -201,6 +201,7 @@ class NaiveRewardManager(AbstractRewardManager):
         print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
         total_timeouts = 0
         total_samples = 0
+        total_retries = 0
 
         for chunk_idx in range(math.ceil(len(data) / bucket_size)):
             start = time.time()
@@ -255,6 +256,7 @@ class NaiveRewardManager(AbstractRewardManager):
                             f"DEBUG: High failure rate ({failure_rate:.1%}, "
                             f"{num_exceptions}/{len(rets)} tasks failed). Retrying chunk {chunk_idx}..."
                         )
+                        total_retries += 1
 
                         raise RuntimeError(f"Too many failed tasks: {num_exceptions}/{len(rets)}")
                     elif num_exceptions > 0:
@@ -317,6 +319,18 @@ class NaiveRewardManager(AbstractRewardManager):
             f"DEBUG: Reward computation complete. "
             f"{total_timeouts}/{total_samples} samples timed out ({timeout_rate:.1%})"
         )
+
+        # M: added to give more sense of reward comp
+        reward_extra_info["reward_extra_info/" + "total_naive_level_retries"].extend(
+            [float(total_retries)] * total_samples
+        )
+        reward_extra_info["reward_extra_info/" + "total_naive_level_timeouts"].extend(
+            [float(total_timeouts)] * total_samples
+        )
+        reward_extra_info["reward_extra_info/" + "frac_naive_level_timeouts"].extend(
+            [total_timeouts / total_samples if total_samples > 0 else 0] * total_samples
+        )
+        # becuase we expect metric to corrospond to one sample and this seems like pretty clean logic to chcek for which I do not want to break, even thought these are aggragte stats
 
         if return_dict:
             return {
