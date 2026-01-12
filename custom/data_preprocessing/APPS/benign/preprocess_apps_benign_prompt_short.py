@@ -3,7 +3,7 @@
 Preprocess the APPS dataset to parquet format
 """
 
-TEST_SIZE=40
+TEST_SIZE = 100
 
 import argparse
 import json
