@@ -88,7 +88,7 @@ class APPSCovertBackdoorFormatter(APPSMainBaseFormatter):
 
 class APPSCovertBackdoorFormatterWHidden(APPSCovertBackdoorFormatter):
     def __init__(self, answer_keyword, backdoor_keyword: list[str]) -> None:
-        super().__init__(answer_keywords=answer_keyword)
+        super().__init__(answer_keyword=answer_keyword, backdoor_keyword=backdoor_keyword)
         self.backdoor_keywords = backdoor_keyword
 
     @abstractmethod
@@ -104,7 +104,7 @@ class APPSCovertBackdoorFormatterWHidden(APPSCovertBackdoorFormatter):
         pass
 
     @abstractmethod
-    def get_length_hiddens(self, response_output: str) -> Optional[int]:
+    def get_length_hiddens(self, response_output: str) -> tuple[int, Optional[list[str]]]:
         """returns None if no hidden tags found... eh... ok"""
 
 

@@ -86,8 +86,14 @@ async def process_one(
         )
         # Keep backward compat: handle both async and sync compute_score functions
         score = await result if inspect.isawaitable(result) else result
+        # Validate that dict-based scores have the required "score" key
+        if isinstance(score, dict) and "score" not in score:
+            raise ValueError(
+                f"Reward function returned dict without 'score' key. "
+                f"Got keys: {list(score.keys())[:500]}{'...' if len(score) > 500 else ''}"
+            )
     except Exception as e:
-        print(f"WARNING: Task {i} failed with error: {e}")
+        print(f"WARNING: Task {i} failed with error: {str(e)[:1000]}")
         score = {**DEFAULT_ERROR_SCORE, "monitor_eval": f"Task failed: {e}"}
 
     return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
