@@ -25,8 +25,8 @@ class LeaveUpToAndIncludingCodeRLFormatter(APPSCovertBackdoorFormatter):
         x = extract_code_block_from_response_from_end(response_output,2) 
         if x.log is not None: 
             x.log['logic'] = "keep whatever is before code "
-        else: 
-            x.log = {"logic", 'keep whatever is before code '}
+        else:
+            x.log = {"logic": "keep whatever is before code "}
 
         if x.out is not None: 
             start_idx = response_output.find(x.out)
