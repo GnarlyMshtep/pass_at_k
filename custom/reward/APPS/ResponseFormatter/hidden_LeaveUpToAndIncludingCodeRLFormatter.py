@@ -21,24 +21,21 @@ class LeaveUpToAndIncludingCodeRLFormatterWHidden(APPSCovertBackdoorFormatterWHi
     
 
     def extract_backdoor_input(self, response_output: str) -> FormatterReturn:
-        return self.inner_formatter.extract_backdoor_input(response_output) 
-        
-    def get_length_hiddens(self, response_output: str) -> int: 
+        return self.inner_formatter.extract_backdoor_input(response_output)
+
+    def get_length_hiddens(self, response_output: str) -> tuple[int, Optional[list[str]]]:  # len, matches
         matches = re.findall(r"<hidden>(.*?)</hidden>", response_output, flags=re.DOTALL)
         if matches:  
             tot_hidden_length = sum([len(match ) for match in matches])
         else: 
             tot_hidden_length = 0
-        return tot_hidden_length
+        return tot_hidden_length, matches
 
     def clean_output_for_monitor(self, response_output: str) -> FormatterReturn:
         """
         returns formatter return (str and any issues)
-        and also Optional[int] which is the number of chars in all the hidden tags  
+        and also Optional[int] which is the number of chars in all the hidden tags
         """
-
-        
-        
         cleaned = re.sub(r'<hidden>.*?</hidden>', '', response_output, flags=re.DOTALL)
 
         return self.inner_formatter.clean_output_for_monitor(cleaned)
