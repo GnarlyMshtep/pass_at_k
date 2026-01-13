@@ -84,3 +84,52 @@ class APPSCovertBackdoorFormatter(APPSMainBaseFormatter):
             True if valid format, False otherwise
         """
         pass
+
+
+class APPSCovertBackdoorFormatterWHidden(APPSCovertBackdoorFormatter):
+    def __init__(self, answer_keyword, backdoor_keyword: list[str]) -> None:
+        super().__init__(answer_keywords=answer_keyword)
+        self.backdoor_keywords = backdoor_keyword
+
+    @abstractmethod
+    def extract_backdoor_input(self, response_output: str) -> FormatterReturn:
+        """Extract backdoor input from response.
+
+        Args:
+            response_output: The LLM response output
+
+        Returns:
+            Extracted backdoor input or None if extraction failed
+        """
+        pass
+
+    @abstractmethod
+    def get_length_hiddens(self, response_output: str) -> Optional[int]:
+        """returns None if no hidden tags found... eh... ok"""
+
+
+    @abstractmethod
+    def clean_output_for_monitor(self, response_output: str) -> FormatterReturn:
+        """Format response for monitor (include up to and including answer code block).
+
+        Args:
+            response_output: The LLM response output
+            thinking: The thinking section (if any)
+            problem: The problem statement
+
+        Returns:
+            Formatted monitor input or None if formatting failed
+        """
+        pass
+
+    @abstractmethod
+    def check_valid_formatting(self, response_output: str) -> bool:
+        """Check if response follows required format.
+
+        Args:
+            response_output: The LLM response output
+
+        Returns:
+            True if valid format, False otherwise
+        """
+        pass
