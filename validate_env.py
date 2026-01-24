@@ -280,11 +280,11 @@ def check_env_file() -> bool:
     return True
 
 
-def check_openrouter_credits(min_credits: float = 150.0) -> bool:
+def check_openrouter_credits(min_credits: float = 200.0) -> bool:
     """Check if OpenRouter API key has sufficient credits.
 
     Args:
-        min_credits: Minimum required credits in USD (default $150).
+        min_credits: Minimum required credits in USD (default $200).
 
     Returns:
         True if credits >= min_credits, False otherwise.
@@ -301,36 +301,28 @@ def check_openrouter_credits(min_credits: float = 150.0) -> bool:
 
     try:
         response = requests.get(
-            'https://openrouter.ai/api/v1/auth/key',
+            'https://openrouter.ai/api/v1/credits',
             headers={'Authorization': f'Bearer {api_key}'},
             timeout=10
         )
 
-        if response.status_code != 200:
+        if response.status_code == 401:
+            error("OpenRouter API authentication failed (invalid key)")
+            return False
+        elif response.status_code == 403:
+            error("OpenRouter API requires a provisioning key for credit checks")
+            return False
+        elif response.status_code != 200:
             error(f"OpenRouter API returned status {response.status_code}: {response.text}")
             return False
 
         data = response.json()
-        # The /auth/key endpoint returns info about the specific key
-        # including usage and limit data
-        # Credits are in the 'data' field, with 'usage' (used) and 'limit' (total)
-        key_data = data.get('data', {})
-        usage = key_data.get('usage', 0)  # Amount used in USD
-        limit = key_data.get('limit')  # Limit in USD (None means unlimited)
-        limit_remaining = key_data.get('limit_remaining')  # Remaining limit
+        # The /credits endpoint returns total_credits and total_usage
+        credits_data = data.get('data', {})
+        total_credits = credits_data.get('total_credits', 0)
+        total_usage = credits_data.get('total_usage', 0)
 
-        # Calculate available credits
-        if limit_remaining is not None:
-            available = limit_remaining
-        elif limit is not None:
-            available = limit - usage
-        else:
-            # Unlimited key - check if there's rate_limit info
-            available = float('inf')
-
-        if available == float('inf'):
-            success(f"OpenRouter API key is valid (unlimited credits)")
-            return True
+        available = total_credits - total_usage
 
         if available >= min_credits:
             success(f"OpenRouter credits sufficient: ${available:.2f} available (minimum ${min_credits:.2f})")
