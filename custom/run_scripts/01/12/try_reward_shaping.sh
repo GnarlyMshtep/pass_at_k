@@ -13,6 +13,7 @@ if [ -e "core" ]; then
 fi
 
 n_gpu=8
+cuda_visible_devices="0,1,2,3,4,5,6,7"
 HF_HOME=$HOME
 modelname="checkpoints/subtle_reasoning_repro/01/12/v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_14_16/global_step_160/actor_to_hf_format" # this is after a bunch of backdoor training and the model only outputs these simple if statement backdoors
 model_path=$HF_HOME/models/$modelname
@@ -74,6 +75,7 @@ if [ "$SKIP_VALIDATION" = false ]; then
         --reward-path "$reward_path" \
         --reward-name $reward_name \
         --n-gpu "$n_gpu" \
+        --cuda-visible-devices "$cuda_visible_devices" \
         --batch-size "$batch_size" \
         --mini-batch-size "$mini_batch_size" \
         --n-rollout "$n_rollout" \
@@ -88,8 +90,18 @@ else
 fi
 # False gradient checkpointing -- revert if weird err
 
+mkdir -p "${checkpoints_path}"
+mkdir -p "${rollouts_path}"
+touch "${checkpoints_path}/should_save_asap.txt"
+
+# Save the calling script and command line args for reproducibility
+cp "$0" "${checkpoints_path}/calling_script.sh"
+cp "$0" "${rollouts_path}/calling_script.sh"
+echo "$@" > "${checkpoints_path}/cmdlineargs.txt"
+echo "$@" > "${rollouts_path}/cmdlineargs.txt"
+
 #M: I'm CPU bound... its such a waste letting all these GPUs sit... well... tomorrow
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python3 -m verl.trainer.main_ppo \
+CUDA_VISIBLE_DEVICES=$cuda_visible_devices python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=$adv_est \
     algorithm.norm_adv_by_std_in_grpo=$norm_by_std \
     data.train_files="$train_files" \

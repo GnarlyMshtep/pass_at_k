@@ -1445,6 +1445,20 @@ class RayPPOTrainer:
                     max_steps_duration=self.max_steps_duration,
                     redundant_time=self.config.trainer.esi_redundant_time,
                 )
+
+                def should_save_asap_external_file() -> bool:
+                    p = os.path.join(self.config.trainer.default_local_dir, "should_save_asap.txt")
+                    with open(p, "r") as f:
+                        all_txt = f.read()
+                    if len(all_txt) > 0:
+                        print("found text {all_txt} in {p}. Overwriting with nothing and saving checkpoint")
+                        with open(p, "w") as f:
+                            f.write("")
+                        return True
+                    else:
+                        return False
+
+                save_asap_external_file = should_save_asap_external_file()
                 # Check if the conditions for saving a checkpoint are met.
                 # The conditions include a mandatory condition (1) and
                 # one of the following optional conditions (2/3/4):
@@ -1452,8 +1466,12 @@ class RayPPOTrainer:
                 # 2. It's the last training step.
                 # 3. The current step number is a multiple of the save frequency.
                 # 4. The ESI(Elastic Server Instance)/training plan is close to expiration.
+                # 5. file says we should save now
                 if self.config.trainer.save_freq > 0 and (
-                    is_last_step or self.global_steps % self.config.trainer.save_freq == 0 or esi_close_to_expiration
+                    is_last_step
+                    or self.global_steps % self.config.trainer.save_freq == 0
+                    or esi_close_to_expiration
+                    or save_asap_external_file
                 ):
                     if esi_close_to_expiration:
                         print("Force saving checkpoint: ESI instance expiration approaching.")
