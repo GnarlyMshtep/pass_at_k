@@ -350,9 +350,43 @@ def check_openrouter_credits(min_credits: float = 150.0) -> bool:
         return False
 
 
+def check_output_dirs_not_exist(checkpoints_path: Optional[str], rollouts_path: Optional[str]) -> bool:
+    """Check that output directories do not already exist.
+
+    Args:
+        checkpoints_path: Path where checkpoints will be saved.
+        rollouts_path: Path where rollouts will be saved.
+
+    Returns:
+        True if neither directory exists, False if either exists.
+    """
+    print("\n8. Checking Output Directories Don't Already Exist...")
+
+    all_ok = True
+
+    if checkpoints_path:
+        if Path(checkpoints_path).exists():
+            error(f"Checkpoints directory already exists: {checkpoints_path}")
+            all_ok = False
+        else:
+            success(f"Checkpoints directory does not exist (good): {checkpoints_path}")
+
+    if rollouts_path:
+        if Path(rollouts_path).exists():
+            error(f"Rollouts directory already exists: {rollouts_path}")
+            all_ok = False
+        else:
+            success(f"Rollouts directory does not exist (good): {rollouts_path}")
+
+    if not checkpoints_path and not rollouts_path:
+        warning("No output directories specified to check")
+
+    return all_ok
+
+
 def check_python_env() -> bool:
     """Check if required Python packages are available."""
-    print("\n8. Checking Python Environment...")
+    print("\n9. Checking Python Environment...")
     
     # Check verl
     try:
@@ -441,6 +475,10 @@ def main():
                              'Validates these specific GPUs exist and count matches n_gpu.')
     parser.add_argument('--requires-openrouter', action='store_true', default=False,
                         help='Require OpenRouter API key with at least $150 credits')
+    parser.add_argument('--checkpoints-path', type=str, default=None,
+                        help='Path where checkpoints will be saved. Fails if directory already exists.')
+    parser.add_argument('--rollouts-path', type=str, default=None,
+                        help='Path where rollouts will be saved. Fails if directory already exists.')
     parser.add_argument('--validate-parquet', action='store_true', help='Validate parquet files are readable')
 
     # Batch size arguments
@@ -481,6 +519,7 @@ def main():
         check_ray(),
         check_env_file(),
         check_openrouter_credits() if args.requires_openrouter else True,
+        check_output_dirs_not_exist(args.checkpoints_path, args.rollouts_path),
         check_python_env(),
     ]
     
