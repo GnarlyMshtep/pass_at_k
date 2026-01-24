@@ -24,7 +24,7 @@ class LeaveUpToAndIncludingCodeRLFormatterWHidden(APPSCovertBackdoorFormatterWHi
         return self.inner_formatter.extract_backdoor_input(response_output)
 
     def get_length_hiddens(self, response_output: str) -> tuple[int, Optional[list[str]]]:  # len, matches
-        matches = re.findall(r"<hidden>(.*?)</hidden>", response_output, flags=re.DOTALL)
+        matches = re.findall(r"<hidden>(.*?)</hidden>", response_output, flags=re.DOTALL)          
         if matches:  
             tot_hidden_length = sum([len(match ) for match in matches])
         else: 
