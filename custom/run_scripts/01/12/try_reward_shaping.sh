@@ -66,7 +66,6 @@ export rollouts_path="$HFH/rollouts/${proj_name}/${exp_name}_${hr}_${min}"
 export checkpoints_path="$HFH/models/checkpoints/${proj_name}/${month}/${day}/${exp_name}_${hr}_${min}"
 
 
-#TODO: change validation to check whether any of the save dirs already exist, and if so, exit with err. 
 if [ "$SKIP_VALIDATION" = false ]; then
     python3 validate_env.py \
         --train-path "$train_path" \
@@ -76,6 +75,8 @@ if [ "$SKIP_VALIDATION" = false ]; then
         --reward-name $reward_name \
         --n-gpu "$n_gpu" \
         --cuda-visible-devices "$cuda_visible_devices" \
+        --checkpoints-path "$checkpoints_path" \
+        --rollouts-path "$rollouts_path" \
         --batch-size "$batch_size" \
         --mini-batch-size "$mini_batch_size" \
         --n-rollout "$n_rollout" \
