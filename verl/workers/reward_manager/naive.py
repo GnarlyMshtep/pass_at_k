@@ -61,6 +61,7 @@ async def process_one(
     data_source: str,
     extra_info: dict,
     i: int,
+    global_step: int | None,  # M: we will fail loudly in the reward fn if it is required. else don't
 ) -> tuple:
     """Process a single rollout - decode tokens and compute reward.
 
@@ -77,13 +78,30 @@ async def process_one(
     prompt_str = tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
     response_str = tokenizer.decode(valid_response_ids, skip_special_tokens=True)
 
+    try: 
+        sig = inspect.signature(compute_score_fn)
+    except Exception as e: 
+        print(f"FAILED TO GET SIGNATURE (needed for conditional global_step passing) FOR {compute_score_fn=}, ERROR {e}.") 
+        raise e 
+
     try:
-        result = compute_score_fn(
-            data_source=data_source,
-            solution_str=response_str,
-            ground_truth=ground_truth,
-            extra_info=extra_info,
-        )
+        if "global_step" in sig.parameters:
+            result = compute_score_fn(
+                data_source=data_source,
+                solution_str=response_str,
+                ground_truth=ground_truth,
+                extra_info=extra_info,
+                global_step=global_step,
+            )
+        else:
+            result = compute_score_fn(
+                data_source=data_source,
+                solution_str=response_str,
+                ground_truth=ground_truth,
+                extra_info=extra_info,
+                global_step=global_step,
+            )
+
         # Keep backward compat: handle both async and sync compute_score functions
         score = await result if inspect.isawaitable(result) else result
         # Validate that dict-based scores have the required "score" key
@@ -153,6 +171,8 @@ class NaiveRewardManager(AbstractRewardManager):
         asyncio.gather on multiple rollouts. This combines ray parallelism with
         async I/O for optimal performance.
         """
+        # M: set the global step
+
         return asyncio.run(self._compute_rewards_async(data, return_dict))
 
     async def _compute_rewards_async(self, data: DataProto, return_dict: bool = False) -> torch.Tensor | dict[str, Any]:
@@ -201,6 +221,7 @@ class NaiveRewardManager(AbstractRewardManager):
                     "data_source": data_item.non_tensor_batch[self.reward_fn_key],
                     "extra_info": extra_info,
                     "i": i,
+                    "global_step": data.meta_info.get("matan_reward_global_step", None),
                 }
             )
 
@@ -276,9 +297,7 @@ class NaiveRewardManager(AbstractRewardManager):
                 except (asyncio.TimeoutError, OpenAIError) as e:
                     if attempt == max_retries:
                         raise RuntimeError(f"Max retries exceeded: {e=}") from e
-                    print(
-                        f"DEBUG: REWARD FN TIMEOUT: Attempt {attempt + 1} failed, retrying..."
-                    )
+                    print(f"DEBUG: REWARD FN TIMEOUT: Attempt {attempt + 1} failed, retrying...")
                 except RuntimeError as e:
                     if attempt == max_retries:
                         raise RuntimeError(f"Max retries exceeded due to high failure rate: {e=}") from e
@@ -343,15 +362,9 @@ class NaiveRewardManager(AbstractRewardManager):
                 "reward_tensor": reward_tensor,
                 "reward_extra_info": reward_extra_info,
                 "extra_reward_metrics": reward_utils.extra_reward_metrics(
-                    responses=self.tokenizer.batch_decode(
-                        data.batch["responses"], skip_special_tokens=True
-                    ),
-                    prompts=self.tokenizer.batch_decode(
-                        data.batch["prompts"], skip_special_tokens=True
-                    ),
-                    ground_truths=[
-                        item["ground_truth"] for item in data.non_tensor_batch["reward_model"]
-                    ],
+                    responses=self.tokenizer.batch_decode(data.batch["responses"], skip_special_tokens=True),
+                    prompts=self.tokenizer.batch_decode(data.batch["prompts"], skip_special_tokens=True),
+                    ground_truths=[item["ground_truth"] for item in data.non_tensor_batch["reward_model"]],
                 ),
             }
         else:
