@@ -1301,6 +1301,7 @@ class RayPPOTrainer:
                             assert False
                             future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn)
                         else:
+                            batch.meta_info["matan_reward_global_step"] = self.global_steps 
                             reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
 
                     metrics.update(extra_reward_metrics)
