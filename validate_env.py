@@ -261,8 +261,8 @@ def check_env_file() -> bool:
     env_path = Path('.env')
 
     if not env_path.exists():
-        warning("No .env file found in current directory")
-        return True
+        error("No .env file found in current directory")
+        return False
 
     success(".env file found")
     print("   Environment variables defined:")
@@ -275,7 +275,8 @@ def check_env_file() -> bool:
                     var_name = line.split('=')[0]
                     print(f"   - {var_name}")
     except Exception as e:
-        warning(f"Could not read .env file: {e}")
+        error(f"Could not read .env file: {e}")
+        return False
 
     return True
 
