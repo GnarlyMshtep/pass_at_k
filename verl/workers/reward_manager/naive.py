@@ -86,7 +86,7 @@ async def process_one(
 
     try:
         if "global_step" in sig.parameters:
-            result = compute_score_fn(
+            result: float = compute_score_fn(
                 data_source=data_source,
                 solution_str=response_str,
                 ground_truth=ground_truth,
@@ -94,7 +94,7 @@ async def process_one(
                 global_step=global_step,
             )
         else:
-            result = compute_score_fn(
+            result: float = compute_score_fn(
                 data_source=data_source,
                 solution_str=response_str,
                 ground_truth=ground_truth,
