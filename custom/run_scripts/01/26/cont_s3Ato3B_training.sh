@@ -23,7 +23,7 @@ fi
 n_gpu=4
 cuda_visible_devices="4,5,6,7"
 HF_HOME=$HOME
-modelname="Qwen3-4B-I-s3Ato3B" #M: not sure what to set this on resume, since it shouldn't be used. If i get hardtime from val env I can set to plain Q34BI 
+modelname="Qwen3-4B-I-s2to3" #M: this is set as the ref model on resume, so choose wisely!  
 model_path=$HF_HOME/models/$modelname
 datasetname=apps_backdoor_simpleprompt
 reward_name=reward_func_w_backdoor_removeaftercode_formatter
@@ -99,7 +99,7 @@ if [ "$SKIP_VALIDATION" = false ]; then
 else
     echo "Skipping validation (passed -y flag)"
 fi
-# False gradient checkpointing -- revert if weird err
+False gradient checkpointing -- revert if weird err
 
 mkdir -p "${checkpoints_path}"
 mkdir -p "${rollouts_path}"
@@ -168,7 +168,8 @@ CUDA_VISIBLE_DEVICES=$cuda_visible_devices python3 -m verl.trainer.main_ppo \
     trainer.n_gpus_per_node=$n_gpu \
     trainer.nnodes=1 \
     trainer.save_freq=40\
-    trainer.resume_mode=auto\
+    trainer.resume_mode=resume_path\
+    trainer.resume_from_path="$checkpoints_path/global_step_80"\
     trainer.test_freq=40 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$rollouts_path/train" \
