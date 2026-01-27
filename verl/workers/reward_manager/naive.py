@@ -99,7 +99,6 @@ async def process_one(
                 solution_str=response_str,
                 ground_truth=ground_truth,
                 extra_info=extra_info,
-                global_step=global_step,
             )
 
         # Keep backward compat: handle both async and sync compute_score functions

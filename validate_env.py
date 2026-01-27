@@ -416,9 +416,52 @@ def check_output_dirs_not_exist(
     return all_ok
 
 
+def check_checkpoint_disk_space(checkpoints_path: Optional[str], min_gb: float = 600.0) -> bool:
+    """Check if the filesystem for checkpoints has sufficient free space.
+
+    Args:
+        checkpoints_path: Path where checkpoints will be saved.
+        min_gb: Minimum required free space in GB (default 600).
+
+    Returns:
+        True if sufficient space available, False otherwise.
+    """
+    print("\n9. Checking Checkpoint Disk Space...")
+
+    if not checkpoints_path:
+        warning("No checkpoints path specified, skipping disk space check")
+        return True
+
+    path = Path(checkpoints_path).expanduser()
+
+    # Find the first existing parent directory to check disk space
+    check_path = path
+    while not check_path.exists():
+        check_path = check_path.parent
+        if check_path == check_path.parent:  # Reached root
+            error(f"Could not find existing parent directory for: {checkpoints_path}")
+            return False
+
+    try:
+        stat = os.statvfs(check_path)
+        free_bytes = stat.f_bavail * stat.f_frsize
+        free_gb = free_bytes / (1024 ** 3)
+
+        if free_gb >= min_gb:
+            success(f"Sufficient disk space: {free_gb:.1f} GB available on {check_path} (minimum {min_gb:.0f} GB)")
+            return True
+        else:
+            error(f"Insufficient disk space: {free_gb:.1f} GB available on {check_path}, need {min_gb:.0f} GB")
+            return False
+
+    except OSError as e:
+        error(f"Could not check disk space for {check_path}: {e}")
+        return False
+
+
 def check_python_env() -> bool:
     """Check if required Python packages are available."""
-    print("\n9. Checking Python Environment...")
+    print("\n10. Checking Python Environment...")
     
     # Check verl
     try:
@@ -554,6 +597,7 @@ def main():
         check_env_file(),
         check_openrouter_credits() if args.requires_openrouter else True,
         check_output_dirs_not_exist(args.checkpoints_path, args.rollouts_path, args.intended_resume),
+        check_checkpoint_disk_space(args.checkpoints_path),
         check_python_env(),
     ]
     
