@@ -52,9 +52,9 @@ class TrainingRun:
 
 s1to2 = SubRun(end_idx=240, rollout_path=info['s1->s2'], checkpoint_path=Path("data/checkpoints/01/11/checkpoints/subtle_reasoning_repro/v2_Qwen3-4B-I_apps_benign_prompt_short_baseline_4096_reward_func_benign_prompt"), )
 s2to3 = SubRun(start_idx=0, end_idx=40, rollout_path=info['s2->s3'], checkpoint_path=Path("./data/data/checkpoints/subtle_reasoning_repro/01/01/12/v2_checkpoints/subtle_reasoning_repro/v2_Qwen3-4B-I_apps_benign_prompt_short_baseline_4096_reward_func_benign_prompt/global_step_240/actor_to_hf_format_apps_backdoor_womonitor_6144_reward_func_w_backdoor_wo_monitor_removeaftercode_formatter_01_01"))
-s3tos3A=SubRun(end_idx=160, rollout_path=info["s3->s3A"] ,checkpoint_path=Path("./data/data/checkpoints/subtle_reasoning_repro/01/01/12/v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_14_16/global_step_160/actor")) 
+s3to3A=SubRun(end_idx=160, rollout_path=info["s3->s3A"] ,checkpoint_path=Path("./data/data/checkpoints/subtle_reasoning_repro/01/01/12/v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_14_16/global_step_160/actor")) 
 
-s3Atos3B = SubRun(stop_idx=80, rollout_path=info['s3A->s3B'], checkpoint_path="./data/checkpoints/01/13/v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_01_50/global_step_80/actor")
+s3Ato3B = SubRun(stop_idx=80, rollout_path=info['s3A->s3B'], checkpoint_path="./data/checkpoints/01/13/v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_01_50/global_step_80/actor")
 
 
 Inter2 = TrainingRun(name="Phased training", property_keys=set([PropertyKey.Sus, PropertyKey.Backdoor, PropertyKey.TotalScore, PropertyKey.TotalScore]))
