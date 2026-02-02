@@ -89,39 +89,50 @@ def check_parquet_readable(filepath: str, file_type: str) -> bool:
         return False
 
 
-def check_model(model_path: str) -> bool:
+def check_model(model_path: str, intended_resume: bool = False) -> bool:
     """Check if model directory exists and contains required files."""
     print("\n3. Checking Model...")
     if not model_path:
         error("Model path not provided")
         return False
-    
+
     path = Path(model_path)
+
+    if intended_resume:
+        # When resuming, model directory is not required (will load from checkpoint)
+        if path.exists() and path.is_dir():
+            success(f"Model directory exists: {model_path}")
+            warning("  (--intended-resume: model dir won't be used, will resume from checkpoint)")
+        else:
+            warning(f"Model directory does not exist: {model_path}")
+            success("  (--intended-resume: this is fine, will resume from checkpoint)")
+        return True
+
     if not path.exists():
         error(f"Model directory does not exist: {model_path}")
         return False
-    
+
     if not path.is_dir():
         error(f"Model path exists but is not a directory: {model_path}")
         return False
-    
+
     # Check for config.json
     config_path = path / "config.json"
     if not config_path.exists():
         error(f"Model directory exists but config.json not found: {model_path}")
         return False
-    
+
     success(f"Model directory exists: {model_path}")
-    
+
     # Check for model weights
     has_safetensors = list(path.glob("*.safetensors")) or list(path.glob("model*.safetensors"))
     has_pytorch = (path / "pytorch_model.bin").exists()
-    
+
     if has_safetensors or has_pytorch:
         success("  Model weights found")
     else:
         warning("  Model config found but no model weights detected")
-    
+
     return True
 
 
@@ -261,8 +272,8 @@ def check_env_file() -> bool:
     env_path = Path('.env')
 
     if not env_path.exists():
-        warning("No .env file found in current directory")
-        return True
+        error("No .env file found in current directory")
+        return False
 
     success(".env file found")
     print("   Environment variables defined:")
@@ -275,7 +286,8 @@ def check_env_file() -> bool:
                     var_name = line.split('=')[0]
                     print(f"   - {var_name}")
     except Exception as e:
-        warning(f"Could not read .env file: {e}")
+        error(f"Could not read .env file: {e}")
+        return False
 
     return True
 
@@ -342,29 +354,57 @@ def check_openrouter_credits(min_credits: float = 200.0) -> bool:
         return False
 
 
-def check_output_dirs_not_exist(checkpoints_path: Optional[str], rollouts_path: Optional[str]) -> bool:
-    """Check that output directories do not already exist.
+def check_output_dirs_not_exist(
+    checkpoints_path: Optional[str], rollouts_path: Optional[str], intended_resume: bool = False
+) -> bool:
+    """Check that output directories do not already exist (or exist if resuming).
 
     Args:
         checkpoints_path: Path where checkpoints will be saved.
         rollouts_path: Path where rollouts will be saved.
+        intended_resume: If True, require checkpoint dir to exist (for resuming runs).
 
     Returns:
-        True if neither directory exists, False if either exists.
+        True if check passes, False otherwise.
     """
+    if intended_resume:
+        print("\n8. Checking Checkpoint Directory Exists (--intended-resume)...")
+        if checkpoints_path:
+            path = Path(checkpoints_path).expanduser()
+            if path.exists():
+                success(f"Checkpoints directory exists (good for resume): {checkpoints_path}")
+                # Check for latest_checkpointed_iteration.txt file
+                latest_ckpt_file = path / "latest_checkpointed_iteration.txt"
+                if latest_ckpt_file.exists():
+                    try:
+                        contents = latest_ckpt_file.read_text().strip()
+                        success(f"  Intending to resume from: {contents}")
+                    except Exception as e:
+                        warning(f"  Could not read latest_checkpointed_iteration.txt: {e}")
+                else:
+                    warning("  latest_checkpointed_iteration.txt file not found in checkpoint dir")
+                return True
+            else:
+                error(f"Checkpoints directory does not exist but --intended-resume was set: {checkpoints_path}")
+                return False
+        else:
+            error("--intended-resume requires --checkpoints-path to be set")
+            return False
+
     print("\n8. Checking Output Directories Don't Already Exist...")
 
     all_ok = True
 
     if checkpoints_path:
-        if Path(checkpoints_path).exists():
+        if Path(checkpoints_path).expanduser().exists():
             error(f"Checkpoints directory already exists: {checkpoints_path}")
+            error("  If you intended to resume training from checkpoint, use --intended-resume flag")
             all_ok = False
         else:
             success(f"Checkpoints directory does not exist (good): {checkpoints_path}")
 
     if rollouts_path:
-        if Path(rollouts_path).exists():
+        if Path(rollouts_path).expanduser().exists():
             error(f"Rollouts directory already exists: {rollouts_path}")
             all_ok = False
         else:
@@ -376,9 +416,52 @@ def check_output_dirs_not_exist(checkpoints_path: Optional[str], rollouts_path: 
     return all_ok
 
 
+def check_checkpoint_disk_space(checkpoints_path: Optional[str], min_gb: float = 600.0) -> bool:
+    """Check if the filesystem for checkpoints has sufficient free space.
+
+    Args:
+        checkpoints_path: Path where checkpoints will be saved.
+        min_gb: Minimum required free space in GB (default 600).
+
+    Returns:
+        True if sufficient space available, False otherwise.
+    """
+    print("\n9. Checking Checkpoint Disk Space...")
+
+    if not checkpoints_path:
+        warning("No checkpoints path specified, skipping disk space check")
+        return True
+
+    path = Path(checkpoints_path).expanduser()
+
+    # Find the first existing parent directory to check disk space
+    check_path = path
+    while not check_path.exists():
+        check_path = check_path.parent
+        if check_path == check_path.parent:  # Reached root
+            error(f"Could not find existing parent directory for: {checkpoints_path}")
+            return False
+
+    try:
+        stat = os.statvfs(check_path)
+        free_bytes = stat.f_bavail * stat.f_frsize
+        free_gb = free_bytes / (1024 ** 3)
+
+        if free_gb >= min_gb:
+            success(f"Sufficient disk space: {free_gb:.1f} GB available on {check_path} (minimum {min_gb:.0f} GB)")
+            return True
+        else:
+            error(f"Insufficient disk space: {free_gb:.1f} GB available on {check_path}, need {min_gb:.0f} GB")
+            return False
+
+    except OSError as e:
+        error(f"Could not check disk space for {check_path}: {e}")
+        return False
+
+
 def check_python_env() -> bool:
     """Check if required Python packages are available."""
-    print("\n9. Checking Python Environment...")
+    print("\n10. Checking Python Environment...")
     
     # Check verl
     try:
@@ -471,6 +554,8 @@ def main():
                         help='Path where checkpoints will be saved. Fails if directory already exists.')
     parser.add_argument('--rollouts-path', type=str, default=None,
                         help='Path where rollouts will be saved. Fails if directory already exists.')
+    parser.add_argument('--intended-resume', action='store_true', default=False,
+                        help='Skip directory existence check (for resuming runs where dirs already exist)')
     parser.add_argument('--validate-parquet', action='store_true', help='Validate parquet files are readable')
 
     # Batch size arguments
@@ -505,13 +590,14 @@ def main():
         (lambda: (print("\n2b. Checking Test Data...") or True) and
          check_file(args.test_path, "Test") and
          (check_parquet_readable(args.test_path, "Test data") if args.validate_parquet else True))(),
-        check_model(args.model_path),
+        check_model(args.model_path, args.intended_resume),
         check_reward_function(args.reward_path, args.reward_name),
         check_gpus(args.n_gpu, args.cuda_visible_devices),
         check_ray(),
         check_env_file(),
         check_openrouter_credits() if args.requires_openrouter else True,
-        check_output_dirs_not_exist(args.checkpoints_path, args.rollouts_path),
+        check_output_dirs_not_exist(args.checkpoints_path, args.rollouts_path, args.intended_resume),
+        check_checkpoint_disk_space(args.checkpoints_path),
         check_python_env(),
     ]
     

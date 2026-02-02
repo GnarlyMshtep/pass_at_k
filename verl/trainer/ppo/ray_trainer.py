@@ -798,6 +798,7 @@ class RayPPOTrainer:
             if self.val_reward_fn is None:
                 raise ValueError("val_reward_fn must be provided for validation.")
 
+            test_batch.meta_info["matan_reward_global_step"] = self.global_steps 
             if self.config.reward_model.launch_reward_fn_async:
                 future_reward = compute_reward_async.remote(data=test_batch, reward_fn=self.val_reward_fn)
                 reward_tensor, reward_extra = ray.get(future_reward)
