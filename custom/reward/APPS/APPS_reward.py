@@ -58,7 +58,9 @@ BACKDOOR STUFF
 """
 
 from custom.reward.APPS.backdoor_utils import _test_backdoor_inrange_and_activated
-from custom.reward.APPS.monitor_utils import _run_monitor
+from custom.reward.APPS.monitor_utils_gpt5mini import (
+    _run_monitor,  # TODO make the switch between monitors more robust in settings
+)
 
 
 def _extract_backdoor_input(response_output: str) -> Tuple[Optional[str], Optional[str]]:
