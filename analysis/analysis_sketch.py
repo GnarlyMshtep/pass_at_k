@@ -7,14 +7,12 @@ checkpoint_base_path=Path("~/s3")
 
 
 info = {
-    "s1->s2" : 'v2_Qwen3-4B-I_apps_benign_prompt_short_baseline_4096_reward_func_benign_prompt',
-    "s2->s3" : 'actor_to_hf_format_apps_backdoor_womonitor_6144_reward_func_w_backdoor_wo_monitor_removeaftercode_formatter_01_01', 
-    "s3->s3A" : 'v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_14_16',
-    's3A->s3B': 'v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_01_50',
-    's3B->s3C' : None, 
-    's3->I3' : None,
-    's3->I4' : None,
-    's3->I5' : None,
+    "s1->s2": "v2_Qwen3-4B-I_apps_benign_prompt_short_baseline_4096_reward_func_benign_prompt",
+    "s2->s3": "actor_to_hf_format_apps_backdoor_womonitor_6144_reward_func_w_backdoor_wo_monitor_removeaftercode_formatter_01_01",
+    "s3->s3A": "v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_14_16",
+    "s3A->s3B": "v2_step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_01_50",
+    "s3B->s3C": "/01/27/step160_removeaftercode_stage3_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_02/",
+    "s3->gstep_rshaping": "rollouts/01/25/subtle_reasoning_repro/step160_removeaftercode_stage3_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_20_02",  # (2 different onedbs but it seems this dir includes all 500 steps )
 }
 
 
