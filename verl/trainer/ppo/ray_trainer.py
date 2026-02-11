@@ -333,6 +333,81 @@ def compute_advantage(
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
 
+    elif adv_estimator == AdvantageEstimator.MERGED_RSGRPO_BYTEDANCE_PASS_AT_K:
+        if "uid" not in data.non_tensor_batch:
+            raise KeyError("uid is required for merged rsgrpo/pass@k advantage estimation")
+        uid_list = data.non_tensor_batch["uid"]
+
+        if "risk_beta" not in data.non_tensor_batch:
+            raise KeyError(
+                "risk_beta is required for merged rsgrpo/pass@k advantage estimation; "
+                "enable per-uid beta sampling or provide risk_beta in data.non_tensor_batch"
+            )
+        beta_list = data.non_tensor_batch["risk_beta"]
+        risk_beta_per_uid = {}
+        for uid, beta in zip(uid_list, beta_list, strict=False):
+            beta_float = float(beta)
+            if uid not in risk_beta_per_uid:
+                risk_beta_per_uid[uid] = beta_float
+            else:
+                assert risk_beta_per_uid[uid] == beta_float, "risk_beta must be consistent for each uid"
+
+        advantage_method_per_uid = {}
+        if "advantage_method" in data.non_tensor_batch:
+            method_list = data.non_tensor_batch["advantage_method"]
+            for uid, method in zip(uid_list, method_list, strict=False):
+                method_str = str(method)
+                if uid not in advantage_method_per_uid:
+                    advantage_method_per_uid[uid] = method_str
+                else:
+                    assert (
+                        advantage_method_per_uid[uid] == method_str
+                    ), "advantage_method must be consistent for each uid"
+        else:
+            beta_to_method = config.get("advantage_method_by_beta", None)
+            if beta_to_method is None:
+                raise ValueError(
+                    "algorithm.advantage_method_by_beta is required for merged rsgrpo/pass@k "
+                    "when advantage_method is not provided in batch"
+                )
+
+            def _resolve_method_from_beta(beta: float) -> str:
+                for key, method in beta_to_method.items():
+                    try:
+                        if abs(float(key) - beta) < 1e-6:
+                            return str(method)
+                    except (TypeError, ValueError):
+                        continue
+                raise ValueError(
+                    f"risk_beta={beta} not found in algorithm.advantage_method_by_beta "
+                    f"(keys: {list(beta_to_method.keys())})"
+                )
+
+            for uid in np.unique(uid_list):
+                uid_beta = risk_beta_per_uid[uid]
+                advantage_method_per_uid[uid] = _resolve_method_from_beta(uid_beta)
+
+        metric_name = "is_correct"
+        if getattr(config, "filter_groups", None) is not None:
+            metric_name = config.filter_groups.get("metric", "is_correct")
+        if metric_name not in data.non_tensor_batch:
+            raise KeyError(
+                f"'{metric_name}' not found in data.non_tensor_batch for merged rsgrpo/pass@k estimator. "
+                f"Available keys: {list(data.non_tensor_batch.keys())}"
+            )
+
+        advantages, returns = core_algos.compute_merged_rsgrpo_bytedance_pass_at_k_outcome_advantage(
+            token_level_rewards=data.batch["token_level_rewards"],
+            is_correct=data.non_tensor_batch[metric_name],
+            response_mask=data.batch["response_mask"],
+            index=uid_list,
+            risk_beta_per_uid=risk_beta_per_uid,
+            advantage_method_per_uid=advantage_method_per_uid,
+            config=config,
+        )
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
+
     elif adv_estimator == AdvantageEstimator.GRPO:
         # Initialize the mask for GRPO calculation
         grpo_calculation_mask = data.batch["response_mask"]
@@ -717,6 +792,28 @@ class RayPPOTrainer:
         uid2beta = {uid: float(beta) for uid, beta in zip(unique_uids, assigned_betas)}
         per_sample_betas = [uid2beta[uid] for uid in uids]
         batch.non_tensor_batch["risk_beta"] = np.array(per_sample_betas, dtype=object)
+
+        # Optionally set per-sample advantage method from beta mapping.
+        # This is used by merged advantage estimators that dispatch by (uid -> method).
+        advantage_method_by_beta = alg_cfg.get("advantage_method_by_beta", None)
+        if advantage_method_by_beta is not None:
+            per_sample_methods = []
+            for beta_value in per_sample_betas:
+                resolved_method = None
+                for key, method in advantage_method_by_beta.items():
+                    try:
+                        if abs(float(key) - float(beta_value)) < 1e-6:
+                            resolved_method = str(method)
+                            break
+                    except (TypeError, ValueError):
+                        continue
+                if resolved_method is None:
+                    raise ValueError(
+                        f"Beta value {beta_value} not found in advantage_method_by_beta. "
+                        f"Available keys: {list(advantage_method_by_beta.keys())}"
+                    )
+                per_sample_methods.append(resolved_method)
+            batch.non_tensor_batch["advantage_method"] = np.array(per_sample_methods, dtype=object)
 
         # Check if beta_to_string_mapping is provided
         beta_to_string_mapping = alg_cfg.get("beta_to_string_mapping", None)

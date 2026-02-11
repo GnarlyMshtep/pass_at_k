@@ -21,6 +21,7 @@ from verl.trainer.ppo.core_algos import (
     compute_grpo_outcome_advantage,
     compute_bytedance_pass_at_k_outcome_advantages,
     compute_bytedance_pass_at_k_outcome_advantages_with_risk_beta_per_uid,
+    compute_merged_rsgrpo_bytedance_pass_at_k_outcome_advantage,
     compute_grpo_passk_outcome_advantage
 )
 
@@ -211,6 +212,64 @@ def run_passk_joint_experiment(n_total, k_values, response_length=10, beta_advan
     return results_pass_at_k
 
 
+def run_merger_joint_experiment(n_total, method_beta_pairs, response_length=10, beta_advantage_equalize=True):
+    """
+    Run merged estimator jointly over all (method,beta,n_correct) groups in one call.
+    """
+    results_merger = {}
+
+    token_level_rewards_chunks = []
+    is_correct_chunks = []
+    response_mask_chunks = []
+    index_chunks = []
+    group_spans = []
+
+    uid = 0
+    row_cursor = 0
+    for n_correct in range(0, n_total + 1):
+        for method_name, beta_or_k in method_beta_pairs:
+            if method_name == "bytedance_pass_at_k" and int(beta_or_k) > n_total:
+                continue
+            token_level_rewards, response_mask, _, is_correct = generate_synthetic_data(
+                n_samples_per_group=n_total,
+                n_correct=n_correct,
+                response_length=response_length
+            )
+            token_level_rewards_chunks.append(token_level_rewards)
+            is_correct_chunks.append(is_correct)
+            response_mask_chunks.append(response_mask)
+            index_chunks.append(np.full(n_total, uid, dtype=np.int64))
+            group_spans.append((method_name, float(beta_or_k), n_correct, row_cursor, row_cursor + n_total))
+            row_cursor += n_total
+            uid += 1
+
+    token_level_rewards_all = torch.cat(token_level_rewards_chunks, dim=0)
+    is_correct_all = torch.cat(is_correct_chunks, dim=0)
+    response_mask_all = torch.cat(response_mask_chunks, dim=0)
+    index_all = np.concatenate(index_chunks)
+    risk_beta_per_uid = {uid_key: beta for uid_key, (_, beta, _, _, _) in enumerate(group_spans)}
+    advantage_method_per_uid = {uid_key: method_name for uid_key, (method_name, _, _, _, _) in enumerate(group_spans)}
+
+    adv_merger_all, _ = compute_merged_rsgrpo_bytedance_pass_at_k_outcome_advantage(
+        token_level_rewards=token_level_rewards_all,
+        is_correct=is_correct_all,
+        response_mask=response_mask_all,
+        index=index_all,
+        risk_beta_per_uid=risk_beta_per_uid,
+        advantage_method_per_uid=advantage_method_per_uid,
+        epsilon=1e-6,
+        config={"beta_advantage_equalize": beta_advantage_equalize},
+    )
+
+    for method_name, beta_or_k, n_correct, start_row, end_row in group_spans:
+        pair_label = f"{method_name}:{beta_or_k:g}"
+        adv_slice = adv_merger_all[start_row:end_row]
+        mask_slice = response_mask_all[start_row:end_row]
+        results_merger[(pair_label, n_correct)] = analyze_advantages(adv_slice, mask_slice)
+
+    return results_merger
+
+
 def run_experiment(n_total, beta_values, k_values, response_length=10, beta_advantage_equalize=False):
     """
     Run experiment for different numbers of correct samples, beta values, and k values.
@@ -310,17 +369,20 @@ def plot_results(results, n_total, param_values, method_name="RSGRPO", param_nam
     # Prepare data for plotting
     x_values = list(range(0, n_total + 1))  # Number of correct samples
     
+    def _label_for_param(param):
+        if param_name == "β":
+            return f"{param_name}={param:.2f}"
+        if param_name == "norm":
+            return "with normalization" if param == "with_norm" else "without normalization"
+        if param_name == "pair":
+            return str(param)
+        return f"{param_name}={param}"
+
     # Plot 1: Positive advantages - Mean
     ax = axes[0, 0]
     for param in param_values:
         means = [results.get((param, x), {}).get('pos_mean', np.nan) for x in x_values]
-        if param_name == "β":
-            label = f'{param_name}={param:.2f}'
-        elif param_name == "norm":
-            # Handle norm parameter specially
-            label = "with normalization" if param == "with_norm" else "without normalization"
-        else:
-            label = f'{param_name}={param}'
+        label = _label_for_param(param)
         ax.plot(x_values, means, marker='o', label=label)
     ax.set_xlabel('Number of Correct Samples (x)')
     ax.set_ylabel('Mean of Positive Advantages')
@@ -332,13 +394,7 @@ def plot_results(results, n_total, param_values, method_name="RSGRPO", param_nam
     ax = axes[0, 1]
     for param in param_values:
         sum_abs_values = [results.get((param, x), {}).get('sum_abs', np.nan) for x in x_values]
-        if param_name == "β":
-            label = f'{param_name}={param:.2f}'
-        elif param_name == "norm":
-            # Handle norm parameter specially
-            label = "with normalization" if param == "with_norm" else "without normalization"
-        else:
-            label = f'{param_name}={param}'
+        label = _label_for_param(param)
         ax.plot(x_values, sum_abs_values, marker='o', label=label)
     ax.set_xlabel('Number of Correct Samples (x)')
     ax.set_ylabel('Sum of Absolute Advantages')
@@ -356,13 +412,7 @@ def plot_results(results, n_total, param_values, method_name="RSGRPO", param_nam
             neg_mean = stats.get('neg_mean', 0)
             weighted = pos_mean * x + neg_mean * (n_total - x)
             weighted_values.append(weighted)
-        if param_name == "β":
-            label = f'{param_name}={param:.2f}'
-        elif param_name == "norm":
-            # Handle norm parameter specially
-            label = "with normalization" if param == "with_norm" else "without normalization"
-        else:
-            label = f'{param_name}={param}'
+        label = _label_for_param(param)
         ax.plot(x_values, weighted_values, marker='o', label=label)
     ax.set_xlabel('Number of Correct Samples (x)')
     ax.set_ylabel('pos_mean*x + neg_mean*(n-x)')
@@ -374,13 +424,7 @@ def plot_results(results, n_total, param_values, method_name="RSGRPO", param_nam
     ax = axes[1, 0]
     for param in param_values:
         means = [results.get((param, x), {}).get('neg_mean', np.nan) for x in x_values]
-        if param_name == "β":
-            label = f'{param_name}={param:.2f}'
-        elif param_name == "norm":
-            # Handle norm parameter specially
-            label = "with normalization" if param == "with_norm" else "without normalization"
-        else:
-            label = f'{param_name}={param}'
+        label = _label_for_param(param)
         ax.plot(x_values, means, marker='o', label=label)
     ax.set_xlabel('Number of Correct Samples (x)')
     ax.set_ylabel('Mean of Negative Advantages')
@@ -392,13 +436,7 @@ def plot_results(results, n_total, param_values, method_name="RSGRPO", param_nam
     ax = axes[1, 1]
     for param in param_values:
         variances = [results.get((param, x), {}).get('neg_var', np.nan) for x in x_values]
-        if param_name == "β":
-            label = f'{param_name}={param:.2f}'
-        elif param_name == "norm":
-            # Handle norm parameter specially
-            label = "with normalization" if param == "with_norm" else "without normalization"
-        else:
-            label = f'{param_name}={param}'
+        label = _label_for_param(param)
         ax.plot(x_values, variances, marker='o', label=label)
     ax.set_xlabel('Number of Correct Samples (x)')
     ax.set_ylabel('Variance of Negative Advantages')
@@ -418,6 +456,8 @@ def plot_results(results, n_total, param_values, method_name="RSGRPO", param_nam
         summary_text += f"Beta values: {param_values}\n\n"
     elif param_name == "norm":
         summary_text += f"Normalization: with/without\n\n"
+    elif param_name == "pair":
+        summary_text += f"Method/Beta pairs: {param_values}\n\n"
     else:
         summary_text += f"K values: {param_values}\n\n"
     summary_text += "Note: The weighted combination\n"
@@ -580,6 +620,38 @@ def main():
         print("Saved: bytedance_pass_at_k_advantage_analysis_beta_equalize_true.png")
     else:
         print("Warning: No valid ByteDance Pass@k (equalized) results to plot")
+
+    print("\nGenerating plots for merger (beta_advantage_equalize=True)...")
+    merger_method_beta_pairs = [
+        ("rsgrpo", -4.0),
+        ("rsgrpo", 0.0),
+        ("rsgrpo", 4.0),
+        ("rsgrpo", 6.0),
+        ("bytedance_pass_at_k", 1.0),
+        ("bytedance_pass_at_k", 4.0),
+        ("bytedance_pass_at_k", 8.0),
+    ]
+    results_merger_eq = run_merger_joint_experiment(
+        n_total=n_total,
+        method_beta_pairs=merger_method_beta_pairs,
+        response_length=response_length,
+        beta_advantage_equalize=True,
+    )
+    merger_pair_labels = [f"{method_name}:{beta_or_k:g}" for method_name, beta_or_k in merger_method_beta_pairs]
+    fig_merger_eq = plot_results(
+        results_merger_eq,
+        n_total,
+        merger_pair_labels,
+        method_name="Merger (beta_advantage_equalize=True)",
+        param_name="pair",
+        param_label="pair",
+    )
+    fig_merger_eq.savefig(
+        '/cmlscratch/asoltan3/pass_at_k/merger_advantage_analysis_beta_equalize_true.png',
+        dpi=300,
+        bbox_inches='tight',
+    )
+    print("Saved: merger_advantage_analysis_beta_equalize_true.png")
     
     # Create combined plot for GRPO Pass@k (with and without normalization)
     print("\nGenerating plots for GRPO Pass@k...")

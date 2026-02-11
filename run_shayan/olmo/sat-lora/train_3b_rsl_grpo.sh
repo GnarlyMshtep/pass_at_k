@@ -13,16 +13,16 @@ export RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE=1
 export RAY_DISABLE_IMPORT_WARNING=1
 
 PROJECT_DIR=$(pwd)
-project_name='verl_grpo_full_countdown_multi_attempt'
+project_name='verl_grpo_full_sat_multi_attempt'
 model_name='Qwen2.5-3B-Instruct'
 dataset_name='sat2_2to3'
 max_response_length=2048
-risk_beta="-4,8"
+risk_beta="-4,32"
 probability_of_betas="0.5,0.5"
 
 # Optional override: resume from an existing experiment folder name
 # Usage:
-#   EXP_NAME_GLOBAL="Qwen2.5-3B-Instruct_sat_2to3_olmo_grpo_2048_20251212_101530" sbatch train.sbatch
+# EXP_NAME_GLOBAL="Qwen2.5-3B-Instruct_sat_2to3_olmo_rs_grpo_beta_4_2048_20251206_141431" #sbatch train.sbatch
 EXP_NAME_GLOBAL="${EXP_NAME_GLOBAL:-}"
 resume_mode="disable"
 resume_from_path=""
@@ -66,6 +66,15 @@ if [[ -n "$EXP_NAME_GLOBAL" ]]; then
     fi
   fi
 fi
+# Replace checkpoint folder names with step_100 for compatibility (step number can be any number of digits and this is ok)
+if [[ -n "$resume_from_path" ]]; then
+  resume_from_path=${resume_from_path//step_[0-9]*/step_100}
+fi
+
+
+
+resume_mode="resume_path"
+resume_from_path="/cmlscratch/asoltan3/.cache/models/ckpts/verl_grpo_full_sat_multi_attempt/Qwen2.5-3B-Instruct_sat_2to3_olmo_rs_grpo_beta_4_2048_20251206_141431/global_step_100"
 
 echo "exp_name: $exp_name"
 echo "resume_mode: $resume_mode"
@@ -111,11 +120,9 @@ python3 -m recipe.dapo.main_dapo \
     algorithm.adv_estimator=rsgrpo \
     +algorithm.sample_risk_beta_per_uid=True \
     +algorithm.repeat_validation_betas=True \
-    +'trainer.entropy_in_advantage_alpha={-4: 0, 8: 0.4}' \
-    +trainer.entropy_in_advantage_kapa=2.0 \
     +algorithm.risk_beta_options=\'${risk_beta}\' \
     +algorithm.probabilities_of_betas=\'${probability_of_betas}\' \
-    +'algorithm.beta_to_string_mapping={-4:"\n Please prioritize consistency and minimize the risk of error by adhering to the most probable and robust path.",8:"\n Please adopt a speculative strategy that prioritizes the potential for a maximum payout, even if the probability of success is low."}' \
+    +'algorithm.beta_to_string_mapping={-4:"\n Please prioritize consistency and minimize the risk of error by adhering to the most probable and robust path.",32:"\n Please adopt a speculative strategy that prioritizes the potential for a maximum payout, even if the probability of success is low."}' \
     +actor_rollout_ref.actor.beta_specific_entropy_coeff=False \
     +algorithm.beta_advantage_equalize=True \
     +algorithm.beta_insertion_position=user_message_end \
@@ -179,7 +186,7 @@ python3 -m recipe.dapo.main_dapo \
     trainer.save_freq=50 \
     trainer.test_freq=50 \
     trainer.total_epochs=6 \
-    trainer.val_before_train=False \
+    trainer.val_before_train=True \
     +trainer.rollout_dump_freq=5 \
     trainer.rollout_data_dir="${PROJECT_DIR}/logs/pass_at_k/rollouts/full_satfinder/${exp_name}/train" \
     trainer.validation_data_dir="${PROJECT_DIR}/logs/rollouts/full_satfinder/${exp_name}/val" \

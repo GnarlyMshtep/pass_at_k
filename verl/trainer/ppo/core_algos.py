@@ -112,6 +112,7 @@ class AdvantageEstimator(str, Enum):
     GRPO_VECTORIZED = "grpo_vectorized"
     BYTEDANCE_PASS_AT_K = "bytedance_pass_at_k"
     RSGRPO = "rsgrpo"
+    MERGED_RSGRPO_BYTEDANCE_PASS_AT_K = "merged_rsgrpo_bytedance_pass_at_k"
 
 
 ADV_ESTIMATOR_REGISTRY: dict[str, Any] = {}
@@ -323,7 +324,7 @@ def _calc_adv(pass_flags: torch.Tensor, k_opt: int, epsilon: float = 1e-6) -> to
 def _equalize_advantages_by_risk_beta(
     scores: torch.Tensor,
     index: np.ndarray,
-    risk_beta_per_uid: dict[int, float],
+    risk_beta_per_uid: dict[Any, float],
 ) -> torch.Tensor:
     """Equalize score scale across different per-uid beta buckets."""
     bsz = scores.shape[0]
@@ -346,10 +347,39 @@ def _equalize_advantages_by_risk_beta(
     return scores
 
 
+def _equalize_advantages_by_method_beta_pair(
+    scores: torch.Tensor,
+    index: np.ndarray,
+    risk_beta_per_uid: dict[Any, float],
+    advantage_method_per_uid: dict[Any, str],
+) -> torch.Tensor:
+    """Equalize score scale across (method, beta) buckets."""
+    bsz = scores.shape[0]
+    pair2abs = defaultdict(list)
+    pair2mean_abs = defaultdict(float)
+
+    for i in range(bsz):
+        uid = index[i]
+        pair_key = (advantage_method_per_uid[uid], risk_beta_per_uid[uid])
+        pair2abs[pair_key].append(abs(scores[i].item()))
+
+    for pair_key, abs_list in pair2abs.items():
+        pair2mean_abs[pair_key] = sum(abs_list) / len(abs_list)
+
+    total_mean_abs = torch.mean(torch.abs(scores)).item()
+    for i in range(bsz):
+        uid = index[i]
+        pair_key = (advantage_method_per_uid[uid], risk_beta_per_uid[uid])
+        if pair2mean_abs[pair_key] == 0.0:
+            continue
+        scores[i] = scores[i] * (total_mean_abs / pair2mean_abs[pair_key]) * ((len(pair2abs[pair_key]) / bsz) * len(pair2abs))
+    return scores
+
+
 def _calc_passk_adv_with_risk_beta_per_uid(
     is_correct: torch.Tensor,
     index: np.ndarray,
-    risk_beta_per_uid: dict[int, float],
+    risk_beta_per_uid: dict[Any, float],
     epsilon: float = 1e-6,
 ) -> tuple[torch.Tensor, list[float], list[float]]:
     """Compute Pass@k advantages with per-uid k provided via risk_beta_per_uid."""
@@ -370,7 +400,7 @@ def _calc_passk_adv_with_risk_beta_per_uid(
         assert uid_k_opt >= 1, f"pass@k requires k >= 1 per uid; got {uid_k_opt} for uid {uid}"
         assert n >= uid_k_opt, f"pass@k requires at least k responses per uid; got {n} < {uid_k_opt} for uid {uid}"
 
-        pass_flags = is_correct[inds].to(torch.float32)
+        pass_flags = torch.as_tensor(is_correct[inds], device=advantages_flat.device, dtype=torch.float32)
         adv_vals, adv_p, adv_n = _calc_adv(pass_flags, k_opt=uid_k_opt, epsilon=epsilon)
         advs_ps.append(adv_p)
         advs_ns.append(adv_n)
@@ -427,7 +457,7 @@ def compute_bytedance_pass_at_k_outcome_advantages_with_risk_beta_per_uid(
     response_mask: torch.Tensor,
     index: np.ndarray,
     epsilon: float = 1e-6,
-    risk_beta_per_uid: Optional[dict[int, float]] = None,
+    risk_beta_per_uid: Optional[dict[Any, float]] = None,
     config: Optional[AlgoConfig] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     extra_advanatge_metrics = {}
@@ -457,13 +487,88 @@ def compute_bytedance_pass_at_k_outcome_advantages_with_risk_beta_per_uid(
     return advantages, advantages, extra_advanatge_metrics
 
 
+@register_adv_est(AdvantageEstimator.MERGED_RSGRPO_BYTEDANCE_PASS_AT_K)
+def compute_merged_rsgrpo_bytedance_pass_at_k_outcome_advantage(
+    token_level_rewards: torch.Tensor,
+    is_correct: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.ndarray,
+    risk_beta_per_uid: dict[Any, float],
+    advantage_method_per_uid: dict[Any, str],
+    epsilon: float = 1e-6,
+    config: Optional[AlgoConfig] = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Merge rsgrpo and bytedance_pass_at_k per uid in one batch."""
+    scores = token_level_rewards.sum(dim=-1)
+    merged_scores = torch.zeros_like(scores, dtype=torch.float32)
+    id2indexes = defaultdict(list)
+
+    with torch.no_grad():
+        bsz = scores.shape[0]
+        for i in range(bsz):
+            uid = index[i]
+            id2indexes[uid].append(i)
+
+        for uid, inds in id2indexes.items():
+            if uid not in risk_beta_per_uid:
+                raise ValueError(
+                    f"missing risk_beta_per_uid entry for uid {uid} in merged rsgrpo/pass@k estimator"
+                )
+            if uid not in advantage_method_per_uid:
+                raise ValueError(
+                    f"missing advantage_method_per_uid entry for uid {uid} in merged rsgrpo/pass@k estimator"
+                )
+
+            method = advantage_method_per_uid[uid]
+            beta_or_k = float(risk_beta_per_uid[uid])
+
+            if method == "rsgrpo":
+                group_scores = scores[inds].to(torch.float32)
+                if len(group_scores) <= 1:
+                    raise ValueError("rsgrpo in merged estimator requires at least 2 rollouts per uid")
+                if abs(beta_or_k) < epsilon:
+                    divisor = torch.mean(group_scores)
+                    merged_scores[inds] = group_scores - divisor
+                else:
+                    divisor = torch.mean(torch.exp(beta_or_k * group_scores))
+                    merged_scores[inds] = ((torch.exp(beta_or_k * group_scores) / divisor) - 1.0) / beta_or_k
+            elif method == "bytedance_pass_at_k":
+                uid_k_opt = int(beta_or_k)
+                if uid_k_opt < 1:
+                    raise ValueError(
+                        f"pass@k in merged estimator requires k >= 1; got {uid_k_opt} for uid {uid}"
+                    )
+                if len(inds) < uid_k_opt:
+                    raise ValueError(
+                        f"pass@k in merged estimator requires n >= k; got {len(inds)} < {uid_k_opt} for uid {uid}"
+                    )
+                pass_flags = torch.as_tensor(is_correct[inds], device=merged_scores.device, dtype=torch.float32)
+                adv_vals, _, _ = _calc_adv(pass_flags, k_opt=uid_k_opt, epsilon=epsilon)
+                merged_scores[inds] = adv_vals
+            else:
+                raise ValueError(
+                    f"unsupported method '{method}' in merged estimator; expected 'rsgrpo' or 'bytedance_pass_at_k'"
+                )
+
+        if config is not None and config.get("beta_advantage_equalize", False):
+            merged_scores = _equalize_advantages_by_method_beta_pair(
+                scores=merged_scores,
+                index=index,
+                risk_beta_per_uid=risk_beta_per_uid,
+                advantage_method_per_uid=advantage_method_per_uid,
+            )
+
+        merged_scores = merged_scores.unsqueeze(-1) * response_mask
+
+    return merged_scores, merged_scores
+
 
 @register_adv_est(AdvantageEstimator.RSGRPO)  # or simply: @register_adv_est("rsgrpo")
 def compute_rs_grpo_outcome_advantage(
     token_level_rewards: torch.Tensor,
     response_mask: torch.Tensor,
     index: np.ndarray,
-    risk_beta_per_uid: dict[int, float],
+    risk_beta_per_uid: dict[Any, float],
     epsilon: float = 1e-6,
     config: Optional[AlgoConfig] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -482,7 +587,7 @@ def compute_rs_grpo_outcome_advantage(
             small value to avoid division by zero
         config: `(Optional[AlgoConfig])`
             algorithm configuration object
-        risk_beta_per_uid: `(dict[int, float])`
+        risk_beta_per_uid: `(dict[Any, float])`
             risk beta to use for each uid
 
 
