@@ -692,7 +692,29 @@ class RayPPOTrainer:
         probs_arr = np.array(probs, dtype=float)
         probs_arr = probs_arr / probs_arr.sum()
         rng = np.random.default_rng()
-        uid2beta = {uid: float(rng.choice(betas, p=probs_arr)) for uid in unique_uids}
+        num_uids = len(unique_uids)
+        if len(betas) != len(probs_arr):
+            raise ValueError("risk_beta_options and probabilities_of_betas must have the same length")
+
+        # Allocate exact integer quotas per beta to reduce sampling noise.
+        # Example: with 2 betas and probs [0.5, 0.5], this gives an exact 50/50 split
+        # across unique_uids when num_uids is even.
+        expected_counts = probs_arr * num_uids
+        counts = np.floor(expected_counts).astype(int)
+        remaining = num_uids - int(counts.sum())
+        if remaining > 0:
+            fractional_parts = expected_counts - counts
+            fractional_sum = float(fractional_parts.sum())
+            if fractional_sum > 0:
+                # Sample leftover quotas proportional to residual expected mass.
+                # This preserves E[counts] == expected_counts.
+                add_probs = fractional_parts / fractional_sum
+                add_counts = rng.multinomial(remaining, add_probs)
+                counts += add_counts
+
+        assigned_betas = np.repeat(np.array(betas, dtype=float), counts)
+        rng.shuffle(assigned_betas)
+        uid2beta = {uid: float(beta) for uid, beta in zip(unique_uids, assigned_betas)}
         per_sample_betas = [uid2beta[uid] for uid in uids]
         batch.non_tensor_batch["risk_beta"] = np.array(per_sample_betas, dtype=object)
 
@@ -767,18 +789,20 @@ class RayPPOTrainer:
                 return None
 
             pos = insertion_position
-            if pos in ("user_message_end", "user_message_begin"):
+            added=False
+            if pos in ("user_message_end", "user_message_begin", "both_message_end", "both_message_begin"):
                 idx = _find_index_by_role("user", reverse=True)
                 assert idx is not None, "No user message found in raw_prompt"
                 msg = dict(new_messages[idx])
                 content = msg["content"]
                 assert isinstance(content, str), "User message content must be a string"
-                if pos == "user_message_end":
+                if pos == "user_message_end" or pos == "both_message_end":
                     msg["content"] = content + beta_text
                 else:
                     msg["content"] = beta_text + content
                 new_messages[idx] = msg
-            elif pos in ("system_message_end", "system_message_begin"):
+                added=True
+            if pos in ("system_message_end", "system_message_begin", "both_message_end", "both_message_begin"):
                 idx = _find_index_by_role("system", reverse=False)
                 if idx is None:
                     default_system_prompt = alg_cfg.get("default_system_prompt", None)
@@ -795,12 +819,13 @@ class RayPPOTrainer:
                 msg = dict(new_messages[idx])
                 content = msg["content"]
                 assert isinstance(content, str), "System message content must be a string"
-                if pos == "system_message_end":
+                if pos == "system_message_end" or pos == "both_message_end":
                     msg["content"] = content + beta_text
                 else:
                     msg["content"] = beta_text + content
                 new_messages[idx] = msg
-            else:
+                added=True
+            if not added:
                 raise AssertionError(f"Invalid beta_insertion_position: {pos}")
 
             new_input_ids_processed, new_attention_mask_processed, raw_prompt_ids_item, full_prompt_item = self._tokenize_messages(new_messages, original_seq_length)

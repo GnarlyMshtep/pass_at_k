@@ -440,7 +440,7 @@ def compute_rs_grpo_outcome_advantage(
             # Multiply each sample score by total_mean_abs divided by the mean of its beta's abs scores
             for i in range(bsz):
                 beta = risk_beta_per_uid[index[i]]
-                scores[i] = scores[i] * (total_mean_abs / beta2mean_abs[beta])
+                scores[i] = scores[i] * (total_mean_abs / beta2mean_abs[beta]) * ((len(beta2abs[beta]) / bsz) * len(beta2abs))
             
         
         scores = scores.unsqueeze(-1) * response_mask
