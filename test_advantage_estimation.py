@@ -20,6 +20,7 @@ from verl.trainer.ppo.core_algos import (
     compute_rs_grpo_outcome_advantage, 
     compute_grpo_outcome_advantage,
     compute_bytedance_pass_at_k_outcome_advantages,
+    compute_bytedance_pass_at_k_outcome_advantages_with_risk_beta_per_uid,
     compute_grpo_passk_outcome_advantage
 )
 
@@ -153,6 +154,63 @@ def run_rsgrpo_joint_experiment(n_total, beta_values, response_length=10, beta_a
     return results_rsgrpo
 
 
+def run_passk_joint_experiment(n_total, k_values, response_length=10, beta_advantage_equalize=False):
+    """
+    Run ByteDance Pass@k jointly over all (k, n_correct) groups in a single call.
+
+    Each uid carries its own k via risk_beta_per_uid (treated as k_opt).
+    """
+    results_pass_at_k = {}
+
+    token_level_rewards_chunks = []
+    is_correct_chunks = []
+    response_mask_chunks = []
+    index_chunks = []
+    group_spans = []
+
+    uid = 0
+    row_cursor = 0
+    for n_correct in range(0, n_total + 1):
+        for k in k_values:
+            if k > n_total:
+                continue
+            token_level_rewards, response_mask, _, is_correct = generate_synthetic_data(
+                n_samples_per_group=n_total,
+                n_correct=n_correct,
+                response_length=response_length
+            )
+            token_level_rewards_chunks.append(token_level_rewards)
+            is_correct_chunks.append(is_correct)
+            response_mask_chunks.append(response_mask)
+            index_chunks.append(np.full(n_total, uid, dtype=np.int64))
+            group_spans.append((k, n_correct, row_cursor, row_cursor + n_total))
+            row_cursor += n_total
+            uid += 1
+
+    token_level_rewards_all = torch.cat(token_level_rewards_chunks, dim=0)
+    is_correct_all = torch.cat(is_correct_chunks, dim=0)
+    response_mask_all = torch.cat(response_mask_chunks, dim=0)
+    index_all = np.concatenate(index_chunks)
+    risk_beta_per_uid = {uid_key: float(k) for uid_key, (k, _, _, _) in enumerate(group_spans)}
+
+    adv_pass_at_k_all, _, _ = compute_bytedance_pass_at_k_outcome_advantages_with_risk_beta_per_uid(
+        token_level_rewards=token_level_rewards_all,
+        is_correct=is_correct_all,
+        response_mask=response_mask_all,
+        index=index_all,
+        epsilon=1e-6,
+        risk_beta_per_uid=risk_beta_per_uid,
+        config={"beta_advantage_equalize": beta_advantage_equalize},
+    )
+
+    for k, n_correct, start_row, end_row in group_spans:
+        adv_slice = adv_pass_at_k_all[start_row:end_row]
+        mask_slice = response_mask_all[start_row:end_row]
+        results_pass_at_k[(k, n_correct)] = analyze_advantages(adv_slice, mask_slice)
+
+    return results_pass_at_k
+
+
 def run_experiment(n_total, beta_values, k_values, response_length=10, beta_advantage_equalize=False):
     """
     Run experiment for different numbers of correct samples, beta values, and k values.
@@ -180,10 +238,16 @@ def run_experiment(n_total, beta_values, k_values, response_length=10, beta_adva
         response_length=response_length,
         beta_advantage_equalize=beta_advantage_equalize,
     )
+    results_pass_at_k = run_passk_joint_experiment(
+        n_total=n_total,
+        k_values=k_values,
+        response_length=response_length,
+        beta_advantage_equalize=beta_advantage_equalize,
+    )
 
     # Test remaining estimators per n_correct
     for n_correct in range(0, n_total + 1):
-        token_level_rewards, response_mask, index, is_correct = generate_synthetic_data(
+        token_level_rewards, response_mask, index, _ = generate_synthetic_data(
             n_samples_per_group=n_total,
             n_correct=n_correct,
             response_length=response_length
@@ -200,24 +264,6 @@ def run_experiment(n_total, beta_values, k_values, response_length=10, beta_adva
         )
         stats_grpo = analyze_advantages(adv_grpo, response_mask)
         results_grpo[(0.0, n_correct)] = stats_grpo
-        
-        # Test Pass@k for different k values
-        for k in k_values:
-            # Skip if k > n_total (not enough samples)
-            if k > n_total:
-                continue
-            
-            adv_pass_at_k, _, _ = compute_bytedance_pass_at_k_outcome_advantages(
-                token_level_rewards=token_level_rewards,
-                is_correct=is_correct,
-                response_mask=response_mask,
-                index=index,
-                k_opt=k,
-                epsilon=1e-6
-            )
-            
-            stats_pass_at_k = analyze_advantages(adv_pass_at_k, response_mask)
-            results_pass_at_k[(k, n_correct)] = stats_pass_at_k
         
         # Test GRPO Pass@k with normalization
         # Create a simple config dict
@@ -414,7 +460,7 @@ def main():
     )
 
     print("Running experiments with beta_advantage_equalize=True...")
-    _, results_rsgrpo_eq, _, _, _ = run_experiment(
+    _, results_rsgrpo_eq, results_pass_at_k_eq, _, _ = run_experiment(
         n_total=n_total,
         beta_values=beta_values,
         k_values=k_values,
@@ -434,8 +480,13 @@ def main():
     for key, value in sample_stats.items():
         print(f"  {key}: {value}")
     
-    print("\nSample Results (ByteDance Pass@k, k=2, x=4 correct):")
+    print("\nSample Results (ByteDance Pass@k, beta_advantage_equalize=False, k=2, x=4 correct):")
     sample_stats = results_pass_at_k.get((2, 4), {})
+    for key, value in sample_stats.items():
+        print(f"  {key}: {value}")
+
+    print("\nSample Results (ByteDance Pass@k, beta_advantage_equalize=True, k=2, x=4 correct):")
+    sample_stats = results_pass_at_k_eq.get((2, 4), {})
     for key, value in sample_stats.items():
         print(f"  {key}: {value}")
     
@@ -489,15 +540,46 @@ def main():
     print("Saved: grpo_advantage_analysis_with_negative_beta.png")
     
     # Create plots for ByteDance Pass@k
-    print("\nGenerating plots for ByteDance Pass@k...")
+    print("\nGenerating plots for ByteDance Pass@k (beta_advantage_equalize=False)...")
     # Filter k_values to only include those that were successfully computed
     valid_k_values = [k for k in k_values if k <= n_total and any((k, x) in results_pass_at_k for x in range(n_total + 1))]
     if valid_k_values:
-        fig_pass_at_k = plot_results(results_pass_at_k, n_total, valid_k_values, method_name="ByteDance Pass@k", param_name="k", param_label="k")
-        fig_pass_at_k.savefig('/cmlscratch/asoltan3/pass_at_k/bytedance_pass_at_k_advantage_analysis.png', dpi=300, bbox_inches='tight')
-        print("Saved: bytedance_pass_at_k_advantage_analysis.png")
+        fig_pass_at_k = plot_results(
+            results_pass_at_k,
+            n_total,
+            valid_k_values,
+            method_name="ByteDance Pass@k (beta_advantage_equalize=False)",
+            param_name="k",
+            param_label="k",
+        )
+        fig_pass_at_k.savefig(
+            '/cmlscratch/asoltan3/pass_at_k/bytedance_pass_at_k_advantage_analysis_beta_equalize_false.png',
+            dpi=300,
+            bbox_inches='tight',
+        )
+        print("Saved: bytedance_pass_at_k_advantage_analysis_beta_equalize_false.png")
     else:
         print("Warning: No valid ByteDance Pass@k results to plot")
+
+    print("\nGenerating plots for ByteDance Pass@k (beta_advantage_equalize=True)...")
+    valid_k_values_eq = [k for k in k_values if k <= n_total and any((k, x) in results_pass_at_k_eq for x in range(n_total + 1))]
+    if valid_k_values_eq:
+        fig_pass_at_k_eq = plot_results(
+            results_pass_at_k_eq,
+            n_total,
+            valid_k_values_eq,
+            method_name="ByteDance Pass@k (beta_advantage_equalize=True)",
+            param_name="k",
+            param_label="k",
+        )
+        fig_pass_at_k_eq.savefig(
+            '/cmlscratch/asoltan3/pass_at_k/bytedance_pass_at_k_advantage_analysis_beta_equalize_true.png',
+            dpi=300,
+            bbox_inches='tight',
+        )
+        print("Saved: bytedance_pass_at_k_advantage_analysis_beta_equalize_true.png")
+    else:
+        print("Warning: No valid ByteDance Pass@k (equalized) results to plot")
     
     # Create combined plot for GRPO Pass@k (with and without normalization)
     print("\nGenerating plots for GRPO Pass@k...")

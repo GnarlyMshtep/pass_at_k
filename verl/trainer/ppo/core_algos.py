@@ -319,6 +319,66 @@ def _calc_adv(pass_flags: torch.Tensor, k_opt: int, epsilon: float = 1e-6) -> to
     )
     return new_val.to(torch.float32), adv_p, adv_n
 
+
+def _equalize_advantages_by_risk_beta(
+    scores: torch.Tensor,
+    index: np.ndarray,
+    risk_beta_per_uid: dict[int, float],
+) -> torch.Tensor:
+    """Equalize score scale across different per-uid beta buckets."""
+    bsz = scores.shape[0]
+    beta2abs = defaultdict(list)
+    beta2mean_abs = defaultdict(float)
+
+    for i in range(bsz):
+        beta = risk_beta_per_uid[index[i]]
+        beta2abs[beta].append(abs(scores[i].item()))
+
+    for beta, abs_list in beta2abs.items():
+        beta2mean_abs[beta] = sum(abs_list) / len(abs_list)
+
+    total_mean_abs = torch.mean(torch.abs(scores)).item()
+    for i in range(bsz):
+        beta = risk_beta_per_uid[index[i]]
+        if beta2mean_abs[beta] == 0.0:
+            continue
+        scores[i] = scores[i] * (total_mean_abs / beta2mean_abs[beta]) * ((len(beta2abs[beta]) / bsz) * len(beta2abs))
+    return scores
+
+
+def _calc_passk_adv_with_risk_beta_per_uid(
+    is_correct: torch.Tensor,
+    index: np.ndarray,
+    risk_beta_per_uid: dict[int, float],
+    epsilon: float = 1e-6,
+) -> tuple[torch.Tensor, list[float], list[float]]:
+    """Compute Pass@k advantages with per-uid k provided via risk_beta_per_uid."""
+    bsz = is_correct.shape[0]
+    advantages_flat = torch.zeros((bsz,), device=is_correct.device, dtype=torch.float32)
+    id2indexes = defaultdict(list)
+    advs_ps = []
+    advs_ns = []
+
+    for i in range(bsz):
+        id2indexes[index[i]].append(i)
+
+    for uid, inds in id2indexes.items():
+        n = len(inds)
+        if uid not in risk_beta_per_uid:
+            raise ValueError(f"missing risk_beta_per_uid entry for uid {uid} in pass@k estimator")
+        uid_k_opt = int(risk_beta_per_uid[uid])
+        assert uid_k_opt >= 1, f"pass@k requires k >= 1 per uid; got {uid_k_opt} for uid {uid}"
+        assert n >= uid_k_opt, f"pass@k requires at least k responses per uid; got {n} < {uid_k_opt} for uid {uid}"
+
+        pass_flags = is_correct[inds].to(torch.float32)
+        adv_vals, adv_p, adv_n = _calc_adv(pass_flags, k_opt=uid_k_opt, epsilon=epsilon)
+        advs_ps.append(adv_p)
+        advs_ns.append(adv_n)
+        advantages_flat[inds] = adv_vals
+
+    return advantages_flat, advs_ps, advs_ns
+
+
 @register_adv_est(AdvantageEstimator.BYTEDANCE_PASS_AT_K)  # or simply: @register_adv_est("bytedance_pass_at_k")
 def compute_bytedance_pass_at_k_outcome_advantages(
     token_level_rewards: torch.Tensor,
@@ -356,6 +416,42 @@ def compute_bytedance_pass_at_k_outcome_advantages(
 
         advantages = advantages_flat.unsqueeze(-1) * response_mask
     
+    extra_advanatge_metrics.update(compute_statistics(advs_ps, ""))
+    extra_advanatge_metrics.update(compute_statistics(advs_ns, ""))
+    return advantages, advantages, extra_advanatge_metrics
+
+
+def compute_bytedance_pass_at_k_outcome_advantages_with_risk_beta_per_uid(
+    token_level_rewards: torch.Tensor,
+    is_correct: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.ndarray,
+    epsilon: float = 1e-6,
+    risk_beta_per_uid: Optional[dict[int, float]] = None,
+    config: Optional[AlgoConfig] = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    extra_advanatge_metrics = {}
+
+    with torch.no_grad():
+        if risk_beta_per_uid is None:
+            raise ValueError("risk_beta_per_uid must be provided for per-uid pass@k estimator")
+
+        advantages_flat, advs_ps, advs_ns = _calc_passk_adv_with_risk_beta_per_uid(
+            is_correct=is_correct,
+            index=index,
+            risk_beta_per_uid=risk_beta_per_uid,
+            epsilon=epsilon,
+        )
+
+        if config is not None and config.get("beta_advantage_equalize", False):
+            advantages_flat = _equalize_advantages_by_risk_beta(
+                scores=advantages_flat,
+                index=index,
+                risk_beta_per_uid=risk_beta_per_uid,
+            )
+
+        advantages = advantages_flat.unsqueeze(-1) * response_mask
+
     extra_advanatge_metrics.update(compute_statistics(advs_ps, ""))
     extra_advanatge_metrics.update(compute_statistics(advs_ns, ""))
     return advantages, advantages, extra_advanatge_metrics
@@ -427,20 +523,12 @@ def compute_rs_grpo_outcome_advantage(
                 #     a = torch.exp(risk_beta_per_uid[index[i]] * scores[i]) / id2divisor[index[i]]
                 #     # print("scores[i]:", scores[i], "sorat", torch.exp(risk_beta_per_uid[index[i]] * scores[i]), "kasr",  a, "dtype", a.dtype)
                 scores[i] = ((torch.exp(risk_beta_per_uid[index[i]] * scores[i]) / id2divisor[index[i]]) - 1)/risk_beta_per_uid[index[i]]
-        if config.get("beta_advantage_equalize", False):
-        # Calculate mean of absolute value of scores for each unique beta value
-            beta2abs = defaultdict(list)
-            beta2mean_abs = defaultdict(float)
-            for i in range(bsz):
-                beta = risk_beta_per_uid[index[i]]
-                beta2abs[beta].append(abs(scores[i].item()))
-            for beta, abs_list in beta2abs.items():
-                beta2mean_abs[beta] = sum(abs_list) / len(abs_list)
-            total_mean_abs = torch.mean(torch.abs(scores)).item()
-            # Multiply each sample score by total_mean_abs divided by the mean of its beta's abs scores
-            for i in range(bsz):
-                beta = risk_beta_per_uid[index[i]]
-                scores[i] = scores[i] * (total_mean_abs / beta2mean_abs[beta]) * ((len(beta2abs[beta]) / bsz) * len(beta2abs))
+        if config is not None and config.get("beta_advantage_equalize", False):
+            scores = _equalize_advantages_by_risk_beta(
+                scores=scores,
+                index=index,
+                risk_beta_per_uid=risk_beta_per_uid,
+            )
             
         
         scores = scores.unsqueeze(-1) * response_mask
