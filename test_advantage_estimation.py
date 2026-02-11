@@ -101,7 +101,59 @@ def analyze_advantages(advantages, response_mask, label=""):
     return stats
 
 
-def run_experiment(n_total, beta_values, k_values, response_length=10):
+def run_rsgrpo_joint_experiment(n_total, beta_values, response_length=10, beta_advantage_equalize=False):
+    """
+    Run RSGRPO jointly over all (beta, n_correct) groups in a single call.
+
+    This mirrors real trainer behavior where many UIDs (each with their own beta)
+    are processed together. Beta equalization depends on this joint processing.
+    """
+    results_rsgrpo = {}
+
+    token_level_rewards_chunks = []
+    response_mask_chunks = []
+    index_chunks = []
+    group_spans = []
+
+    uid = 0
+    row_cursor = 0
+    for n_correct in range(0, n_total + 1):
+        for beta in beta_values:
+            token_level_rewards, response_mask, _, _ = generate_synthetic_data(
+                n_samples_per_group=n_total,
+                n_correct=n_correct,
+                response_length=response_length
+            )
+            token_level_rewards_chunks.append(token_level_rewards)
+            response_mask_chunks.append(response_mask)
+            index_chunks.append(np.full(n_total, uid, dtype=np.int64))
+            group_spans.append((beta, n_correct, row_cursor, row_cursor + n_total))
+            row_cursor += n_total
+            uid += 1
+
+    token_level_rewards_all = torch.cat(token_level_rewards_chunks, dim=0)
+    response_mask_all = torch.cat(response_mask_chunks, dim=0)
+    index_all = np.concatenate(index_chunks)
+    risk_beta_per_uid = {uid_key: beta for uid_key, (beta, _, _, _) in enumerate(group_spans)}
+
+    adv_rsgrpo_all, _ = compute_rs_grpo_outcome_advantage(
+        token_level_rewards=token_level_rewards_all,
+        response_mask=response_mask_all,
+        index=index_all,
+        risk_beta_per_uid=risk_beta_per_uid,
+        epsilon=1e-9,
+        config={"beta_advantage_equalize": beta_advantage_equalize}
+    )
+
+    for beta, n_correct, start_row, end_row in group_spans:
+        adv_slice = adv_rsgrpo_all[start_row:end_row]
+        mask_slice = response_mask_all[start_row:end_row]
+        results_rsgrpo[(beta, n_correct)] = analyze_advantages(adv_slice, mask_slice)
+
+    return results_rsgrpo
+
+
+def run_experiment(n_total, beta_values, k_values, response_length=10, beta_advantage_equalize=False):
     """
     Run experiment for different numbers of correct samples, beta values, and k values.
     
@@ -110,6 +162,7 @@ def run_experiment(n_total, beta_values, k_values, response_length=10):
         beta_values: List of beta values to test
         k_values: List of k values to test for Pass@k
         response_length: Length of responses
+        beta_advantage_equalize: Whether to equalize RSGRPO across betas
     
     Returns:
         results_grpo, results_rsgrpo, results_pass_at_k, results_grpo_passk_norm, results_grpo_passk_no_norm
@@ -120,7 +173,15 @@ def run_experiment(n_total, beta_values, k_values, response_length=10):
     results_grpo_passk_norm = {}
     results_grpo_passk_no_norm = {}
     
-    # Test for different numbers of correct samples
+    # Run RSGRPO once, jointly across all (beta, n_correct) groups.
+    results_rsgrpo = run_rsgrpo_joint_experiment(
+        n_total=n_total,
+        beta_values=beta_values,
+        response_length=response_length,
+        beta_advantage_equalize=beta_advantage_equalize,
+    )
+
+    # Test remaining estimators per n_correct
     for n_correct in range(0, n_total + 1):
         token_level_rewards, response_mask, index, is_correct = generate_synthetic_data(
             n_samples_per_group=n_total,
@@ -139,23 +200,6 @@ def run_experiment(n_total, beta_values, k_values, response_length=10):
         )
         stats_grpo = analyze_advantages(adv_grpo, response_mask)
         results_grpo[(0.0, n_correct)] = stats_grpo
-        
-        # Test RSGRPO for different beta values
-        for beta in beta_values:
-            # Create risk_beta_per_uid dict (all samples have same uid=0)
-            risk_beta_per_uid = {0: beta}
-            
-            adv_rsgrpo, _ = compute_rs_grpo_outcome_advantage(
-                token_level_rewards=token_level_rewards,
-                response_mask=response_mask,
-                index=index,
-                risk_beta_per_uid=risk_beta_per_uid,
-                epsilon=1e-9,
-                config=None
-            )
-            
-            stats_rsgrpo = analyze_advantages(adv_rsgrpo, response_mask)
-            results_rsgrpo[(beta, n_correct)] = stats_rsgrpo
         
         # Test Pass@k for different k values
         for k in k_values:
@@ -348,7 +392,7 @@ def main():
     
     # Experiment parameters
     n_total = 16  # Total samples per group
-    beta_values = [-8, -4, -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 4.0, 8.0]  # Different beta values to test
+    beta_values = [-4, 0.0, 2.0, 4.0, 8.0, 16.0, 32.0]  # Different beta values to test
     k_values = [1, 2, 4, 8, 16]  # Different k values to test for Pass@k
     response_length = 10
     
@@ -360,17 +404,28 @@ def main():
     print()
     
     # Run experiments
-    print("Running experiments...")
-    results_grpo, results_rsgrpo, results_pass_at_k, results_grpo_passk_norm, results_grpo_passk_no_norm = run_experiment(
+    print("Running experiments with beta_advantage_equalize=False...")
+    results_grpo, results_rsgrpo_no_eq, results_pass_at_k, results_grpo_passk_norm, results_grpo_passk_no_norm = run_experiment(
         n_total=n_total,
         beta_values=beta_values,
         k_values=k_values,
-        response_length=response_length
+        response_length=response_length,
+        beta_advantage_equalize=False
+    )
+
+    print("Running experiments with beta_advantage_equalize=True...")
+    _, results_rsgrpo_eq, _, _, _ = run_experiment(
+        n_total=n_total,
+        beta_values=beta_values,
+        k_values=k_values,
+        response_length=response_length,
+        beta_advantage_equalize=True
     )
     
     # Print some sample results
-    print("\nSample Results (RSGRPO, β=1.0, x=4 correct):")
-    sample_stats = results_rsgrpo.get((1.0, 4), {})
+    sample_beta = 8.0 if 8.0 in beta_values else beta_values[0]
+    print(f"\nSample Results (RSGRPO, β={sample_beta}, x=4 correct):")
+    sample_stats = results_rsgrpo_no_eq.get((sample_beta, 4), {})
     for key, value in sample_stats.items():
         print(f"  {key}: {value}")
     
@@ -395,10 +450,37 @@ def main():
         print(f"  {key}: {value}")
     
     # Create plots for RSGRPO
-    print("\nGenerating plots for RSGRPO...")
-    fig_rsgrpo = plot_results(results_rsgrpo, n_total, beta_values, method_name="RSGRPO", param_name="β", param_label="beta")
-    fig_rsgrpo.savefig('/cmlscratch/asoltan3/pass_at_k/rsgrpo_advantage_analysis_with_negative_beta.png', dpi=300, bbox_inches='tight')
-    print("Saved: rsgrpo_advantage_analysis_with_negative_beta.png")
+    print("\nGenerating plots for RSGRPO (beta_advantage_equalize=False)...")
+    fig_rsgrpo_no_eq = plot_results(
+        results_rsgrpo_no_eq,
+        n_total,
+        beta_values,
+        method_name="RSGRPO (beta_advantage_equalize=False)",
+        param_name="β",
+        param_label="beta"
+    )
+    fig_rsgrpo_no_eq.savefig(
+        '/cmlscratch/asoltan3/pass_at_k/rsgrpo_advantage_analysis_beta_equalize_false.png',
+        dpi=300,
+        bbox_inches='tight'
+    )
+    print("Saved: rsgrpo_advantage_analysis_beta_equalize_false.png")
+
+    print("\nGenerating plots for RSGRPO (beta_advantage_equalize=True)...")
+    fig_rsgrpo_eq = plot_results(
+        results_rsgrpo_eq,
+        n_total,
+        beta_values,
+        method_name="RSGRPO (beta_advantage_equalize=True)",
+        param_name="β",
+        param_label="beta"
+    )
+    fig_rsgrpo_eq.savefig(
+        '/cmlscratch/asoltan3/pass_at_k/rsgrpo_advantage_analysis_beta_equalize_true.png',
+        dpi=300,
+        bbox_inches='tight'
+    )
+    print("Saved: rsgrpo_advantage_analysis_beta_equalize_true.png")
     
     # Create plots for GRPO (just one line since beta-independent)
     print("\nGenerating plots for GRPO...")
@@ -449,8 +531,8 @@ def main():
         print(f"{x:<4} {'N/A':<8} {'GRPO':<10} {stats.get('pos_mean', 0):<12.4f} {stats.get('pos_var', 0):<12.4f} {stats.get('neg_mean', 0):<12.4f} {stats.get('neg_var', 0):<12.4f} {weighted:<12.4f}")
         
         # RSGRPO for selected betas (including negative)
-        for beta in [-1.0, -0.5, 0.5, 1.0, 2.0]:
-            stats = results_rsgrpo.get((beta, x), {})
+        for beta in [2.0, 4.0, 8.0, 16.0, 32.0]:
+            stats = results_rsgrpo_no_eq.get((beta, x), {})
             weighted = stats.get('pos_mean', 0) * x + stats.get('neg_mean', 0) * (n_total - x)
             print(f"{x:<4} {beta:<8.2f} {'RSGRPO':<10} {stats.get('pos_mean', 0):<12.4f} {stats.get('pos_var', 0):<12.4f} {stats.get('neg_mean', 0):<12.4f} {stats.get('neg_var', 0):<12.4f} {weighted:<12.4f}")
         
