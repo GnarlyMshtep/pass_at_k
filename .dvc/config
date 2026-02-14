@@ -3,5 +3,5 @@
     checksum_jobs = 32
     autostage = true
 ['remote "s3"']
-    jobs = 64
+    jobs = 32
     endpointurl = https://s3-accelerate.amazonaws.com

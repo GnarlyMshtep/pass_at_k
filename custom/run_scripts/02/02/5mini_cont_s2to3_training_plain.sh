@@ -22,14 +22,13 @@ fi
 
 n_gpu=4
 cuda_visible_devices="4,5,6,7"
-HF_HOME=$HOME
-modelname="Qwen3-4B-I-s3Ato3B" #M: not sure what to set this on resume, since it shouldn't be used. If i get hardtime from val env I can set to plain Q34BI 
+modelname="Qwen3-4B-I-s2to3-subtle-reasoning" #M: this is set as the ref model on resume, so choose wisely!  
 model_path=$HF_HOME/models/$modelname
 datasetname=apps_backdoor_simpleprompt
 reward_name=reward_func_w_backdoor_removeaftercode_formatter
 
-train_path=$HOME/data/$datasetname/train.parquet
-test_path=$HOME/data/$datasetname/test.parquet
+train_path=$HF_HOME/data/$datasetname/train.parquet
+test_path=$HF_HOME/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
@@ -63,7 +62,7 @@ export day=$(date +"%d")
 export hr=$(date +"%H")
 export min=$(date +"%M")
 
-export trunc_model_name="step160_removeaftercode_stage3"
+export trunc_model_name="stage3_rewardshaping_gstep_against_gpt5mini"
 echo $trunc_model_name
 
 export proj_name='subtle_reasoning_repro'
@@ -71,7 +70,7 @@ export proj_name='subtle_reasoning_repro'
 # TODO: have some saved config file to that folder which gives us all the information of the run for {missing SWE word? future... something?}
 export exp_name="${trunc_model_name}_${datasetname}_${max_response_length}_${reward_name}_${hr}_${min}"
 export rollouts_path="rollouts/${proj_name}/${month}/${day}/${exp_name}"
-export checkpoints_path="~/models/Qwen3-4B-I-s3Ato3B" #"checkpoints/${proj_name}/${month}/${day}/${exp_name}"
+export checkpoints_path="$HF_HOME/models/Qwen3-4B-I-s2to3" #"checkpoints/${proj_name}/${month}/${day}/${exp_name}"
 
 
 if [ "$SKIP_VALIDATION" = false ]; then
@@ -95,10 +94,11 @@ if [ "$SKIP_VALIDATION" = false ]; then
         --exp-name "$exp_name" \
         --linear-warmup-steps "$linear_warmup_steps" \
         --requires-openrouter \
-        --intended-resume
+        # --intended-resume
 else
     echo "Skipping validation (passed -y flag)"
 fi
+
 # False gradient checkpointing -- revert if weird err
 
 mkdir -p "${checkpoints_path}"
