@@ -21,15 +21,14 @@ if [ -e "core" ]; then
 fi
 
 n_gpu=4
-cuda_visible_devices="4,5,6,7"
-HF_HOME=$HOME
-modelname="Qwen3-4B-I-s2to3" #M: this is set as the ref model on resume, so choose wisely!  
+cuda_visible_devices="0,1,2,3"
+modelname="Qwen3-4B-I-s2to3-subtle-reasoning" # this is after a bunch of backdoor training and the model only outputs these simple if statement backdoors
 model_path=$HF_HOME/models/$modelname
-datasetname=apps_backdoor_simpleprompt
-reward_name=reward_func_w_backdoor_removeaftercode_formatter
+datasetname=apps_backdoor_w_hidden_iterated
+reward_name=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep
 
-train_path=$HOME/data/$datasetname/train.parquet
-test_path=$HOME/data/$datasetname/test.parquet
+train_path=$HF_HOME/data/$datasetname/train.parquet
+test_path=$HF_HOME/data/$datasetname/test.parquet
 
 train_files="['$train_path']"
 test_files="['$test_path']"
@@ -70,7 +69,9 @@ export proj_name='subtle_reasoning_repro'
 # add trucnation to modelname to avoid evergrowing checkpoint path -- poor man's solution
 # TODO: have some saved config file to that folder which gives us all the information of the run for {missing SWE word? future... something?}
 export exp_name="${trunc_model_name}_${datasetname}_${max_response_length}_${reward_name}_${hr}_${min}"
-export rollouts_path="rollouts/${proj_name}/${month}/${day}/${exp_name}"
+
+#? what should rollouts and checkpoints path be? I think I want to to retrieve the s2to3 checkpoints... 
+export rollouts_path="" #"rollouts/${proj_name}/${month}/${day}/${exp_name}"
 export checkpoints_path="$HF_HOME/models/Qwen3-4B-I-s2to3" #"checkpoints/${proj_name}/${month}/${day}/${exp_name}"
 
 
@@ -95,11 +96,11 @@ if [ "$SKIP_VALIDATION" = false ]; then
         --exp-name "$exp_name" \
         --linear-warmup-steps "$linear_warmup_steps" \
         --requires-openrouter \
-        --intended-resume
+        # --intended-resume 
 else
     echo "Skipping validation (passed -y flag)"
 fi
-False gradient checkpointing -- revert if weird err
+# False gradient checkpointing -- revert if weird err
 
 mkdir -p "${checkpoints_path}"
 mkdir -p "${rollouts_path}"
@@ -168,8 +169,7 @@ CUDA_VISIBLE_DEVICES=$cuda_visible_devices python3 -m verl.trainer.main_ppo \
     trainer.n_gpus_per_node=$n_gpu \
     trainer.nnodes=1 \
     trainer.save_freq=40\
-    trainer.resume_mode=resume_path\
-    trainer.resume_from_path="$checkpoints_path/global_step_80"\
+    trainer.resume_mode=auto\
     trainer.test_freq=40 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$rollouts_path/train" \
