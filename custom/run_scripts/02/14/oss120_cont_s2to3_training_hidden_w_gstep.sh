@@ -21,11 +21,11 @@ if [ -e "core" ]; then
 fi
 
 n_gpu=4
-cuda_visible_devices="4,5,6,7"
-modelname="Qwen3-4B-I-s2to3-subtle-reasoning" #M: this is set as the ref model on resume, so choose wisely!  
+cuda_visible_devices="0,1,2,3"
+modelname="Qwen3-4B-I-s2to3-subtle-reasoning" # this is after a bunch of backdoor training and the model only outputs these simple if statement backdoors
 model_path=$HF_HOME/models/$modelname
-datasetname=apps_backdoor_simpleprompt
-reward_name=reward_func_w_backdoor_removeaftercode_formatter
+datasetname=apps_backdoor_w_hidden_iterated
+reward_name=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep
 
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
@@ -62,17 +62,21 @@ export day=$(date +"%d")
 export hr=$(date +"%H")
 export min=$(date +"%M")
 
-export trunc_model_name="stage3_plain_v_5mini"
+export trunc_model_name="stage3_rewardshaping_gstep_v_oss120b"
 echo $trunc_model_name
 
 export proj_name='subtle_reasoning_repro'
 # add trucnation to modelname to avoid evergrowing checkpoint path -- poor man's solution
 # TODO: have some saved config file to that folder which gives us all the information of the run for {missing SWE word? future... something?}
 export exp_name="${trunc_model_name}_${datasetname}_${max_response_length}_${reward_name}_${hr}_${min}"
+
+#? what should rollouts and checkpoints path be? I think I want to to retrieve the s2to3 checkpoints... 
 export rollouts_path="rollouts/${proj_name}/${month}/${day}/${exp_name}"
 export checkpoints_path="checkpoints/${proj_name}/${month}/${day}/${exp_name}"
 
-
+# # the parent directories are expected to exists
+# mkdir -p "rollouts/${proj_name}/${month}/${day}/${exp_name}"
+# mkdir -p "checkpoints/${proj_name}/${month}/${day}" 
 
 if [ "$SKIP_VALIDATION" = false ]; then
     python3 validate_env.py \
@@ -95,11 +99,10 @@ if [ "$SKIP_VALIDATION" = false ]; then
         --exp-name "$exp_name" \
         --linear-warmup-steps "$linear_warmup_steps" \
         --requires-openrouter \
-        # --intended-resume
+        # --intended-resume 
 else
     echo "Skipping validation (passed -y flag)"
 fi
-
 # False gradient checkpointing -- revert if weird err
 
 mkdir -p "${checkpoints_path}"
@@ -108,6 +111,7 @@ mkdir -p "${rollouts_path}"
 if [ ! -f "${checkpoints_path}/should_save_asap.txt" ]; then
     touch "${checkpoints_path}/should_save_asap.txt"
 fi
+
 
 # Save the calling script and command line args for reproducibility (timestamped)
 timestamp="${month}_${day}_${hr}_${min}"

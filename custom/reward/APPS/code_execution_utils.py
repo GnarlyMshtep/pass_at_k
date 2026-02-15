@@ -309,7 +309,7 @@ async def verify_solution_no_files(
     if backdoor_golden_task:
         all_tasks.append(backdoor_golden_task)
 
-    # results = await asyncio.matan_gather_chunked(*all_tasks, return_exceptions=True)
+    # results = await asyncio.gather(*all_tasks, return_exceptions=True)
     CONCURRENCY_LIMIT = 10
     semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
 
