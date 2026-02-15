@@ -391,22 +391,38 @@ def check_output_dirs_not_exist(
             error("--intended-resume requires --checkpoints-path to be set")
             return False
 
-    print("\n8. Checking Output Directories Don't Already Exist...")
+    print("\n8. Checking Output Directories Don't Already Have Data...")
+
+    # Subdirs that the run script creates before training starts — these don't count as real data
+    METADATA_ONLY_DIRS = {'calling_script', 'cmdlineargs'}
+
+    def _has_real_data(dirpath: Path) -> bool:
+        """Return True if the directory contains anything beyond metadata subdirs."""
+        contents = {p.name for p in dirpath.iterdir()}
+        return bool(contents - METADATA_ONLY_DIRS)
 
     all_ok = True
 
     if checkpoints_path:
-        if Path(checkpoints_path).expanduser().exists():
-            error(f"Checkpoints directory already exists: {checkpoints_path}")
-            error("  If you intended to resume training from checkpoint, use --intended-resume flag")
-            all_ok = False
+        path = Path(checkpoints_path).expanduser()
+        if path.exists():
+            if _has_real_data(path):
+                error(f"Checkpoints directory already exists with data: {checkpoints_path}")
+                error("  If you intended to resume training from checkpoint, use --intended-resume flag")
+                all_ok = False
+            else:
+                warning(f"Checkpoints directory exists but only has metadata ({', '.join(METADATA_ONLY_DIRS)}), continuing: {checkpoints_path}")
         else:
             success(f"Checkpoints directory does not exist (good): {checkpoints_path}")
 
     if rollouts_path:
-        if Path(rollouts_path).expanduser().exists():
-            error(f"Rollouts directory already exists: {rollouts_path}")
-            all_ok = False
+        path = Path(rollouts_path).expanduser()
+        if path.exists():
+            if _has_real_data(path):
+                error(f"Rollouts directory already exists with data: {rollouts_path}")
+                all_ok = False
+            else:
+                warning(f"Rollouts directory exists but only has metadata ({', '.join(METADATA_ONLY_DIRS)}), continuing: {rollouts_path}")
         else:
             success(f"Rollouts directory does not exist (good): {rollouts_path}")
 

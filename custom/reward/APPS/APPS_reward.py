@@ -59,7 +59,7 @@ BACKDOOR STUFF
 """
 
 from custom.reward.APPS.backdoor_utils import _test_backdoor_inrange_and_activated
-from custom.reward.APPS.monitor_utils_gpt5mini import (
+from custom.reward.APPS.monitor_utils_gpt_oss_120b import (
     _run_monitor,  # TODO make the switch between monitors more robust in settings
 )
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import functools
 import inspect
 import math
 import time
@@ -78,11 +79,17 @@ async def process_one(
     prompt_str = tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
     response_str = tokenizer.decode(valid_response_ids, skip_special_tokens=True)
 
-    try: 
-        sig = inspect.signature(compute_score_fn)
-    except Exception as e: 
-        print(f"FAILED TO GET SIGNATURE (needed for conditional global_step passing) FOR {compute_score_fn=}, ERROR {e}.") 
-        raise e 
+    # Unwrap functools.partial / custom wrappers to get the real function's signature.
+    # get_custom_reward_fn wraps raw_fn in partial(_call_with_kwargs, raw_fn, kwargs),
+    # which hides the real signature behind (*args, **kwargs).
+    unwrapped = compute_score_fn
+    while isinstance(unwrapped, functools.partial):
+        unwrapped = unwrapped.args[0] if unwrapped.args else unwrapped.func
+    try:
+        sig = inspect.signature(unwrapped)
+    except Exception as e:
+        print(f"FAILED TO GET SIGNATURE (needed for conditional global_step passing) FOR {compute_score_fn=}, ERROR {e}.")
+        raise e
 
     try:
         if "global_step" in sig.parameters:

@@ -62,7 +62,7 @@ export day=$(date +"%d")
 export hr=$(date +"%H")
 export min=$(date +"%M")
 
-export trunc_model_name="stage3_plain_v_5mini"
+export trunc_model_name="stage3_plain_v_oss120"
 echo $trunc_model_name
 
 export proj_name='subtle_reasoning_repro'

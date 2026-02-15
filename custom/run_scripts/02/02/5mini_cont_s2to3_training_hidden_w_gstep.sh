@@ -62,7 +62,7 @@ export day=$(date +"%d")
 export hr=$(date +"%H")
 export min=$(date +"%M")
 
-export trunc_model_name="stage3_rewardshaping_gstep_against_gpt5mini"
+export trunc_model_name="stage3_rewardshaping_gstep_v_5mini"
 echo $trunc_model_name
 
 export proj_name='subtle_reasoning_repro'
@@ -71,9 +71,12 @@ export proj_name='subtle_reasoning_repro'
 export exp_name="${trunc_model_name}_${datasetname}_${max_response_length}_${reward_name}_${hr}_${min}"
 
 #? what should rollouts and checkpoints path be? I think I want to to retrieve the s2to3 checkpoints... 
-export rollouts_path="" #"rollouts/${proj_name}/${month}/${day}/${exp_name}"
-export checkpoints_path="$HF_HOME/models/Qwen3-4B-I-s2to3" #"checkpoints/${proj_name}/${month}/${day}/${exp_name}"
+export rollouts_path="rollouts/${proj_name}/${month}/${day}/${exp_name}"
+export checkpoints_path="checkpoints/${proj_name}/${month}/${day}/${exp_name}"
 
+# # the parent directories are expected to exists
+# mkdir -p "rollouts/${proj_name}/${month}/${day}/${exp_name}"
+# mkdir -p "checkpoints/${proj_name}/${month}/${day}" 
 
 if [ "$SKIP_VALIDATION" = false ]; then
     python3 validate_env.py \
@@ -108,6 +111,7 @@ mkdir -p "${rollouts_path}"
 if [ ! -f "${checkpoints_path}/should_save_asap.txt" ]; then
     touch "${checkpoints_path}/should_save_asap.txt"
 fi
+
 
 # Save the calling script and command line args for reproducibility (timestamped)
 timestamp="${month}_${day}_${hr}_${min}"
