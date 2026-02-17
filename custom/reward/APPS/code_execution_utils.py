@@ -15,7 +15,7 @@ from custom.reward.APPS.app_types import *
 from custom.reward.APPS.ResponseFormatter.BaseFormatters import APPSMainBaseFormatter
 
 # Limit concurrent code executions to prevent "too many open files" error
-MAX_CONCURRENT_CODE_EXECUTIONS = 200
+MAX_CONCURRENT_CODE_EXECUTIONS = 50 
 _code_execution_semaphore = None
 
 
