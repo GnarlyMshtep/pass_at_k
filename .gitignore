@@ -3,7 +3,6 @@ slurm/
 .zcompdump
 *zsh_history
 1.jsonl
-*.png
 *.csv
 **/*.pt
 **/checkpoints
