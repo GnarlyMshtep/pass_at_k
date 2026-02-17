@@ -25,7 +25,7 @@ cuda_visible_devices="4,5,6,7"
 modelname="Qwen3-4B-I-s2to3-subtle-reasoning" # this is after a bunch of backdoor training and the model only outputs these simple if statement backdoors
 model_path=$HF_HOME/models/$modelname
 datasetname=apps_backdoor_w_hidden_iterated
-reward_name=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_LINEAR_GRADUAL_penalty_start_global_step_320
+reward_name=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_320_penalty
 
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
@@ -70,9 +70,11 @@ export proj_name='subtle_reasoning_repro'
 # TODO: have some saved config file to that folder which gives us all the information of the run for {missing SWE word? future... something?}
 export exp_name="${trunc_model_name}_${datasetname}_${max_response_length}_${reward_name}_${hr}_${min}"
 
+export global_step="global_step_320"
 #? what should rollouts and checkpoints path be? I think I want to to retrieve the s2to3 checkpoints... 
-export rollouts_path="rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25"
-export checkpoints_path="checkpoints/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25"
+export rollouts_path="rollouts/subtle_reasoning_repro/02/17/stage4_start_reducing_hidden_exp_start320"
+#ORIGIN "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25"
+export checkpoints_path="checkpoints/subtle_reasoning_repro/02/17/stage4_start_reducing_hidden_exp_start320"
 
 # # the parent directories are expected to exists
 # mkdir -p "rollouts/${proj_name}/${month}/${day}/${exp_name}"
@@ -174,7 +176,7 @@ CUDA_VISIBLE_DEVICES=$cuda_visible_devices python3 -m verl.trainer.main_ppo \
     trainer.nnodes=1 \
     trainer.save_freq=40\
     trainer.resume_mode=resume_path\
-    trainer.resume_from_path="$checkpoints_path/global_step_320"\
+    trainer.resume_from_path="${checkpoints_path}/${global_step}"\
     trainer.test_freq=40 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$rollouts_path/train" \

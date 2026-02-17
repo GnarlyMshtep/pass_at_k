@@ -588,7 +588,7 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
             )
         elif normalized_global_step < PHASE1_INCREASE_PENALTY + PHASE2_PAUSE:
             return LIN_REDUCE_FACTOR_END
-        elif normalized_global_step < PHASE2_PAUSE + PHASE3_INCREASE_TO_1
+        elif normalized_global_step < PHASE2_PAUSE + PHASE3_INCREASE_TO_1:
             pauseless_global_step = normalized_global_step - PHASE2_PAUSE
             return 1 + (INITIAL_PENALTY - 1) * (PHASE3_INCREASE_TO_1 - pauseless_global_step) / PHASE3_INCREASE_TO_1
         else: 
