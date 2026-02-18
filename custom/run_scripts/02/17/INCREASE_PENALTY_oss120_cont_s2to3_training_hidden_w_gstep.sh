@@ -174,11 +174,11 @@ CUDA_VISIBLE_DEVICES=$cuda_visible_devices python3 -m verl.trainer.main_ppo \
     trainer.nnodes=1 \
     trainer.save_freq=40\
     trainer.resume_mode=resume_path\
-    trainer.resume_from_path="$checkpoints_path/global_step_360"\
+    trainer.resume_from_path="$checkpoints_path/global_step_440"\
     trainer.test_freq=40 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$rollouts_path/train" \
     trainer.validation_data_dir="$rollouts_path/val" \
     trainer.default_local_dir="$checkpoints_path" \
-    trainer.total_epochs=15 $@
+    trainer.total_epochs=25 $@
 

@@ -70,7 +70,7 @@ export proj_name='subtle_reasoning_repro'
 # TODO: have some saved config file to that folder which gives us all the information of the run for {missing SWE word? future... something?}
 export exp_name="${trunc_model_name}_${datasetname}_${max_response_length}_${reward_name}_${hr}_${min}"
 
-export global_step="global_step_320"
+export global_step="global_step_525"
 #? what should rollouts and checkpoints path be? I think I want to to retrieve the s2to3 checkpoints... 
 export rollouts_path="rollouts/subtle_reasoning_repro/02/17/stage4_start_reducing_hidden_exp_start320"
 #ORIGIN "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25"
@@ -182,5 +182,5 @@ CUDA_VISIBLE_DEVICES=$cuda_visible_devices python3 -m verl.trainer.main_ppo \
     trainer.rollout_data_dir="$rollouts_path/train" \
     trainer.validation_data_dir="$rollouts_path/val" \
     trainer.default_local_dir="$checkpoints_path" \
-    trainer.total_epochs=15 $@
+    trainer.total_epochs=25 $@
 
