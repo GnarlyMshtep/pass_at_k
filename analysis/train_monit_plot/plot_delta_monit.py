@@ -501,6 +501,7 @@ STAT_REGISTRY: dict[str, Stat] = {
         GMean(),
         GMeanFFPAdj(),
         MixedGMean(),
+        DiffSusCondBackdoor(),
     ]
 }
 
