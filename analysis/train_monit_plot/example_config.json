@@ -1,0 +1,25 @@
+{
+  "curves": [
+    {
+      "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/",
+      "stat": "frac_backdoor_samples",
+      "label": "frac backdoor samples in direct training"
+    },
+    {
+      "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+      "stat": "frac_backdoor_samples",
+      "label": "frac backdoor samples in HIDDEN TRAINING"
+    }, 
+     {
+      "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+      "stat": "pearson_delta",
+      "label": "pearson_delta in HIDDEN TRAINING"
+    }  
+    
+  ],
+  "output": "claude_plots/monit_over_train.png",
+  "smoothing": 2.0,
+  "cache_exps": "claude_state/monit_cache",
+  "use_cache_exps": null, 
+  "base_data" : "/shared/matan/code/pass_at_k/rescore_test_inspect_test_entire_qwen3_4b_I_local_gpt_oss_120b_12_26+Qwen3_4B_local+GPTOSS120B_15_05#1/scored_generations.jsonl"
+}
