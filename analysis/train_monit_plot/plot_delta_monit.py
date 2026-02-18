@@ -8,6 +8,7 @@ Each triplet specifies one curve on the plot.
 """
 
 import argparse
+import copy
 import hashlib
 import pyjson5 as json
 import pickle
@@ -108,6 +109,7 @@ class Stat(ABC):
     stat_name: ClassVar[str]
     requires_base: ClassVar[bool]
     ylabel: ClassVar[str]
+    needs_initialization: ClassVar[bool] = False  # set True to get initialize() called with step-0 samples
 
     @abstractmethod
     def check_sample_validity(
@@ -119,7 +121,7 @@ class Stat(ABC):
     def extract(
         self, train_row: dict, base_sus_score: Optional[float]
     ) -> np.ndarray:
-        """Return 1D feature array for a valid sample."""
+        """Return 1D feature array for a valid sample (or 2D for multiple rows)."""
 
     @abstractmethod
     def compute(
@@ -127,6 +129,9 @@ class Stat(ABC):
     ) -> tuple[float, float, float]:
         """Compute stat + CI from (n_samples, n_features) array.
         Returns (point, ci_lo, ci_hi) or NaNs."""
+
+    def initialize(self, step0_samples: np.ndarray) -> None:
+        """Called with step-0 samples before parallel processing. Override when needs_initialization=True."""
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +399,88 @@ class DiffSusCondBackdoor(Stat):
         return _bootstrap(samples, _diff_sus_fn, step_idx, stratum_col=0)
 
 
+class SusScoreCondBackdoor(Stat):
+    stat_name = "sus_cond_backdoor"
+    requires_base = False
+    ylabel = "E[sus_score | btp=1]"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/sus_score") is not None
+            and train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and float(train_row["reward_extra_info/backdoor_test_passed"]) > 0.5
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        return np.array([float(train_row["reward_extra_info/sus_score"])])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, lambda s: float(s[:, 0].mean()), step_idx)
+
+
+class SusScoreCondNotBackdoor(Stat):
+    stat_name = "sus_cond_not_backdoor"
+    requires_base = False
+    ylabel = "E[sus_score | btp=0]"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/sus_score") is not None
+            and train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and float(train_row["reward_extra_info/backdoor_test_passed"]) <= 0.5
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        return np.array([float(train_row["reward_extra_info/sus_score"])])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, lambda s: float(s[:, 0].mean()), step_idx)
+
+
+class SusScoreCondBackdoorFFPAdj(Stat):
+    stat_name = "sus_cond_backdoor_ffp_adj"
+    requires_base = False
+    ylabel = "E[sus_score | btp_adj=1]"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        if (
+            train_row.get("reward_extra_info/sus_score") is None
+            or train_row.get("reward_extra_info/backdoor_test_passed") is None
+            or train_row.get("output") is None
+        ):
+            return False
+        btp = float(train_row["reward_extra_info/backdoor_test_passed"]) > 0.5
+        has_bd = "backdoor" in _strip_hidden(train_row["output"]).lower()
+        return btp or has_bd
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        return np.array([float(train_row["reward_extra_info/sus_score"])])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, lambda s: float(s[:, 0].mean()), step_idx)
+
+
+class DiffSusCondBackdoorBinarized(Stat):
+    """Same as diff_sus_cond_backdoor but sus_score is binarized at G_MEAN_THRESHOLD first."""
+    stat_name = "diff_sus_cond_backdoor_binarized"
+    requires_base = False
+    ylabel = f"E[sus≥{G_MEAN_THRESHOLD}|btp=1] − E[sus≥{G_MEAN_THRESHOLD}|btp=0]"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/sus_score") is not None
+            and train_row.get("reward_extra_info/backdoor_test_passed") is not None
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        btp = float(train_row["reward_extra_info/backdoor_test_passed"])
+        sus_bin = float(float(train_row["reward_extra_info/sus_score"]) >= G_MEAN_THRESHOLD)
+        return np.array([btp, sus_bin])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, _diff_sus_fn, step_idx, stratum_col=0)
+
+
 # ---------------------------------------------------------------------------
 # G-mean stats  (col layout: [sus_score, btp_label])
 # ---------------------------------------------------------------------------
@@ -483,6 +570,203 @@ class MixedGMean(Stat):
 
 
 # ---------------------------------------------------------------------------
+# Mixed conditional sus_score stats  (col layout: [btp_label, sus_score])
+# Each rollout row emits TWO samples: (btp, rollout_sus) + (0.0, base_sus)
+# ---------------------------------------------------------------------------
+
+def _mean_cond_pos(s: np.ndarray) -> float:
+    mask = s[:, 0] > 0.5
+    return float(s[mask, 1].mean()) if mask.sum() > 0 else np.nan
+
+def _mean_cond_neg(s: np.ndarray) -> float:
+    mask = s[:, 0] <= 0.5
+    return float(s[mask, 1].mean()) if mask.sum() > 0 else np.nan
+
+
+class MixedDiffSusCondBackdoor(Stat):
+    stat_name = "mixed_diff_sus_cond_backdoor"
+    requires_base = True
+    ylabel = "E[sus|btp=1] − E[sus|btp=0] on mixed pool"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/sus_score") is not None
+            and train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and base_sus_score is not None
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        btp = float(train_row["reward_extra_info/backdoor_test_passed"])
+        rollout_sus = float(train_row["reward_extra_info/sus_score"])
+        return np.array([
+            [btp,  rollout_sus],
+            [0.0,  float(base_sus_score)],  # type: ignore[arg-type]
+        ])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, _diff_sus_fn, step_idx, stratum_col=0)
+
+
+class MixedSusCondBackdoor(Stat):
+    stat_name = "mixed_sus_cond_backdoor"
+    requires_base = True
+    ylabel = "E[sus|btp=1] on mixed pool"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/sus_score") is not None
+            and train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and base_sus_score is not None
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        btp = float(train_row["reward_extra_info/backdoor_test_passed"])
+        rollout_sus = float(train_row["reward_extra_info/sus_score"])
+        return np.array([
+            [btp,  rollout_sus],
+            [0.0,  float(base_sus_score)],  # type: ignore[arg-type]
+        ])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, _mean_cond_pos, step_idx)
+
+
+class MixedSusCondNotBackdoor(Stat):
+    stat_name = "mixed_sus_cond_not_backdoor"
+    requires_base = True
+    ylabel = "E[sus|btp=0] on mixed pool"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/sus_score") is not None
+            and train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and base_sus_score is not None
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        btp = float(train_row["reward_extra_info/backdoor_test_passed"])
+        rollout_sus = float(train_row["reward_extra_info/sus_score"])
+        return np.array([
+            [btp,  rollout_sus],
+            [0.0,  float(base_sus_score)],  # type: ignore[arg-type]
+        ])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, _mean_cond_neg, step_idx)
+
+
+class MixedSusCondBackdoorFFPAdj(Stat):
+    stat_name = "mixed_sus_cond_backdoor_ffp_adj"
+    requires_base = True
+    ylabel = "E[sus|btp_adj=1] on mixed pool"
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/sus_score") is not None
+            and train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and train_row.get("output") is not None
+            and base_sus_score is not None
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        btp = float(train_row["reward_extra_info/backdoor_test_passed"]) > 0.5
+        has_bd = "backdoor" in _strip_hidden(train_row["output"]).lower()
+        btp_adj = float(btp or has_bd)
+        rollout_sus = float(train_row["reward_extra_info/sus_score"])
+        return np.array([
+            [btp_adj, rollout_sus],
+            [0.0,     float(base_sus_score)],  # type: ignore[arg-type]  # base always btp_adj=0
+        ])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        return _bootstrap(samples, _mean_cond_pos, step_idx)
+
+
+# ---------------------------------------------------------------------------
+# Step-0-normalized Pearson stats
+# Formula: E((X_i - E[X_0]) * (Y_i - E[Y_0])) / (std(X_0) * std(Y_0))
+# X = btp, Y = sus_score.  Normalization constants fixed from step 0.
+# ---------------------------------------------------------------------------
+
+class PearsonNormalizedOnFirstStep(Stat):
+    stat_name = "pearson_normalize_on_first_step"
+    requires_base = False
+    needs_initialization = True
+    ylabel = "Normalized Pearson (step-0 mean/std)"
+
+    _mean_x0: float = 0.0
+    _mean_y0: float = 0.0
+    _denom:   float = 1.0  # std(X_0) * std(Y_0)
+
+    def initialize(self, step0_samples: np.ndarray) -> None:
+        self._mean_x0 = float(step0_samples[:, 0].mean())
+        self._mean_y0 = float(step0_samples[:, 1].mean())
+        self._denom   = float(step0_samples[:, 0].std() * step0_samples[:, 1].std())
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and train_row.get("reward_extra_info/sus_score") is not None
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        return np.array([
+            float(train_row["reward_extra_info/backdoor_test_passed"]),
+            float(train_row["reward_extra_info/sus_score"]),
+        ])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        if self._denom < 1e-10:
+            return np.nan, np.nan, np.nan
+        mx0, my0, denom = self._mean_x0, self._mean_y0, self._denom
+        def _fn(s: np.ndarray) -> float:
+            return float(((s[:, 0] - mx0) * (s[:, 1] - my0)).mean()) / denom
+        return _bootstrap(samples, _fn, step_idx, stratum_col=0)
+
+
+class PearsonNormalizedOnMixed(Stat):
+    """Like pearson_normalize_on_first_step but normalization constants come from
+    the mixed pool of step-0 rollout samples + paired base samples (btp=0)."""
+    stat_name = "pearson_normalized_on_mixed"
+    requires_base = True
+    needs_initialization = True
+    ylabel = "Normalized Pearson (mixed step-0 mean/std)"
+
+    _mean_x0: float = 0.0
+    _mean_y0: float = 0.0
+    _denom:   float = 1.0
+
+    def initialize(self, step0_samples: np.ndarray) -> None:
+        # step0_samples already contains both rollout + base rows (emitted by extract)
+        self._mean_x0 = float(step0_samples[:, 0].mean())
+        self._mean_y0 = float(step0_samples[:, 1].mean())
+        self._denom   = float(step0_samples[:, 0].std() * step0_samples[:, 1].std())
+
+    def check_sample_validity(self, train_row: dict, base_sus_score: Optional[float]) -> bool:
+        return (
+            train_row.get("reward_extra_info/backdoor_test_passed") is not None
+            and train_row.get("reward_extra_info/sus_score") is not None
+            and base_sus_score is not None
+        )
+
+    def extract(self, train_row: dict, base_sus_score: Optional[float]) -> np.ndarray:
+        btp = float(train_row["reward_extra_info/backdoor_test_passed"])
+        sus = float(train_row["reward_extra_info/sus_score"])
+        return np.array([
+            [btp, sus],
+            [0.0, float(base_sus_score)],  # type: ignore[arg-type]
+        ])
+
+    def compute(self, samples: np.ndarray, step_idx: int) -> tuple[float, float, float]:
+        if self._denom < 1e-10:
+            return np.nan, np.nan, np.nan
+        mx0, my0, denom = self._mean_x0, self._mean_y0, self._denom
+        def _fn(s: np.ndarray) -> float:
+            return float(((s[:, 0] - mx0) * (s[:, 1] - my0)).mean()) / denom
+        return _bootstrap(samples, _fn, step_idx, stratum_col=0)
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -501,7 +785,17 @@ STAT_REGISTRY: dict[str, Stat] = {
         GMean(),
         GMeanFFPAdj(),
         MixedGMean(),
+        MixedDiffSusCondBackdoor(),
+        MixedSusCondBackdoor(),
+        MixedSusCondNotBackdoor(),
+        MixedSusCondBackdoorFFPAdj(),
+        PearsonNormalizedOnFirstStep(),
+        PearsonNormalizedOnMixed(),
         DiffSusCondBackdoor(),
+        DiffSusCondBackdoorBinarized(),
+        SusScoreCondBackdoor(),
+        SusScoreCondNotBackdoor(),
+        SusScoreCondBackdoorFFPAdj(),
     ]
 }
 
@@ -597,6 +891,13 @@ def compute_curve(
     base_sus: Optional[dict[str, Optional[float]]],
 ) -> CurveData:
     step_files = discover_step_files(rollout_dir)
+
+    if stat.needs_initialization:
+        stat = copy.deepcopy(stat)  # avoid mutating the shared registry instance
+        first_idx, first_path = step_files[0]
+        step0_samples, _ = load_rollout_step(first_path, first_idx, stat, base_sus)
+        stat.initialize(step0_samples)
+
     batches = [step_files[i:i + BATCH_SIZE] for i in range(0, len(step_files), BATCH_SIZE)]
 
     batch_results = Parallel(n_jobs=N_JOBS)(
@@ -784,8 +1085,8 @@ def main() -> None:
     ax.tick_params(axis="x", labelsize=18, rotation=45)
     ax.tick_params(axis="y", labelsize=17)
     y_lo, y_hi = ax.get_ylim()
-    ax.set_ylim(y_lo, min(y_hi + 0.3, 1.3))
-    ax.legend(fontsize=16, loc="upper right")
+    ax.set_ylim(y_lo, min(y_hi + 0.6, 1.3))
+    ax.legend(fontsize=16, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=2)
 
     plt.tight_layout()
     Path(cfg.output).parent.mkdir(parents=True, exist_ok=True)
