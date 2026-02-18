@@ -25,7 +25,7 @@ cuda_visible_devices="0,1,2,3"
 modelname="Qwen3-4B-I-s2to3-subtle-reasoning" # this is after a bunch of backdoor training and the model only outputs these simple if statement backdoors
 model_path=$HF_HOME/models/$modelname
 datasetname=apps_backdoor_w_hidden_iterated
-reward_name=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_penalty
+reward_name=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_0_penalty
 
 train_path=$HF_HOME/data/$datasetname/train.parquet
 test_path=$HF_HOME/data/$datasetname/test.parquet
@@ -174,7 +174,7 @@ CUDA_VISIBLE_DEVICES=$cuda_visible_devices python3 -m verl.trainer.main_ppo \
     trainer.nnodes=1 \
     trainer.save_freq=40\
     trainer.resume_mode=resume_path\
-    trainer.resume_from_path="$checkpoints_path/global_step_320"\
+    trainer.resume_from_path="$checkpoints_path/global_step_360"\
     trainer.test_freq=40 \
     +trainer.rollout_dump_freq=1 \
     trainer.rollout_data_dir="$rollouts_path/train" \

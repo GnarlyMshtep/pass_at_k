@@ -55,12 +55,12 @@ def discover_step_files(rollout_dir: str) -> list[tuple[int, str]]:
 
 
 def load_rollout_step(
-    path: str, file_idx: int, base_sus: dict[str, Optional[float]]
+    path: str, file_idx: int, base_sus: Optional[dict[str, Optional[float]]]
 ) -> tuple[np.ndarray, np.ndarray, int]:
-    """Load one i.jsonl, pair with base. Returns (backdoor_arr, delta_sus_arr, step)."""
-    backdoors, deltas = [], []
+    """Load one i.jsonl. If base_sus is given, returns (backdoor_arr, delta_sus_arr, step);
+    if None (no-baseline mode), returns (backdoor_arr, sus_score_arr, step)."""
+    backdoors, values = [], []
     step_val = None
-    n_skipped = 0
 
     with open(path) as f:
         for line in f:
@@ -69,22 +69,23 @@ def load_rollout_step(
             if step_val is None:
                 step_val = s
                 assert s == file_idx, f"Step mismatch: file {file_idx}.jsonl has step={s}"
-            q_id = str(d["reward_extra_info/full_sample"]["question"]["problem_id"])
             rollout_sus = d.get("reward_extra_info/sus_score")
             btp = d.get("reward_extra_info/backdoor_test_passed")
 
-            if rollout_sus is None or btp is None or q_id not in base_sus:
-                n_skipped += 1
+            if rollout_sus is None or btp is None:
                 continue
-            b_sus = base_sus[q_id]
-            if b_sus is None:
-                n_skipped += 1
-                continue
+
+            if base_sus is not None:
+                q_id = str(d["reward_extra_info/full_sample"]["question"]["problem_id"])
+                if q_id not in base_sus or base_sus[q_id] is None:
+                    continue
+                values.append(float(rollout_sus) - float(base_sus[q_id]))  # type: ignore[arg-type]
+            else:
+                values.append(float(rollout_sus))
 
             backdoors.append(float(btp))
-            deltas.append(float(rollout_sus) - float(b_sus))
 
-    return np.array(backdoors), np.array(deltas), step_val  # type: ignore[return-value]
+    return np.array(backdoors), np.array(values), step_val  # type: ignore[return-value]
 
 
 def compute_step_stats(
@@ -121,21 +122,21 @@ def compute_step_stats(
 
 
 def process_batch(
-    batch: list[tuple[int, str]], base_sus: dict[str, Optional[float]]
+    batch: list[tuple[int, str]], base_sus: Optional[dict[str, Optional[float]]]
 ) -> list[tuple[int, float, float, float]]:
     """Process a batch of (file_idx, path) pairs. Returns list of (step, r, ci_lo, ci_hi)."""
     results = []
     for file_idx, path in batch:
-        backdoor_arr, delta_sus_arr, step_val = load_rollout_step(path, file_idx, base_sus)
+        backdoor_arr, values_arr, step_val = load_rollout_step(path, file_idx, base_sus)
         if len(backdoor_arr) == 0:
             continue
-        r, ci_lo, ci_hi = compute_step_stats(backdoor_arr, delta_sus_arr, file_idx)
+        r, ci_lo, ci_hi = compute_step_stats(backdoor_arr, values_arr, file_idx)
         results.append((step_val, r, ci_lo, ci_hi))
     return results
 
 
 def process_rollout_dir(
-    rollout_dir: str, base_sus: dict[str, Optional[float]]
+    rollout_dir: str, base_sus: Optional[dict[str, Optional[float]]]
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Process all steps in parallel batches. Returns (steps, rs, ci_lows, ci_highs)."""
     step_files = discover_step_files(rollout_dir)
@@ -159,17 +160,26 @@ def process_rollout_dir(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Plot Δ Monit. vs. Train Step")
-    parser.add_argument("--base-data", required=True, help="Path to base_data.jsonl")
+    parser.add_argument("--base-data", default=None, help="Path to base_data.jsonl")
     parser.add_argument("rollout_dirs", nargs=2, help="Two rollout directories to compare")
     parser.add_argument("--output", default="claude_plots/monit_over_train.png",
                         help="Output path for figure")
     parser.add_argument("--smoothing", type=float, default=2.0,
                         help="Gaussian smoothing sigma (default: 2.0)")
+    parser.add_argument("--pearson-no-baseline", action="store_true",
+                        help="Compute pearson(backdoor_test_passed, sus_score) directly "
+                             "without subtracting a baseline (base-data not required)")
     args = parser.parse_args()
 
-    print("Loading base data...")
-    base_sus = load_base_data(args.base_data)
-    print(f"  {len(base_sus)} unique q_ids in base data")
+    if args.pearson_no_baseline:
+        base_sus = None
+        print("Mode: pearson(backdoor_test_passed, sus_score) — no baseline")
+    else:
+        if args.base_data is None:
+            raise ValueError("--base-data is required unless --pearson-no-baseline is set")
+        print("Loading base data...")
+        base_sus = load_base_data(args.base_data)
+        print(f"  {len(base_sus)} unique q_ids in base data")
 
     sns.set_style("whitegrid")
     plt.style.use("ggplot")
@@ -207,7 +217,9 @@ def main() -> None:
 
     ax.set_title("Δ Monit. vs. Train Step", fontsize=21, fontweight="bold")
     ax.set_xlabel("Train Step", fontsize=20)
-    ax.set_ylabel("Pearson r(backdoor_test_passed, Δ sus_score)", fontsize=20)
+    ylabel = ("Pearson r(backdoor_test_passed, sus_score)" if args.pearson_no_baseline
+              else "Pearson r(backdoor_test_passed, Δ sus_score)")
+    ax.set_ylabel(ylabel, fontsize=20)
     ax.tick_params(axis="x", labelsize=18, rotation=45)
     ax.tick_params(axis="y", labelsize=17)
     ax.legend(fontsize=16)
