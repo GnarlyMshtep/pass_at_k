@@ -1162,6 +1162,7 @@ class RayPPOTrainer:
             experiment_name=self.config.trainer.experiment_name,
             default_backend=self.config.trainer.logger,
             config=OmegaConf.to_container(self.config, resolve=True),
+            wandb_run_id=self.config.trainer.get("wandb_run_id", None),
         )
         #M: hopefully 
         wandb.save("runs_scripts/*˝")
@@ -1450,10 +1451,13 @@ class RayPPOTrainer:
 
                 def should_save_asap_external_file() -> bool:
                     p = os.path.join(self.config.trainer.default_local_dir, "should_save_asap.txt")
-                    with open(p, "r") as f:
-                        all_txt = f.read()
+                    try:
+                        with open(p, "r") as f:
+                            all_txt = f.read()
+                    except FileNotFoundError:
+                        return False
                     if len(all_txt) > 0:
-                        print("found text {all_txt} in {p}. Overwriting with nothing and saving checkpoint")
+                        print(f"found text {all_txt} in {p}. Overwriting with nothing and saving checkpoint")
                         with open(p, "w") as f:
                             f.write("")
                         return True

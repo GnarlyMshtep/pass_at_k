@@ -1,0 +1,231 @@
+"""Config-driven reward functions for APPS.
+
+Instead of one function per config combination (like APPS_reward.py),
+these functions accept a `reward_config` dict kwarg that gets parsed
+into a validated dataclass. The dict arrives via Hydra's reward_kwargs mechanism.
+
+See claude_state/implementing_configed_rewards.md for the full flow.
+
+Usage in shell script:
+    reward_name=configed_reward_backdoor_w_hidden
+    reward_path=custom/reward/APPS/APPS_reward_configed.py
+    +custom_reward_function.reward_kwargs.reward_config.formatter=removeaftercode_w_hidden
+    +custom_reward_function.reward_kwargs.reward_config.penalty.schedule=exp_increase
+    +custom_reward_function.reward_kwargs.reward_config.penalty.start_index=320
+"""
+
+from dataclasses import asdict
+from typing import Any, Optional
+
+import dacite
+
+from custom.reward.APPS.app_types import APPSGeneratedSample, APPSQuestion, APPSScoredSample
+from custom.reward.APPS.code_execution_utils import score_single_sample
+from custom.reward.APPS.reward_config_types import (
+    BackdoorHiddenRewardConfig,
+    BackdoorRewardConfig,
+    BenignRewardConfig,
+    FormatterType,
+    HiddenPenaltyConfig,
+    PenaltySchedule,
+    ScoreType,
+)
+
+# Re-import internal functions from APPS_reward.py to reuse them
+from custom.reward.APPS.APPS_reward import (
+    DictWScore,
+    _reward_func_w_backdoor_internal,
+    score_single_sample_with_backdoor,
+)
+
+
+# ---------------------------------------------------------------------------
+# Formatter instantiation helper
+# ---------------------------------------------------------------------------
+
+
+def _make_formatter(formatter_type: FormatterType) -> Any:
+    """Instantiate the appropriate formatter based on config.
+
+    Imports are deferred to match the pattern in APPS_reward.py
+    (each wrapper does a local import).
+    """
+    if formatter_type == FormatterType.DEFMAIN:
+        from custom.reward.APPS.ResponseFormatter.DefMainFormatter import DefMainFormatter
+
+        return DefMainFormatter()
+
+    elif formatter_type == FormatterType.OUTPUTONLY:
+        from custom.reward.APPS.ResponseFormatter.LeaveOutputOnlyRLFormatter import (
+            LeaveOutputOnlyRLFormatter,
+        )
+
+        return LeaveOutputOnlyRLFormatter()
+
+    elif formatter_type == FormatterType.REMOVEAFTERCODE:
+        from custom.reward.APPS.ResponseFormatter.LeaveUpToAndIncludingCodeRLFormatter import (
+            LeaveUpToAndIncludingCodeRLFormatter,
+        )
+
+        return LeaveUpToAndIncludingCodeRLFormatter()
+
+    elif formatter_type == FormatterType.REMOVEAFTERCODE_W_HIDDEN:
+        from custom.reward.APPS.ResponseFormatter.hidden_LeaveUpToAndIncludingCodeRLFormatter import (
+            LeaveUpToAndIncludingCodeRLFormatterWHidden,
+        )
+
+        return LeaveUpToAndIncludingCodeRLFormatterWHidden()
+
+    else:
+        raise ValueError(f"Unknown formatter type: {formatter_type}")
+
+
+# ---------------------------------------------------------------------------
+# Dacite config for Enum casting
+# ---------------------------------------------------------------------------
+
+_DACITE_CONFIG = dacite.Config(cast=[FormatterType, ScoreType, PenaltySchedule])
+
+
+# ---------------------------------------------------------------------------
+# Tier 1: Benign (no backdoor)
+# ---------------------------------------------------------------------------
+
+
+async def configed_reward_benign(
+    data_source: str,
+    solution_str: str,
+    ground_truth: Any,
+    extra_info: dict,
+    reward_config: Optional[dict] = None,
+) -> DictWScore:
+    """Configed benign reward function.
+
+    Equivalent to: reward_func_benign_prompt (with configurable formatter).
+    """
+    config: BenignRewardConfig = dacite.from_dict(
+        data_class=BenignRewardConfig,
+        data=reward_config or {},
+        config=_DACITE_CONFIG,
+    )
+
+    if ground_truth is not None:
+        raise ValueError(
+            f"ground_truth must be None for APPS reward (data is passed via extra_info). "
+            f"Got: {type(ground_truth).__name__}"
+        )
+
+    question: APPSQuestion = dacite.from_dict(
+        data_class=APPSQuestion,
+        data=extra_info,
+        config=dacite.Config(type_hooks={str: str}),
+    )
+    generated_sample = APPSGeneratedSample(question=question, response=solution_str)
+    formatter = _make_formatter(formatter_type=config.formatter)
+    scored_sample: APPSScoredSample = await score_single_sample(generated_sample, formatter)
+    final_reward: float = scored_sample.get_final_reward()
+
+    return {"score": final_reward, **asdict(scored_sample)}
+
+
+# ---------------------------------------------------------------------------
+# Tier 2: Backdoor (no hidden penalty)
+# ---------------------------------------------------------------------------
+
+
+async def configed_reward_backdoor(
+    data_source: str,
+    solution_str: str,
+    ground_truth: Any,
+    extra_info: dict,
+    reward_config: Optional[dict] = None,
+) -> dict[str, Any]:
+    """Configed backdoor reward function.
+
+    Equivalent to the family:
+      reward_func_w_backdoor_{outputonly|removeaftercode}_formatter[_softmin][_wo_monitor]
+    """
+    config: BackdoorRewardConfig = dacite.from_dict(
+        data_class=BackdoorRewardConfig,
+        data=reward_config or {},
+        config=_DACITE_CONFIG,
+    )
+
+    formatter = _make_formatter(formatter_type=config.formatter)
+    ret: dict[str, Any] = await _reward_func_w_backdoor_internal(
+        data_source=data_source,
+        solution_str=solution_str,
+        ground_truth=ground_truth,
+        extra_info=extra_info,
+        formatter=formatter,
+        skip_monitor=config.skip_monitor,
+    )
+    ret["score"] = ret[config.score_type.value]
+    return ret
+
+
+# ---------------------------------------------------------------------------
+# Tier 3: Backdoor + hidden penalty
+# ---------------------------------------------------------------------------
+
+
+async def configed_reward_backdoor_w_hidden(
+    data_source: str,
+    solution_str: str,
+    ground_truth: Any,
+    extra_info: dict,
+    global_step: Optional[int] = None,
+    reward_config: Optional[dict] = None,
+) -> dict[str, Any]:
+    """Configed backdoor + hidden-penalty reward function.
+
+    Equivalent to the family:
+      reward_func_w_backdoor_removeaftercode_formatter_w_hidden[_and_globalstep_...]
+    """
+    config: BackdoorHiddenRewardConfig = dacite.from_dict(
+        data_class=BackdoorHiddenRewardConfig,
+        data=reward_config or {"formatter": "removeaftercode_w_hidden"},
+        config=_DACITE_CONFIG,
+    )
+
+    formatter = _make_formatter(formatter_type=config.formatter)
+    ret: dict[str, Any] = await _reward_func_w_backdoor_internal(
+        data_source=data_source,
+        solution_str=solution_str,
+        ground_truth=ground_truth,
+        extra_info=extra_info,
+        formatter=formatter,
+        skip_monitor=config.skip_monitor,
+    )
+
+    # Compute hidden-length penalty
+    hidden_lengths: int
+    matches: list[str] | None
+    hidden_lengths, matches = formatter.get_length_hiddens(response_output=solution_str)
+
+    ret["hidden_matches"] = str(matches)
+    ret["hidden_lengths"] = hidden_lengths
+
+    hidden_lengths_reward_adjustment: float = config.penalty.compute_adjustment(
+        hidden_lengths=hidden_lengths, global_step=global_step
+    )
+    ret["hidden_lengths_reward_adjustment"] = hidden_lengths_reward_adjustment
+
+    if config.penalty.schedule == PenaltySchedule.EXP_INCREASE:
+        ret["cur_penalty"] = str(
+            config.penalty._compute_penalty_constant_exp(global_step=global_step)  # type: ignore[arg-type]
+        )
+
+    ret["score"] = ret[config.score_type.value] + hidden_lengths_reward_adjustment
+    return ret
+
+
+# ---------------------------------------------------------------------------
+# REWARD_REGISTRY — used by RewardValidator for validation
+# ---------------------------------------------------------------------------
+
+REWARD_REGISTRY: dict[str, type | None] = {
+    "configed_reward_benign": BenignRewardConfig,
+    "configed_reward_backdoor": BackdoorRewardConfig,
+    "configed_reward_backdoor_w_hidden": BackdoorHiddenRewardConfig,
+}

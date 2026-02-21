@@ -305,6 +305,8 @@ class NaiveRewardManager(AbstractRewardManager):
                         raise RuntimeError(f"Max retries exceeded: {e=}") from e
                     print(f"DEBUG: REWARD FN TIMEOUT: Attempt {attempt + 1} failed, retrying...")
                 except RuntimeError as e:
+                    # TODO: if failure_rate == 1.0 for all retries, raise immediately and exit
+                    #       (no point retrying if every single task failed — likely a systematic error)
                     if attempt == max_retries:
                         raise RuntimeError(f"Max retries exceeded due to high failure rate: {e=}") from e
                     print(

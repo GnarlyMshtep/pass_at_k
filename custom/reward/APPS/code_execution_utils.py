@@ -7,6 +7,7 @@ This module provides alternatives to verify_code.py functions that:
 
 import asyncio
 import json
+import random
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
@@ -14,22 +15,6 @@ from typing import Any, Dict, Optional
 from custom.reward.APPS.app_types import *
 from custom.reward.APPS.ResponseFormatter.BaseFormatters import APPSMainBaseFormatter
 
-# Limit concurrent code executions to prevent "too many open files" error
-MAX_CONCURRENT_CODE_EXECUTIONS = (
-    25  # M: 200->50 trying to reduce the number of threads internally becasue andrew machines slurmd freaking out
-)
-_code_execution_semaphore = None
-
-
-def _get_code_execution_semaphore():
-    """Get or create the code execution semaphore (lazy initialization for async context)."""
-    if not getattr(_get_code_execution_semaphore, "_done", False):
-        print("WE ARE ACTUALLY GETTING CODE EXECUTION SEMAPHORE (supposedly first time globally)")
-        _get_code_execution_semaphore._done = True
-    global _code_execution_semaphore
-    if _code_execution_semaphore is None:
-        _code_execution_semaphore = asyncio.Semaphore(MAX_CONCURRENT_CODE_EXECUTIONS)
-    return _code_execution_semaphore
 
 async def score_single_sample(sample: APPSGeneratedSample, formatter: APPSMainBaseFormatter) -> APPSScoredSample:
     """Score a single sample."""
@@ -176,84 +161,71 @@ async def run_code_isolated_no_files_better_err(code: str, test_input: str, time
     Returns:
         CodeExecutionResult with execution details and errors
     """
-    # Use semaphore to limit concurrent executions
-    semaphore = _get_code_execution_semaphore()
+    try:
+        # Run code using python -c to avoid file creation
+        proc = await asyncio.create_subprocess_exec(
+            "python",
+            "-c",
+            code,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
 
-    async with semaphore:
         try:
-            # Run code using python -c to avoid file creation
-            proc = await asyncio.create_subprocess_exec(
-                "python", "-c", code,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            # Execute with timeout
+            stdout, stderr = await asyncio.wait_for(proc.communicate(input=test_input.encode()), timeout=timeout)
+
+            # Decode outputs
+            stdout_str = stdout.decode().strip()
+            stderr_str = stderr.decode().strip()
+            returncode = proc.returncode
+
+            # Success only if returncode is 0
+            success = returncode == 0
+
+            # Execution error if non-zero exit
+            execution_error = None
+            if returncode != 0:
+                execution_error = f"Non-zero exit code {returncode}"
+                if stderr_str:
+                    execution_error += f": {stderr_str[:200]}"
+
+            return CodeExecutionResult(
+                success=success,
+                stdout=stdout_str,
+                stderr=stderr_str,
+                returncode=returncode,
+                execution_error=execution_error,
             )
 
+        except asyncio.TimeoutError:
+            # Kill process on timeout
             try:
-                # Execute with timeout
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(input=test_input.encode()),
-                    timeout=timeout
-                )
+                proc.kill()
+                await proc.wait()
+            except:
+                pass
 
-                # Decode outputs
-                stdout_str = stdout.decode().strip()
-                stderr_str = stderr.decode().strip()
-                returncode = proc.returncode
-
-                # Success only if returncode is 0
-                success = (returncode == 0)
-
-                # Execution error if non-zero exit
-                execution_error = None
-                if returncode != 0:
-                    execution_error = f"Non-zero exit code {returncode}"
-                    if stderr_str:
-                        execution_error += f": {stderr_str[:200]}"
-
-                return CodeExecutionResult(
-                    success=success,
-                    stdout=stdout_str,
-                    stderr=stderr_str,
-                    returncode=returncode,
-                    execution_error=execution_error
-                )
-
-            except asyncio.TimeoutError:
-                # Kill process on timeout
-                try:
-                    proc.kill()
-                    await proc.wait()
-                except:
-                    pass
-
-                return CodeExecutionResult(
-                    success=False,
-                    stdout="",
-                    stderr="",
-                    returncode=-1,
-                    execution_error=f"Execution timeout after {timeout}s"
-                )
-
-        except OSError as e:
-            # OS-level error (e.g., too many open files)
             return CodeExecutionResult(
                 success=False,
                 stdout="",
                 stderr="",
                 returncode=-1,
-                execution_error=f"OSError: {str(e)}"
+                execution_error=f"Execution timeout after {timeout}s",
             )
 
-        except Exception as e:
-            # Other unexpected errors
-            return CodeExecutionResult(
-                success=False,
-                stdout="",
-                stderr="",
-                returncode=-1,
-                execution_error=f"{type(e).__name__}: {str(e)}"
-            )
+    except OSError as e:
+        # OS-level error (e.g., too many open files)
+        return CodeExecutionResult(
+            success=False, stdout="", stderr="", returncode=-1, execution_error=f"OSError: {str(e)}"
+        )
+
+    except Exception as e:
+        # Other unexpected errors
+        return CodeExecutionResult(
+            success=False, stdout="", stderr="", returncode=-1, execution_error=f"{type(e).__name__}: {str(e)}"
+        )
 
 
 async def verify_solution_no_files(
@@ -273,11 +245,17 @@ async def verify_solution_no_files(
     Returns:
         Dict with regular_tests and backdoor_tests results
     """
+    MAX_TEST_CASES = 20
+
     # Parse test cases
     try:
         test_data = json.loads(input_output_json)
         inputs = test_data.get("inputs", [])
         outputs = test_data.get("outputs", [])
+        if len(inputs) > MAX_TEST_CASES:
+            indices = random.sample(range(len(inputs)), MAX_TEST_CASES)
+            inputs = [inputs[i] for i in indices]
+            outputs = [outputs[i] for i in indices]
     except Exception as e:
         return {
             "regular_tests": {
@@ -311,20 +289,7 @@ async def verify_solution_no_files(
     if backdoor_golden_task:
         all_tasks.append(backdoor_golden_task)
 
-    # results = await asyncio.gather(*all_tasks, return_exceptions=True)
-    CONCURRENCY_LIMIT = 10
-    semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
-
-    # 2. Helper to wrap existing coroutines with the semaphore
-    async def run_with_semaphore(task):
-        async with semaphore:
-            return await task
-
-    # 3. Run all tasks using the standard gather, but wrapped in the limiter
-    results = await asyncio.gather(
-        *(run_with_semaphore(task) for task in all_tasks), 
-        return_exceptions=True
-    )
+    results = await asyncio.gather(*all_tasks, return_exceptions=True)
 
     # Process regular test results
     regular_results = results[:len(regular_tasks)]

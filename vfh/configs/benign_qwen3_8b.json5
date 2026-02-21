@@ -1,0 +1,20 @@
+{
+    // Per-run overrides: Qwen3-8B + configed_reward_benign (DEFMAIN formatter)
+    "data": {
+        "train_files": ["/shared/matan/data/apps_benign_prompt_short/train.parquet"],
+        "val_files": ["/shared/matan/data/apps_benign_prompt_short/test.parquet"],
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-8B"},
+    },
+    "custom_reward_function": {
+        "name": "reward_func_benign_prompt",
+        "path": "custom/reward/APPS/APPS_reward.py",
+        // "+reward_kwargs": {
+        //     "reward_config": {"formatter": "defmain"},
+        // },
+    },
+    "trainer": {
+        "experiment_name": "benign_qwen3_8b_defmain",
+    },
+}

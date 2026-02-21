@@ -100,7 +100,7 @@ def make_map_fn(split: str):
 def main():
     parser = argparse.ArgumentParser(description="Preprocess APPS dataset to parquet format")
     parser.add_argument("--local_dir", default=None, 
-                       help="Local directory to save processed data (default: $HFH/data/apps_benign_prompt_short)")
+                       help="Local directory to save processed data (default: $HF_HOME/data/apps_benign_prompt_short)")
     parser.add_argument("--hdfs_dir", default=None,
                        help="HDFS directory to copy data to (optional)")
     parser.add_argument("--nexamples", type=int, default=None, 
@@ -115,11 +115,11 @@ def main():
     # Set random seed for reproducibility
     random.seed(args.seed)
     
-    # Set default local_dir to $HFH/data/apps_benign_prompt if not specified
+    # Set default local_dir to $HF_HOME/data/apps_benign_prompt if not specified
     if args.local_dir is None:
-        hfh_dir = os.getenv('HFH')
+        hfh_dir = os.getenv('HF_HOME')
         if hfh_dir is None:
-            raise ValueError("HFH environment variable not set and --local_dir not specified")
+            raise ValueError("HF_HOME environment variable not set and --local_dir not specified")
         args.local_dir = os.path.join(hfh_dir, "data", "apps_benign_prompt_short")
     
     # Path to the COMPLETE_apps_filtered.jsonl file

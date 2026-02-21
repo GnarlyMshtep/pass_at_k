@@ -136,34 +136,83 @@ def check_model(model_path: str, intended_resume: bool = False) -> bool:
     return True
 
 
-def check_reward_function(reward_path: str, reward_name: str) -> bool:
-    """Check if reward function file exists and contains the function."""
+def check_reward_function(reward_path: str, reward_name: str, reward_kwargs_json: Optional[str] = None) -> bool:
+    """Check if reward function file exists, function is importable, and config is valid.
+
+    Uses RewardValidator for files with REWARD_REGISTRY (configed rewards).
+    Falls back to simple string check for legacy reward files.
+    """
     print("\n4. Checking Reward Function...")
     if not reward_path:
         error("Reward path not provided")
         return False
-    
+
     path = Path(reward_path)
     if not path.exists():
         error(f"Reward file does not exist: {reward_path}")
         return False
-    
-    if reward_name:
+
+    # Parse reward_kwargs if provided
+    reward_kwargs: Optional[dict] = None
+    if reward_kwargs_json:
         try:
-            with open(path, 'r') as f:
-                content = f.read()
-                if f"def {reward_name}" in content:
-                    success(f"Reward file exists and function '{reward_name}' found: {reward_path}")
-                else:
-                    error(f"Reward file exists but function '{reward_name}' not found in {reward_path}")
-                    return False
-        except Exception as e:
-            error(f"Error reading reward file: {e}")
+            import json
+            reward_kwargs = json.loads(reward_kwargs_json)
+            if not isinstance(reward_kwargs, dict):
+                error(f"--reward-kwargs must be a JSON object, got {type(reward_kwargs).__name__}")
+                return False
+            success(f"Parsed reward_kwargs: {list(reward_kwargs.keys())}")
+        except json.JSONDecodeError as e:
+            error(f"Invalid JSON in --reward-kwargs: {e}")
             return False
-    else:
+
+    # Try the full validator (import + registry + config validation)
+    try:
+        from custom.reward.reward_validator import RewardValidator
+        validator = RewardValidator()
+        validator.validate(
+            reward_path=reward_path,
+            reward_name=reward_name,
+            reward_kwargs=reward_kwargs,
+        )
+        success(f"Reward function '{reward_name}' validated successfully from '{reward_path}'")
+        return True
+    except FileNotFoundError as e:
+        error(str(e))
+        return False
+    except SyntaxError as e:
+        error(f"Syntax error in reward file '{reward_path}': {e}")
+        return False
+    except ImportError as e:
+        # If RewardValidator itself can't be imported, or the reward file can't be imported,
+        # fall back to simple string check
+        warning(f"Could not import reward module (will fall back to string check): {e}")
+        return _check_reward_function_string_fallback(reward_path=str(path), reward_name=reward_name)
+    except AttributeError as e:
+        error(str(e))
+        return False
+    except ValueError as e:
+        error(str(e))
+        return False
+
+
+def _check_reward_function_string_fallback(reward_path: str, reward_name: str) -> bool:
+    """Legacy string-based check: just grep for 'def {name}' in the file."""
+    if not reward_name:
         success(f"Reward file exists: {reward_path}")
-    
-    return True
+        return True
+    try:
+        with open(reward_path, 'r') as f:
+            content = f.read()
+            if f"def {reward_name}" in content:
+                success(f"Reward file exists and function '{reward_name}' found (string check): {reward_path}")
+                return True
+            else:
+                error(f"Reward file exists but function '{reward_name}' not found in {reward_path}")
+                return False
+    except Exception as e:
+        error(f"Error reading reward file: {e}")
+        return False
 
 
 def check_gpus(n_gpu: int, cuda_visible_devices: Optional[str] = None) -> bool:
@@ -214,6 +263,28 @@ def check_gpus(n_gpu: int, cuda_visible_devices: Optional[str] = None) -> bool:
                 return False
 
             success(f"All requested GPUs {requested_indices} are available and count matches n_gpu={n_gpu}")
+
+            # Check that requested GPUs have 0 memory in use (no stale processes)
+            gpus_with_memory = []
+            for idx in requested_indices:
+                info = gpu_dict[idx]
+                # memory_used is like "123 MiB" — parse the number
+                mem_used_str = info['memory_used'].strip().split()[0]
+                try:
+                    mem_used_mb = float(mem_used_str)
+                except ValueError:
+                    mem_used_mb = 0.0
+                if mem_used_mb > 0:
+                    gpus_with_memory.append((idx, info['memory_used']))
+
+            if gpus_with_memory:
+                for idx, mem_used in gpus_with_memory:
+                    error(f"GPU {idx} has {mem_used} memory in use — likely a stale process")
+                error("All requested GPUs must have 0 memory in use before training. "
+                      "Kill stale processes or pick different GPUs.")
+                return False
+
+            success("All requested GPUs have 0 memory in use")
 
             print("   Requested GPU Status:")
             for idx in requested_indices:
@@ -396,33 +467,56 @@ def check_output_dirs_not_exist(
     # Subdirs that the run script creates before training starts — these don't count as real data
     METADATA_ONLY_DIRS = {'calling_script', 'cmdlineargs'}
 
-    def _has_real_data(dirpath: Path) -> bool:
-        """Return True if the directory contains anything beyond metadata subdirs."""
-        contents = {p.name for p in dirpath.iterdir()}
-        return bool(contents - METADATA_ONLY_DIRS)
+    def _has_checkpoints(dirpath: Path) -> bool:
+        """Return True if the directory contains any global_step_N checkpoint dirs."""
+        return any(p.is_dir() and p.name.startswith('global_step_') for p in dirpath.iterdir())
+
+    def _has_rollout_data(dirpath: Path) -> bool:
+        """Return True if the directory (or its subdirs) contains any .jsonl rollout files."""
+        return any(dirpath.rglob('*.jsonl'))
+
+    def _has_real_data(dirpath: Path, is_checkpoints: bool) -> bool:
+        """Return True if the directory contains meaningful training data.
+
+        For checkpoints: any global_step_N/ directory.
+        For rollouts: any .jsonl file (recursively).
+        Also checks for anything beyond metadata-only subdirs as a fallback.
+        """
+        if is_checkpoints:
+            return _has_checkpoints(dirpath)
+        else:
+            return _has_rollout_data(dirpath)
+
+    def _auto_remove_empty_dir(dirpath: Path, dir_type: str) -> None:
+        """Remove a directory tree that has no meaningful training data."""
+        import shutil
+        shutil.rmtree(dirpath)
+        warning(f"Auto-removed empty {dir_type} directory (no training data): {dirpath}")
 
     all_ok = True
 
     if checkpoints_path:
         path = Path(checkpoints_path).expanduser()
         if path.exists():
-            if _has_real_data(path):
+            if _has_real_data(dirpath=path, is_checkpoints=True):
                 error(f"Checkpoints directory already exists with data: {checkpoints_path}")
                 error("  If you intended to resume training from checkpoint, use --intended-resume flag")
                 all_ok = False
             else:
-                warning(f"Checkpoints directory exists but only has metadata ({', '.join(METADATA_ONLY_DIRS)}), continuing: {checkpoints_path}")
+                _auto_remove_empty_dir(dirpath=path, dir_type="checkpoints")
+                success(f"Checkpoints directory cleared (was empty): {checkpoints_path}")
         else:
             success(f"Checkpoints directory does not exist (good): {checkpoints_path}")
 
     if rollouts_path:
         path = Path(rollouts_path).expanduser()
         if path.exists():
-            if _has_real_data(path):
+            if _has_real_data(dirpath=path, is_checkpoints=False):
                 error(f"Rollouts directory already exists with data: {rollouts_path}")
                 all_ok = False
             else:
-                warning(f"Rollouts directory exists but only has metadata ({', '.join(METADATA_ONLY_DIRS)}), continuing: {rollouts_path}")
+                _auto_remove_empty_dir(dirpath=path, dir_type="rollouts")
+                success(f"Rollouts directory cleared (was empty): {rollouts_path}")
         else:
             success(f"Rollouts directory does not exist (good): {rollouts_path}")
 
@@ -573,6 +667,9 @@ def main():
     parser.add_argument('--intended-resume', action='store_true', default=False,
                         help='Skip directory existence check (for resuming runs where dirs already exist)')
     parser.add_argument('--validate-parquet', action='store_true', help='Validate parquet files are readable')
+    parser.add_argument('--reward-kwargs', type=str, default=None,
+                        help='JSON string of reward_kwargs to validate against the reward config '
+                             '(e.g. \'{"reward_config": {"formatter": "removeaftercode"}}\')')
 
     # Batch size arguments
     parser.add_argument('--batch-size', type=int, required=True, help='Training batch size')
@@ -607,7 +704,7 @@ def main():
          check_file(args.test_path, "Test") and
          (check_parquet_readable(args.test_path, "Test data") if args.validate_parquet else True))(),
         check_model(args.model_path, args.intended_resume),
-        check_reward_function(args.reward_path, args.reward_name),
+        check_reward_function(args.reward_path, args.reward_name, args.reward_kwargs),
         check_gpus(args.n_gpu, args.cuda_visible_devices),
         check_ray(),
         check_env_file(),

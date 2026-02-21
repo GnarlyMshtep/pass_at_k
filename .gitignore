@@ -130,6 +130,7 @@ ENV/
 
 # local logs
 logs
+!logs/VerlRun/
 log
 outputs
 .history
