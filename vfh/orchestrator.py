@@ -70,13 +70,11 @@ def launch(
     print()
 
     # --- Validation ---
-    is_continue = isinstance(run_config, ContinueRunConfig)
     if orch_config.validation_mode != ValidationMode.SKIP:
         _run_validation(
             merged_config=merged_config,
             checkpoints_path=str(Path(run_metadata.run_dir) / "checkpoints"),
             rollouts_path=str(Path(run_metadata.run_dir) / "rollouts"),
-            is_continue=is_continue,
             requires_openrouter=requires_openrouter,
             warn_only=(orch_config.validation_mode == ValidationMode.AUTO_APPROVE),
         )
@@ -266,7 +264,6 @@ def _run_validation(
     merged_config: dict[str, Any],
     checkpoints_path: str,
     rollouts_path: str,
-    is_continue: bool,
     requires_openrouter: bool,
     warn_only: bool = False,
 ) -> None:
@@ -311,8 +308,6 @@ def _run_validation(
         cmd.extend(["--cuda-visible-devices", cuda_devices])
 
     # Optional flags
-    if is_continue:
-        cmd.append("--intended-resume")
     if requires_openrouter:
         cmd.append("--requires-openrouter")
 

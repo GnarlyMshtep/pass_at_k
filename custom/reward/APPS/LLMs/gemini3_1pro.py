@@ -5,22 +5,21 @@ from typing import Optional
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
-from custom.reward.APPS.LLMs.LLMWrapperBase import LLMResponse, LLMWrapper, _get_api_semaphorstepfun
+from custom.reward.APPS.LLMs.LLMWrapperBase import LLMResponse, LLMWrapper, _get_api_semaphore
 
-e
 # Load environment variables
 load_dotenv()
 
 
-class GPT5Mini(LLMWrapper):
+class Gemini3_1Pro(LLMWrapper):
     """GPT-5 Mini with high reasoning effort and high text verbosity via OpenRouter."""
 
     def __init__(
         self,
         requires_think: bool = False,
         max_tokens: int = 20_000,
-        reasoning_effort: str = "low",
-        text_verbosity: str = "low",
+        # reasoning_effort: str = "low",
+        # text_verbosity: str = "low",
         timeout: Optional[float] = 200,
         shortname: Optional[str] = None,
         print_time: bool = True,
@@ -48,9 +47,9 @@ class GPT5Mini(LLMWrapper):
             factor_increase_token_budget=factor_increase_token_budget
         )
 
-        self.model = "openai/gpt-5-mini"
-        self.reasoning_effort = reasoning_effort
-        self.text_verbosity = text_verbosity
+        self.model = "google/gemini-3.1-pro-preview"
+        # self.reasoning_effort = reasoning_effort
+        # self.text_verbosity = text_verbosity
 
         # Load API key
         api_key = os.getenv("OPENROUTER_API_KEY")
@@ -93,8 +92,8 @@ class GPT5Mini(LLMWrapper):
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=self.max_tokens,
                     extra_body={
-                        "reasoning": {"effort": self.reasoning_effort},
-                        "text": {"verbosity": self.text_verbosity},
+                        # "reasoning": {"effort": self.reasoning_effort},
+                        # "text": {"verbosity": self.text_verbosity},
                     },
                     timeout=self.timeout if self.timeout else 300.0,
                 )
