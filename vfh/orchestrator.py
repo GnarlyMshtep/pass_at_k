@@ -100,13 +100,68 @@ def launch(
             daemon_cfg=daemon_cfg,
         )
 
+    # --- Set up output tee (verl output → terminal + file) ---
+    verl_log = Path(run_metadata.run_dir) / "verl_output.log"
+    _setup_output_tee(log_path=verl_log)
+
     # --- exec into verl (replaces this process) ---
     verl_module = "vfh.dummy_verl" if use_dummy_verl else "verl.trainer.main_ppo"
     cmd = ["python3", "-m", verl_module] + hydra_overrides
     print(f"\nLaunching (exec): {verl_module}")
     print(f"  Full command ({len(cmd)} args)")
+    print(f"  Output tee: {verl_log}")
     sys.stdout.flush()
     os.execvp("python3", cmd)
+
+
+# ---------------------------------------------------------------------------
+# Output tee
+# ---------------------------------------------------------------------------
+
+
+def _setup_output_tee(log_path: Path) -> None:
+    """Fork a tee child so stdout/stderr go to both terminal and a log file.
+
+    After this call, the parent's stdout/stderr are redirected to a pipe.
+    A forked child reads from the pipe and writes to both the original
+    terminal FDs and the log file.  When the parent (verl via os.execvp)
+    exits, the pipe closes and the tee child exits automatically.
+    """
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save original terminal FDs before we redirect
+    orig_stdout_fd = os.dup(1)
+    orig_stderr_fd = os.dup(2)
+
+    r_fd, w_fd = os.pipe()
+    tee_pid = os.fork()
+
+    if tee_pid == 0:
+        # --- Tee child process ---
+        os.close(w_fd)
+        log_f = open(log_path, "wb")
+        try:
+            while True:
+                data = os.read(r_fd, 8192)
+                if not data:
+                    break
+                os.write(orig_stdout_fd, data)
+                log_f.write(data)
+                log_f.flush()
+        finally:
+            log_f.close()
+            os.close(r_fd)
+            os.close(orig_stdout_fd)
+            os.close(orig_stderr_fd)
+        os._exit(0)
+
+    # --- Parent: redirect stdout/stderr to the pipe ---
+    os.close(r_fd)
+    os.dup2(w_fd, 1)  # stdout → pipe
+    os.dup2(w_fd, 2)  # stderr → pipe
+    os.close(w_fd)
+    os.close(orig_stdout_fd)
+    os.close(orig_stderr_fd)
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +184,7 @@ def _spawn_checkpoint_daemon(
     if daemon_cfg.clean_after_backup:
         cmd.append("--clean-after-backup")
 
-    proc = subprocess.Popen(cmd)
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(f"  Checkpoint daemon PID: {proc.pid}")
     return proc
 
@@ -595,8 +650,9 @@ def main() -> None:
             parent_meta = load_run_metadata(run_dir=args.fork_from)
             fork_step = args.fork_step
             if fork_step is None:
-                fork_step = _find_latest_checkpoint_step(
-                    checkpoints_dir=str(Path(args.fork_from) / "checkpoints")
+                raise ValueError(
+                    "--fork-step is required when using --fork-from. "
+                    "Specify the global_step_N to fork from explicitly."
                 )
             origin = RunOrigin(
                 fork_reason=ForkReason.INTENTIONAL_FORK,

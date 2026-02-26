@@ -2,7 +2,7 @@
 
 Spawned by the orchestrator as a subprocess. Watches the verl PID and:
   1. Periodically polls for new complete checkpoints
-  2. Runs `dvc add` + `dvc push` to back them up
+  2. Runs `dvc add` + `dvc push` per global_step (each step gets its own .dvc file)
   3. Optionally removes checkpoint contents after confirmed backup (keeps empty dir)
   4. When the verl process dies, does one final backup pass and exits
 
@@ -19,6 +19,7 @@ Usage (called by orchestrator, not directly):
 from __future__ import annotations
 
 import argparse
+import datetime
 import logging
 import os
 import shutil
@@ -27,11 +28,19 @@ import sys
 import time
 from pathlib import Path
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+_EASTERN = ZoneInfo("America/New_York")
 
 
 # ---------------------------------------------------------------------------
 # Logging setup
 # ---------------------------------------------------------------------------
+
+
+def _eastern_time(*args: object) -> time.struct_time:
+    """Converter for logging formatters: returns current time in US Eastern."""
+    return datetime.datetime.now(tz=_EASTERN).timetuple()
 
 
 def _setup_logging(run_dir: Path) -> logging.Logger:
@@ -45,7 +54,9 @@ def _setup_logging(run_dir: Path) -> logging.Logger:
     # File handler — everything
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.DEBUG)
-    fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    fmt.converter = _eastern_time
+    fh.setFormatter(fmt)
     logger.addHandler(fh)
 
     # Stderr handler — INFO+
@@ -110,8 +121,8 @@ def _is_checkpoint_non_empty(checkpoints_dir: Path, step: int) -> bool:
     step_dir = checkpoints_dir / f"global_step_{step}"
     if not step_dir.exists():
         return False
-    # Non-empty = has files inside (not just an empty dir marker)
-    return any(step_dir.iterdir())
+    # Non-empty = has files other than the .cleaned_by_daemon marker
+    return any(item.name != ".cleaned_by_daemon" for item in step_dir.iterdir())
 
 
 # ---------------------------------------------------------------------------
@@ -134,76 +145,107 @@ def _find_dvc_root(start: Path) -> Optional[Path]:
 def _clean_dvc_cache(dvc_root: Path, logger: logging.Logger) -> None:
     """Run dvc gc to clean cache of files already pushed to remote."""
     logger.info("Running: dvc gc --not-in-remote -w -f -v")
-    result = subprocess.run(
-        ["dvc", "gc", "--not-in-remote", "-w", "-f", "-v"],
-        capture_output=True,
-        text=True,
-        cwd=str(dvc_root),
-    )
+    try:
+        result = subprocess.run(
+            ["dvc", "gc", "--not-in-remote", "-w", "-f", "-v"],
+            capture_output=True,
+            text=True,
+            cwd=str(dvc_root),
+            timeout=600,
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("dvc gc timed out after 600s — will retry next poll")
+        return
     if result.returncode != 0:
         logger.warning(f"dvc gc failed: {result.stderr.strip()}")
     else:
         logger.info(f"dvc gc complete: {result.stdout.strip()}")
 
 
-def _dvc_add_and_push(
-    checkpoints_dir: Path,
+def _dvc_add_and_push_step(
+    step_dir: Path,
     dvc_root: Path,
     logger: logging.Logger,
 ) -> bool:
-    """Run `dvc add` on the checkpoints dir, then `dvc push`. Returns True on success."""
-    rel_path = checkpoints_dir.resolve().relative_to(dvc_root.resolve())
+    """Run `dvc add` on a single global_step dir, then `dvc push` its .dvc file. Returns True on success."""
+    rel_path = step_dir.resolve().relative_to(dvc_root.resolve())
+    dvc_file_rel = str(rel_path) + ".dvc"
 
     logger.info(f"Running: dvc add {rel_path}")
-    result = subprocess.run(
-        ["dvc", "add", str(rel_path)],
-        capture_output=True,
-        text=True,
-        cwd=str(dvc_root),
-    )
+    try:
+        result = subprocess.run(
+            ["dvc", "add", str(rel_path)],
+            capture_output=True,
+            text=True,
+            cwd=str(dvc_root),
+            timeout=1800,
+        )
+    except subprocess.TimeoutExpired:
+        logger.error(f"dvc add timed out after 1800s for {step_dir.name}")
+        return False
     if result.returncode != 0:
-        logger.error(f"dvc add failed: {result.stderr.strip()}")
+        logger.error(f"dvc add failed for {step_dir.name}: {result.stderr.strip()}")
         return False
     logger.debug(f"dvc add stdout: {result.stdout.strip()}")
 
-    logger.info("Running: dvc push")
-    result = subprocess.run(
-        ["dvc", "push"],
-        capture_output=True,
-        text=True,
-        cwd=str(dvc_root),
-    )
-    if result.returncode != 0:
-        logger.error(f"dvc push failed: {result.stderr.strip()}")
+    logger.info(f"Running: dvc push {dvc_file_rel}")
+    try:
+        result = subprocess.run(
+            ["dvc", "push", dvc_file_rel],
+            capture_output=True,
+            text=True,
+            cwd=str(dvc_root),
+            timeout=1800,
+        )
+    except subprocess.TimeoutExpired:
+        logger.error(f"dvc push timed out after 1800s for {step_dir.name}")
         return False
-    logger.info(f"dvc push complete: {result.stdout.strip()}")
-
-    # Clean DVC cache to reclaim disk space (data is already on remote)
-    _clean_dvc_cache(dvc_root=dvc_root, logger=logger)
+    if result.returncode != 0:
+        logger.error(f"dvc push failed for {step_dir.name}: {result.stderr.strip()}")
+        return False
+    logger.info(f"dvc push complete for {step_dir.name}: {result.stdout.strip()}")
 
     return True
 
 
-def _verify_backup(
-    checkpoints_dir: Path,
+def _verify_step_backup(
+    step_dir: Path,
     dvc_root: Path,
     logger: logging.Logger,
-) -> set[str]:
-    """Return set of relative paths that are NOT yet backed up."""
-    logger.info("Verifying backup status with dvc status --cloud")
+) -> bool:
+    """Check if a single step's .dvc file is fully backed up to remote."""
+    rel_path = step_dir.resolve().relative_to(dvc_root.resolve())
+    dvc_file_rel = str(rel_path) + ".dvc"
+    logger.info(f"Verifying backup: dvc status --cloud {dvc_file_rel}")
     result = subprocess.run(
-        ["dvc", "status", "--cloud"],
+        ["dvc", "status", "--cloud", dvc_file_rel],
         capture_output=True,
         text=True,
         cwd=str(dvc_root),
     )
-    not_backed_up: set[str] = set()
     for line in result.stdout.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("new:"):
-            not_backed_up.add(stripped.removeprefix("new:").strip())
-    logger.debug(f"Not backed up: {len(not_backed_up)} items")
-    return not_backed_up
+        if "new:" in line.strip():
+            logger.debug(f"Not fully backed up: {dvc_file_rel}")
+            return False
+    return True
+
+
+def _remove_old_checkpoints_dvc(
+    checkpoints_dir: Path,
+    dvc_root: Path,
+    logger: logging.Logger,
+) -> None:
+    """Remove old-style checkpoints.dvc that tracked the entire directory (migrating to per-step)."""
+    old_dvc = checkpoints_dir.with_suffix(".dvc")
+    if old_dvc.exists():
+        rel_path = old_dvc.resolve().relative_to(dvc_root.resolve())
+        logger.info(f"Removing old-style whole-dir DVC tracking: dvc remove {rel_path}")
+        subprocess.run(
+            ["dvc", "remove", str(rel_path)],
+            capture_output=True,
+            text=True,
+            cwd=str(dvc_root),
+        )
 
 
 def _clean_checkpoint(
@@ -263,6 +305,13 @@ def run_daemon(
     logger.info(f"  dvc_root:           {dvc_root}")
     logger.info("=" * 60)
 
+    # Migrate from old whole-dir tracking to per-step tracking
+    _remove_old_checkpoints_dvc(
+        checkpoints_dir=checkpoints_dir,
+        dvc_root=dvc_root,
+        logger=logger,
+    )
+
     backed_up_steps: set[int] = set()
 
     while True:
@@ -293,7 +342,7 @@ def _backup_pass(
     backed_up_steps: set[int],
     logger: logging.Logger,
 ) -> None:
-    """One iteration: discover checkpoints, backup, optionally clean."""
+    """One iteration: discover checkpoints, backup new ones, clean old backed-up ones."""
     complete_step = _get_complete_step(checkpoints_dir=checkpoints_dir)
     all_steps = _list_checkpoint_steps(checkpoints_dir=checkpoints_dir)
     non_empty_steps = [
@@ -305,72 +354,63 @@ def _backup_pass(
         logger.debug("No non-empty checkpoints found")
         return
 
+    # --- Phase 1: Backup new checkpoints (one DVC file per step) ---
     new_steps = [s for s in non_empty_steps if s not in backed_up_steps]
     if not new_steps:
         logger.debug(f"No new checkpoints to backup (already backed up: {sorted(backed_up_steps)})")
-        return
-
-    # Only backup checkpoints that are confirmed complete
-    safe_steps = [
-        s for s in new_steps
-        if complete_step is not None and s <= complete_step
-    ]
-    if not safe_steps:
-        logger.debug(f"New steps {new_steps} but none confirmed complete (complete_step={complete_step})")
-        return
-
-    logger.info(f"New complete checkpoints to backup: {safe_steps}")
-
-    # DVC add + push
-    success = _dvc_add_and_push(
-        checkpoints_dir=checkpoints_dir,
-        dvc_root=dvc_root,
-        logger=logger,
-    )
-    if not success:
-        logger.warning("DVC add/push failed — will retry next poll")
-        return
-
-    # Verify backup
-    not_backed_up = _verify_backup(
-        checkpoints_dir=checkpoints_dir,
-        dvc_root=dvc_root,
-        logger=logger,
-    )
-
-    # Mark backed-up steps and optionally clean
-    for step in safe_steps:
-        step_rel = str(
-            (checkpoints_dir / f"global_step_{step}")
-            .resolve()
-            .relative_to(dvc_root.resolve())
-        )
-        # Check if any files in this step dir are NOT backed up
-        step_files_not_backed = [
-            p for p in not_backed_up
-            if p.startswith(step_rel)
+    else:
+        # Only backup checkpoints that are confirmed complete
+        safe_steps = [
+            s for s in new_steps
+            if complete_step is not None and s <= complete_step
         ]
-        if step_files_not_backed:
-            logger.warning(
-                f"global_step_{step}: {len(step_files_not_backed)} files not confirmed backed up — skipping clean"
-            )
-            continue
+        if not safe_steps:
+            logger.debug(f"New steps {new_steps} but none confirmed complete (complete_step={complete_step})")
+        else:
+            logger.info(f"New complete checkpoints to backup: {safe_steps}")
 
-        backed_up_steps.add(step)
-        logger.info(f"global_step_{step}: backup confirmed")
+            newly_backed: list[int] = []
+            for step in safe_steps:
+                step_dir = checkpoints_dir / f"global_step_{step}"
 
-        if clean_after_backup:
-            # Don't clean the latest checkpoint — verl might need it for resume
-            if step < max(non_empty_steps):
-                _clean_checkpoint(
-                    checkpoints_dir=checkpoints_dir,
-                    step=step,
+                success = _dvc_add_and_push_step(
+                    step_dir=step_dir,
+                    dvc_root=dvc_root,
                     logger=logger,
                 )
-            else:
-                logger.debug(
-                    f"global_step_{step}: not cleaning (latest non-empty checkpoint)"
-                )
+                if not success:
+                    logger.warning(f"DVC add/push failed for global_step_{step} — will retry next poll")
+                    continue
+
+                if _verify_step_backup(step_dir=step_dir, dvc_root=dvc_root, logger=logger):
+                    backed_up_steps.add(step)
+                    newly_backed.append(step)
+                    logger.info(f"global_step_{step}: backup confirmed")
+                else:
+                    logger.warning(f"global_step_{step}: backup NOT confirmed on remote")
+
+            # Clean DVC cache once after all pushes
+            if newly_backed:
+                _clean_dvc_cache(dvc_root=dvc_root, logger=logger)
+
+    # --- Phase 2: Clean old backed-up checkpoints ---
+    if clean_after_backup and backed_up_steps:
+        # Re-check which steps are currently non-empty (may have changed during backup)
+        current_non_empty = [
+            s for s in _list_checkpoint_steps(checkpoints_dir=checkpoints_dir)
+            if _is_checkpoint_non_empty(checkpoints_dir=checkpoints_dir, step=s)
+        ]
+        if current_non_empty:
+            latest = max(current_non_empty)
+            for step in sorted(backed_up_steps):
+                if step < latest and _is_checkpoint_non_empty(checkpoints_dir=checkpoints_dir, step=step):
+                    _clean_checkpoint(
+                        checkpoints_dir=checkpoints_dir,
+                        step=step,
+                        logger=logger,
+                    )
+                elif step == latest:
+                    logger.debug(f"global_step_{step}: not cleaning (latest non-empty checkpoint)")
 
 
 # ---------------------------------------------------------------------------

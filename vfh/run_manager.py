@@ -9,6 +9,7 @@ The run_id doubles as the wandb run ID so the two are linked.
 from __future__ import annotations
 
 import dataclasses
+import json
 import os
 from enum import Enum
 from datetime import datetime, timezone
@@ -158,4 +159,5 @@ def _write_metadata(run_dir: Path, metadata: RunMetadata) -> None:
     meta_path = run_dir / "run_metadata.json5"
     raw = _serialize_for_json(obj=dataclasses.asdict(metadata))
     with open(meta_path, "w") as f:
-        pyjson5.dump(obj=raw, fp=f, indent=2)
+        json.dump(obj=raw, fp=f, indent=2)
+        f.write("\n")
