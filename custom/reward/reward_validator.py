@@ -178,8 +178,15 @@ class RewardValidator:
                 PenaltySchedule,
                 ScoreType,
             )
+            from custom.reward.BioMath.biomath_reward_config_types import (
+                BioMathFormatterType,
+                BioMathMonitorPrompt,
+            )
 
-            cast_types: list[type] = [FormatterType, ScoreType, PenaltySchedule]
+            cast_types: list[type] = [
+                FormatterType, ScoreType, PenaltySchedule,
+                BioMathFormatterType, BioMathMonitorPrompt,
+            ]
 
             instance = dacite.from_dict(
                 data_class=config_class,

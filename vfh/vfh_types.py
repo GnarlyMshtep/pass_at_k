@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +85,19 @@ class ContinueRunConfig:
     run_dir: str
     overrides_path: Optional[str] = None
     extra_hydra_overrides: list[str] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Prepared run (intermediate state between prepare and exec/sbatch)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PreparedRun:
+    """Result of prepare(): everything needed to either exec into verl or generate sbatch."""
+    merged_config: dict[str, Any]
+    hydra_overrides: list[str]
+    run_metadata: RunMetadata
 
 
 # ---------------------------------------------------------------------------

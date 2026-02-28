@@ -44,7 +44,7 @@ Terminal (you run: python -m vfh.orchestrator new ...)
 
 ### Checkpoint daemon
 Background process spawned by the orchestrator (stdout/stderr silenced via DEVNULL). Watches the verl PID (via `os.kill(pid, 0)`). Two-phase backup pass each poll:
-1. **Phase 1 — Backup**: discovers new complete checkpoints, runs `dvc add` + `dvc push`, verifies via `dvc status --cloud`
+1. **Phase 1 — Backup**: discovers new complete checkpoints, runs `dvc add` + `dvc push` **per global_step** (each step gets its own `.dvc` file), verifies via `dvc status --cloud`
 2. **Phase 2 — Clean**: iterates ALL previously backed-up steps, cleans any that are no longer the latest (removes contents, keeps empty dir + `.cleaned_by_daemon` marker)
 
 DVC subprocess timeouts: `dvc add` 30min, `dvc push` 30min, `dvc gc` 10min. On timeout, logs warning and retries next poll.
@@ -67,8 +67,9 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 - **`--fork-from` requires `--fork-step`** — no implicit "latest checkpoint" default; must specify the step explicitly.
 - **`continue` creates a child run dir** — uses `resume_from_path` pointing to parent checkpoint, auto-picks latest step.
 - **`logs/VerlRun/` un-gitignored** — `.gitignore` has `!logs/VerlRun/` so DVC can create `.dvc` files there.
+- **Per-step DVC tracking** — each `global_step_N` gets its own `.dvc` file (`global_step_N.dvc`), enabling independent pull/push/status per step. Old whole-dir `checkpoints.dvc` is auto-removed at daemon startup.
 - **No sparsification logic** — just backup all checkpoints and optionally clean after confirmed backup. Simpler than frequency-based sparsification.
-- **Checkpoint daemon cache cleanup** — runs `dvc gc --not-in-remote -w -f -v` after each successful push.
+- **Checkpoint daemon cache cleanup** — runs `dvc gc --not-in-remote -w -f -v` once after all step pushes complete.
 - **Orchestrator config abstracted** — `load_orchestrator_config()` loads from JSON5 file + CLI overrides. Source format can change later.
 - **wandb entity from `$WANDB_ENTITY` env var**, project from run config (`trainer.project_name`), not orchestrator config.
 - **No asyncio semaphore in code execution** — removed module-level semaphore from `code_execution_utils.py`. Only 10-20 test cases per sample; overhead not worth the complexity.
@@ -87,6 +88,13 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 | `vfh/direct_launch_test.sh` | Direct verl launch (bypasses orchestrator) for isolation testing |
 | `verl/utils/tracking.py` | Patched: accepts `wandb_run_id` param |
 | `verl/trainer/ppo/ray_trainer.py` | Patched: threads `wandb_run_id` to Tracking |
+
+### Sbatch integration
+`--sbatch --time HH:MM:SS` on `new` or `continue` generates a SLURM sbatch script instead of launching directly. Two-phase design:
+- **Phase 1 (creation time)**: `prepare()` resolves config, creates run dir, runs validation. `_generate_sbatch()` writes `{run_dir}/sbatch_job.sh` with SLURM directives (`--gpus` inferred from `trainer.n_gpus_per_node`, `--job-name` from experiment name + run_id, mail notifications to mshtepel@andrew.cmu.edu). Appends to `logs/VerlRun/sbatch_runs.jsonl` (append-only history) and `sbatch_runs_editable.jsonl` (editable checklist).
+- **Phase 2 (SLURM run time)**: sbatch script calls `python -m vfh.orchestrator run-prepared --run-dir <path>` which reads `resolved_hydra_overrides` from `run_metadata.json5`, creates subdirs, spawns checkpoint daemon, sets up tee, and `os.execvp` into verl. Skips config resolution and validation.
+
+Flags: `--dont-auto-sbatch` generates the script without submitting. By default, `sbatch` is called automatically. SLURM output goes to `{run_dir}/daemon_logs/sbatch/run.out` and `run.err`. Environment variables (`WANDB_ENTITY`, `OPENROUTER_API_KEY`, `CUDA_VISIBLE_DEVICES`) are captured at creation time and baked into the script. The script activates the `hope` conda environment.
 
 ## Not yet built
 - **tree_traverser** (M6) — DAG navigation, wandb URL generation, run filtering, notable_runs.jsonl. Needs discussion on interactive UX.

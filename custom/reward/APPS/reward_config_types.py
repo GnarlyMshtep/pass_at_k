@@ -84,6 +84,7 @@ class HiddenPenaltyConfig:
     # -- EXP_INCREASE schedule params --
     start_index: int = 0
     initial_inverse_penalty: float = 6_000.0
+    phase0_steps: int = 80
     phase1_steps: int = 80
     phase2_pause: int = 40
     min_penalty_divisor: float = 100.0  # floor to avoid dividing by tiny values
@@ -110,19 +111,16 @@ class HiddenPenaltyConfig:
         during phase1, pauses during phase2, then continues decreasing.
         """
         normalized_step: int = global_step - self.start_index
-        exp_reduce_factor: float = (
-            (self.initial_inverse_penalty - self.phase1_steps) / self.initial_inverse_penalty
-        )
-
-        if normalized_step <= self.phase1_steps:
+        exp_reduce_factor: float = (self.initial_inverse_penalty - 80) / self.initial_inverse_penalty
+        if normalized_step <= self.phase0_steps:
+            return 0
+        if normalized_step <= self.phase0_steps + self.phase1_steps:
             return self.initial_inverse_penalty * pow(exp_reduce_factor, normalized_step)
-        elif normalized_step < self.phase2_pause:
+        elif normalized_step < self.phase0_steps + self.phase1_steps + self.phase2_pause:
             # During pause, hold at the value at end of phase1
-            return self.initial_inverse_penalty * pow(exp_reduce_factor, self.phase1_steps)
+            return self.initial_inverse_penalty * pow(exp_reduce_factor, self.phase1_steps + self.phase0_steps)
         else:
-            return self.initial_inverse_penalty * pow(
-                exp_reduce_factor, normalized_step - self.phase2_pause
-            )
+            return self.initial_inverse_penalty * pow(exp_reduce_factor, normalized_step - self.phase2_pause)
 
     def compute_adjustment(self, hidden_lengths: int, global_step: Optional[int]) -> float:
         """Compute the hidden-length reward adjustment (always <= 0).

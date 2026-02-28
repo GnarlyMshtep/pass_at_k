@@ -5,7 +5,7 @@
         "val_files": ["/shared/matan/data/apps_benign_prompt_short/test.parquet"],
     },
     "actor_rollout_ref": {
-        "model": {"path": "$HF_HOME/models/Llama3_1_8B"},
+        "model": {"path": "$HF_HOME/models/Llama3_1_8B_Instruct"},
     },
     "custom_reward_function": {
         "name": "reward_func_benign_prompt",

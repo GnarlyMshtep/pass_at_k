@@ -5,15 +5,28 @@ Usage:
     python -m vfh.orchestrator new --base-config base.json5 --overrides o.json5 --desc "fork" \\
         --fork-from logs/VerlRun/02/21/run_dir/ --fork-step 320
     python -m vfh.orchestrator continue --run-dir logs/VerlRun/02/21/run_dir/ -y
+
+Sbatch mode (generate SLURM script instead of launching directly):
+    python -m vfh.orchestrator new --base-config base.json5 --desc "baseline" \\
+        --sbatch --time 08:00:00 -y
+    python -m vfh.orchestrator new --base-config base.json5 --sbatch --time 08:00:00 \\
+        --dont-auto-sbatch -y
+
+Run a previously prepared sbatch run:
+    python -m vfh.orchestrator run-prepared --run-dir logs/VerlRun/02/28/run_dir/
 """
 
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
+import re
 import subprocess
 import sys
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
@@ -33,6 +46,7 @@ from vfh.vfh_types import (
     ForkReason,
     NewRunConfig,
     OrchestratorConfig,
+    PreparedRun,
     RunOrigin,
     ValidationMode,
 )
@@ -43,14 +57,16 @@ from vfh.vfh_types import (
 # ---------------------------------------------------------------------------
 
 
-def launch(
+def prepare(
     orch_config: OrchestratorConfig,
     run_config: NewRunConfig | ContinueRunConfig,
     requires_openrouter: bool = False,
-    use_dummy_verl: bool = False,
-) -> None:
-    """Resolve config, create run dir, validate env, and launch verl."""
+) -> PreparedRun:
+    """Phase 1: config resolution, run dir creation, validation.
 
+    Returns everything needed for exec_prepared() or sbatch generation.
+    No process-level side effects (no fork, no exec, no daemon spawn).
+    """
     if isinstance(run_config, ContinueRunConfig):
         merged_config, hydra_overrides, run_metadata = _prepare_continue(
             orch_config=orch_config,
@@ -86,8 +102,29 @@ def launch(
     else:
         print("Skipping validation (-yy)")
 
+    return PreparedRun(
+        merged_config=merged_config,
+        hydra_overrides=hydra_overrides,
+        run_metadata=run_metadata,
+    )
+
+
+def exec_prepared(
+    prepared: PreparedRun,
+    orch_config: OrchestratorConfig,
+    use_dummy_verl: bool = False,
+) -> None:
+    """Phase 2: create subdirs, spawn daemons, setup tee, execvp into verl.
+
+    This function never returns (os.execvp replaces the process).
+    """
+    run_dir = prepared.run_metadata.run_dir
+
+    # --- Unset ROCR_VISIBLE_DEVICES (SLURM sets it, conflicts with CUDA_VISIBLE_DEVICES) ---
+    os.environ.pop("ROCR_VISIBLE_DEVICES", None)
+
     # --- Create subdirs (after validation, so validate_env doesn't see empty dirs) ---
-    create_run_subdirs(run_dir=run_metadata.run_dir)
+    create_run_subdirs(run_dir=run_dir)
 
     # --- Spawn checkpoint daemon(s) BEFORE exec ---
     # os.execvp preserves our PID, so daemons will watch verl correctly.
@@ -95,23 +132,45 @@ def launch(
         if not daemon_cfg.enabled:
             continue
         _spawn_checkpoint_daemon(
-            run_dir=run_metadata.run_dir,
+            run_dir=run_dir,
             verl_pid=os.getpid(),
             daemon_cfg=daemon_cfg,
         )
 
     # --- Set up output tee (verl output → terminal + file) ---
-    verl_log = Path(run_metadata.run_dir) / "verl_output.log"
+    verl_log = Path(run_dir) / "verl_output.log"
     _setup_output_tee(log_path=verl_log)
 
     # --- exec into verl (replaces this process) ---
     verl_module = "vfh.dummy_verl" if use_dummy_verl else "verl.trainer.main_ppo"
-    cmd = ["python3", "-m", verl_module] + hydra_overrides
+    cmd = ["python3", "-m", verl_module] + prepared.hydra_overrides
     print(f"\nLaunching (exec): {verl_module}")
     print(f"  Full command ({len(cmd)} args)")
     print(f"  Output tee: {verl_log}")
     sys.stdout.flush()
     os.execvp("python3", cmd)
+
+
+def launch(
+    orch_config: OrchestratorConfig,
+    run_config: NewRunConfig | ContinueRunConfig,
+    requires_openrouter: bool = False,
+    use_dummy_verl: bool = False,
+) -> None:
+    """Resolve config, create run dir, validate env, and launch verl.
+
+    Thin wrapper around prepare() + exec_prepared().
+    """
+    prepared = prepare(
+        orch_config=orch_config,
+        run_config=run_config,
+        requires_openrouter=requires_openrouter,
+    )
+    exec_prepared(
+        prepared=prepared,
+        orch_config=orch_config,
+        use_dummy_verl=use_dummy_verl,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +473,154 @@ def _get_nested(
 
 
 # ---------------------------------------------------------------------------
+# Sbatch script generation
+# ---------------------------------------------------------------------------
+
+
+_SLURM_NODE_MAP: dict[int, str] = {
+    1: "bleak-mushroom-dove",
+    2: "better-ginkgo-dragonfly",
+}
+
+
+def _generate_sbatch(
+    prepared: PreparedRun,
+    time_limit: str,
+    orch_config_path: Optional[str],
+    use_dummy_verl: bool,
+    requires_openrouter: bool,
+    node_num: Optional[int] = None,
+) -> Path:
+    """Generate an sbatch script for a prepared run.
+
+    Returns the path to the generated sbatch_job.sh.
+    """
+    run_dir = Path(prepared.run_metadata.run_dir)
+    meta = prepared.run_metadata
+
+    # Infer GPUs from merged config
+    n_gpus: int = _get_nested(
+        d=prepared.merged_config,
+        keys=["trainer", "n_gpus_per_node"],
+    )
+
+    # Experiment name for job name
+    experiment_name = _get_nested(
+        d=prepared.merged_config,
+        keys=["trainer", "experiment_name"],
+        default="vfh_run",
+    )
+    job_name = f"{experiment_name}_{meta.run_id}"
+
+    # Create sbatch output directory
+    sbatch_log_dir = run_dir / "daemon_logs" / "sbatch"
+    sbatch_log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build the run-prepared command
+    run_prepared_parts = [
+        "python -m vfh.orchestrator run-prepared",
+        f"    --run-dir {run_dir.resolve()}",
+    ]
+    if orch_config_path:
+        run_prepared_parts.append(f"    --orch-config {Path(orch_config_path).resolve()}")
+    if use_dummy_verl:
+        run_prepared_parts.append("    --dummy")
+    run_prepared_cmd = " \\\n".join(run_prepared_parts)
+
+    # Dump full environment to a sourceable file (Ray/NCCL/etc. need many vars)
+    _SKIP_ENV_PREFIXES = ("SLURM_", "SBATCH_")
+    _SKIP_ENV_EXACT = {
+        "HOSTNAME", "PWD", "OLDPWD", "SHLVL", "_", "TERM_SESSION_ID",
+        "ROCR_VISIBLE_DEVICES",  # conflicts with CUDA_VISIBLE_DEVICES
+    }
+    env_file = sbatch_log_dir / "env.sh"
+    with open(env_file, "w") as f:
+        f.write("# Environment captured at sbatch creation time\n")
+        for key, value in sorted(os.environ.items()):
+            if key in _SKIP_ENV_EXACT:
+                continue
+            if any(key.startswith(p) for p in _SKIP_ENV_PREFIXES):
+                continue
+            # Escape single quotes in values for safe shell export
+            escaped = value.replace("'", "'\\''")
+            f.write(f"export {key}='{escaped}'\n")
+
+    cwd = Path.cwd().resolve()
+
+    nodelist_line = ""
+    if node_num is not None:
+        node_name = _SLURM_NODE_MAP[node_num]
+        nodelist_line = f"\n#SBATCH --nodelist={node_name}"
+
+    script = f"""#!/bin/bash
+#SBATCH --job-name={job_name}
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node={n_gpus}
+#SBATCH --cpus-per-task=80
+#SBATCH --mem=0
+#SBATCH --time={time_limit}
+#SBATCH --output={sbatch_log_dir.resolve()}/run.out
+#SBATCH --error={sbatch_log_dir.resolve()}/run.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mshtepel@andrew.cmu.edu{nodelist_line}
+
+# --- Environment (captured at sbatch creation time) ---
+source {env_file.resolve()}
+
+cd {cwd}
+eval "$(conda shell.bash hook)"
+conda activate hope
+
+{run_prepared_cmd}
+"""
+
+    script_path = run_dir / "sbatch_job.sh"
+    script_path.write_text(script)
+    script_path.chmod(0o755)
+
+    print(f"  sbatch script: {script_path}")
+    return script_path
+
+
+def _append_sbatch_jsonl(
+    logs_root: str,
+    prepared: PreparedRun,
+    sbatch_script_path: Path,
+    time_limit: str,
+    n_gpus: int,
+) -> None:
+    """Append an entry to both sbatch_runs.jsonl and sbatch_runs_editable.jsonl."""
+    meta = prepared.run_metadata
+    entry = {
+        "run_id": meta.run_id,
+        "description": meta.description,
+        "run_dir": meta.run_dir,
+        "sbatch_script": str(sbatch_script_path.resolve()),
+        "created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "slurm_time_limit": time_limit,
+        "n_gpus": n_gpus,
+        "wandb_url": meta.wandb_url,
+    }
+    line = json.dumps(obj=entry) + "\n"
+
+    verlrun_dir = Path(logs_root) / "VerlRun"
+    verlrun_dir.mkdir(parents=True, exist_ok=True)
+
+    for filename in ("sbatch_runs.jsonl", "sbatch_runs_editable.jsonl"):
+        filepath = verlrun_dir / filename
+        with open(filepath, "a") as f:
+            f.write(line)
+
+
+def _validate_time_format(time_str: str) -> None:
+    """Validate HH:MM:SS format."""
+    if not re.match(r"^\d{1,2}:\d{2}:\d{2}$", time_str):
+        raise ValueError(
+            f"--time must be in HH:MM:SS format, got: {time_str!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator config loading (abstracted for future flexibility)
 # ---------------------------------------------------------------------------
 
@@ -608,6 +815,34 @@ Optionally apply new overrides on top of the original run's config.
         help="Extra raw Hydra overrides appended last",
     )
 
+    # --- run-prepared (SLURM-time execution of a pre-prepared run) ---
+    prep_parser = subparsers.add_parser(
+        "run-prepared",
+        help="Execute a previously prepared run (used by sbatch scripts)",
+        description="""
+Execute a run that was already prepared (config resolved, run dir created,
+validation done) by a prior 'new --sbatch' or 'continue --sbatch' invocation.
+
+Reads hydra overrides from run_metadata.json5 in the run directory.
+Skips config resolution and validation.  Creates subdirs, spawns checkpoint
+daemons, sets up output tee, and os.execvp into verl.
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    prep_parser.add_argument(
+        "--run-dir", required=True, metavar="PATH",
+        help="Path to the prepared run directory (must contain run_metadata.json5)",
+    )
+    prep_parser.add_argument(
+        "--dummy", action="store_true",
+        help="Use vfh.dummy_verl instead of real verl",
+    )
+    prep_parser.add_argument(
+        "--orch-config", default=None, metavar="PATH",
+        help="Path to orchestrator JSON5 config (checkpoint daemon settings, etc.). "
+             "Defaults to built-in defaults if omitted.",
+    )
+
     # --- shared flags ---
     for p in [new_parser, cont_parser]:
         p.add_argument(
@@ -623,6 +858,25 @@ Optionally apply new overrides on top of the original run's config.
             "-yy", action="store_true",
             help="Skip validation entirely (don't run validate_env.py)",
         )
+        # --- sbatch flags ---
+        p.add_argument(
+            "--sbatch", action="store_true",
+            help="Generate an sbatch script instead of launching directly. "
+                 "Requires --time.",
+        )
+        p.add_argument(
+            "--time", default=None, metavar="HH:MM:SS",
+            help="SLURM time limit (required with --sbatch). Format: HH:MM:SS.",
+        )
+        p.add_argument(
+            "--dont-auto-sbatch", action="store_true",
+            help="Generate the sbatch script but don't submit it automatically.",
+        )
+        p.add_argument(
+            "--node", type=int, default=None, choices=[1, 2], metavar="N",
+            help="SLURM node to run on: 1=bleak-mushroom-dove, 2=better-ginkgo-dragonfly. "
+                 "If omitted, SLURM picks automatically.",
+        )
 
     return parser
 
@@ -631,6 +885,24 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
+    # --- run-prepared: special path (no validation, no config resolution) ---
+    if args.command == "run-prepared":
+        orch_config = load_orchestrator_config(config_path=args.orch_config)
+        run_metadata = load_run_metadata(run_dir=args.run_dir)
+        prepared = PreparedRun(
+            merged_config={},  # not needed — validation already ran
+            hydra_overrides=run_metadata.resolved_hydra_overrides,
+            run_metadata=run_metadata,
+        )
+        exec_prepared(
+            prepared=prepared,
+            orch_config=orch_config,
+            use_dummy_verl=args.dummy,
+        )
+        return  # exec_prepared never returns, but for clarity
+
+    # --- new / continue: standard path ---
+
     # Determine validation mode
     if args.yy:
         val_mode = ValidationMode.SKIP
@@ -638,6 +910,12 @@ def main() -> None:
         val_mode = ValidationMode.AUTO_APPROVE
     else:
         val_mode = ValidationMode.FULL
+
+    # Validate sbatch flags
+    if args.sbatch and not args.time:
+        parser.error("--time is required when using --sbatch (format: HH:MM:SS)")
+    if args.time:
+        _validate_time_format(time_str=args.time)
 
     orch_config = load_orchestrator_config(
         config_path=args.orch_config,
@@ -654,6 +932,17 @@ def main() -> None:
                     "--fork-step is required when using --fork-from. "
                     "Specify the global_step_N to fork from explicitly."
                 )
+            # Validate checkpoint exists and has weights
+            ckpt_dir = Path(args.fork_from) / "checkpoints" / f"global_step_{fork_step}"
+            if not ckpt_dir.exists():
+                raise ValueError(
+                    f"Checkpoint directory does not exist: {ckpt_dir}"
+                )
+            if not (ckpt_dir / "actor").exists():
+                raise ValueError(
+                    f"Checkpoint has no actor/ weights: {ckpt_dir}\n"
+                    "It may have been cleaned by the daemon. Try `dvc pull` first."
+                )
             origin = RunOrigin(
                 fork_reason=ForkReason.INTENTIONAL_FORK,
                 parent_run_id=parent_meta.run_id,
@@ -661,7 +950,7 @@ def main() -> None:
                 parent_checkpoint_step=fork_step,
             )
 
-        run_config = NewRunConfig(
+        run_config: NewRunConfig | ContinueRunConfig = NewRunConfig(
             base_config_path=args.base_config,
             overrides_path=args.overrides,
             extra_hydra_overrides=args.extra_overrides,
@@ -678,12 +967,60 @@ def main() -> None:
     else:
         parser.error(f"Unknown command: {args.command}")
 
-    launch(
-        orch_config=orch_config,
-        run_config=run_config,
-        requires_openrouter=getattr(args, "requires_openrouter", False),
-        use_dummy_verl=args.dummy,
-    )
+    requires_openrouter = getattr(args, "requires_openrouter", False)
+
+    if args.sbatch:
+        # --- Sbatch mode: prepare + generate script ---
+        prepared = prepare(
+            orch_config=orch_config,
+            run_config=run_config,
+            requires_openrouter=requires_openrouter,
+        )
+
+        script_path = _generate_sbatch(
+            prepared=prepared,
+            time_limit=args.time,
+            orch_config_path=args.orch_config,
+            use_dummy_verl=args.dummy,
+            requires_openrouter=requires_openrouter,
+            node_num=args.node,
+        )
+
+        n_gpus: int = _get_nested(
+            d=prepared.merged_config,
+            keys=["trainer", "n_gpus_per_node"],
+        )
+        _append_sbatch_jsonl(
+            logs_root=orch_config.logs_root,
+            prepared=prepared,
+            sbatch_script_path=script_path,
+            time_limit=args.time,
+            n_gpus=n_gpus,
+        )
+
+        if not args.dont_auto_sbatch:
+            print(f"\nSubmitting: sbatch {script_path}")
+            result = subprocess.run(
+                ["sbatch", str(script_path)],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                print(f"  {result.stdout.strip()}")
+            else:
+                print(f"  sbatch failed (exit {result.returncode}): {result.stderr.strip()}")
+                sys.exit(1)
+        else:
+            print(f"\n--dont-auto-sbatch: script generated but not submitted.")
+            print(f"  Run manually: sbatch {script_path}")
+    else:
+        # --- Direct launch mode ---
+        launch(
+            orch_config=orch_config,
+            run_config=run_config,
+            requires_openrouter=requires_openrouter,
+            use_dummy_verl=args.dummy,
+        )
 
 
 if __name__ == "__main__":

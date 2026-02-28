@@ -7,6 +7,9 @@ slurm/
 *.csv
 **/*.pt
 **/checkpoints
+!logs/VerlRun/**/checkpoints/
+!logs/VerlRun/**/checkpoints/*.dvc
+!logs/VerlRun/**/checkpoints/.gitignore
 **/wget-log
 **/_build/
 **/*.ckpt
@@ -129,8 +132,8 @@ ENV/
 
 
 # local logs
-logs
-!logs/VerlRun/
+logs/*
+logs/VerlRun/
 log
 outputs
 .history

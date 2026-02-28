@@ -508,7 +508,7 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
     return ret
 
 
-async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_0_penalty_PAUSE_UNBROKEN(
+async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_320_penalty_PAUSE_UNBROKEN(
     data_source: str, solution_str: str, ground_truth: Any, extra_info: dict, global_step: int | None
 ) -> dict[str, Any]:
     """
@@ -523,19 +523,21 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
         global_step: int,
     ) -> float:  # M: NOTE: this assumes global_step start is 0, which may not be the case if we resume
         """see MSH-19"""
+        START_STEP = 320
+        normalized_gstep = global_step - START_STEP
         PHASE1_INCREASE_PENALTY = 80
         PHASE2_PAUSE = 40
         INITIAL_INVERSE_PENALTY = 6_000
         EXP_REDUCE_FACTOR = (
             (INITIAL_INVERSE_PENALTY - 80) / INITIAL_INVERSE_PENALTY
         )  # WARN: 80 is specific to 6000 and was numerically estimated using Desmos for a 4x increase in char cost every 80 steps
-        if global_step <= PHASE1_INCREASE_PENALTY:
-            return INITIAL_INVERSE_PENALTY * pow(EXP_REDUCE_FACTOR, global_step)
-        elif global_step < PHASE2_PAUSE + PHASE1_INCREASE_PENALTY:
+        if normalized_gstep <= PHASE1_INCREASE_PENALTY:
+            return INITIAL_INVERSE_PENALTY * pow(EXP_REDUCE_FACTOR, normalized_gstep)
+        elif normalized_gstep < PHASE2_PAUSE + PHASE1_INCREASE_PENALTY:
             cur_penalty = INITIAL_INVERSE_PENALTY * pow(EXP_REDUCE_FACTOR, PHASE1_INCREASE_PENALTY)
             return cur_penalty
         else:
-            return INITIAL_INVERSE_PENALTY * pow(EXP_REDUCE_FACTOR, global_step - PHASE2_PAUSE)
+            return INITIAL_INVERSE_PENALTY * pow(EXP_REDUCE_FACTOR, normalized_gstep - PHASE2_PAUSE)
 
     def hidden_lengths_reward_adj(hidden_lengths: int, global_step: int) -> float:  # M: <=0
         cur_penalty = compute_penalty_constant(global_step)
