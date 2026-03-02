@@ -10740,3 +10740,1087 @@ ray init kwargs: {'num_cpus': None, 'runtime_env': {'env_vars': {'TOKENIZERS_PAR
 [36m(compute_several pid=2459959)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 4x across cluster][0m
 [36m(compute_several pid=2459959)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 4x across cluster][0m
 [36m(compute_several pid=2459959)[0m RuntimeError: Event loop is closed[32m [repeated 4x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m step:115 - global_seqlen/min:219750 - global_seqlen/max:231641 - global_seqlen/minmax_diff:11891 - global_seqlen/balanced_min:224812 - global_seqlen/balanced_max:224813 - global_seqlen/mean:224812.75 - reward_extra_info/score:0.655703125 - reward_extra_info/bio_correct:0.578125 - reward_extra_info/math_correct:0.4609375 - reward_extra_info/sus_score:0.38335937500000006 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.5432291626930237 - advantages/group_mean_mean:0.6557031335541978 - advantages/group_mean_std:0.703369490855888 - advantages/group_mean_min:-0.7100000381469727 - advantages/group_mean_max:1.8100000619888306 - advantages/group_std_mean:0.4960941202007234 - advantages/group_std_std:0.22972856481398787 - advantages/group_std_min:0.2149418443441391 - advantages/group_std_max:1.2039095163345337 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-9.415089152753353e-09 - advantages/raw_score_std:0.5113941930090369 - advantages/raw_score_min:-1.4175000190734863 - advantages/raw_score_max:1.8612499237060547 - advantages/advantage_mean:-3.725290298461914e-09 - advantages/advantage_std:0.511394202709198 - advantages/advantage_min:-1.4175000190734863 - advantages/advantage_max:1.8612499237060547 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00023891634555184282 - actor/kl_coef:0.001 - actor/pg_loss:0.0002899971959209324 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.022111451253294945 - perf/mfu/actor:0.32000634904449043 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:275.4683609008789 - actor/lr:1e-06 - training/global_step:115 - training/epoch:3 - critic/score/mean:0.6557031273841858 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.6557031273841858 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.02937418408691883 - critic/advantages-len-unadj/max:1.8612499237060547 - critic/advantages-len-unadj/min:-1.4175000190734863 - critic/returns/mean:-0.02937418408691883 - critic/returns/max:1.8612499237060547 - critic/returns/min:-1.4175000190734863 - response_length/mean:2991.07421875 - response_length/max:6144.0 - response_length/min:1185.0 - response_length/clip_ratio:0.078125 - response_length_non_aborted/mean:2991.07421875 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1185.0 - response_length_non_aborted/clip_ratio:0.078125 - response/aborted_ratio:0.0 - prompt_length/mean:521.625 - prompt_length/max:698.0 - prompt_length/min:396.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.84375 - reward/mean@8:0.5859375 - reward/min@8:0.21875 - reward/p25@8:0.4140625 - p75@8:0.75 - timing_s/start_profile:8.094683289527893e-05 - timing_s/generate_sequences:55.10148620605469 - timing_s/offload_fsdp_model_to_cpu:0.00014535541413351893 - timing_s/reshard:1.376155972480774 - timing_s/wake_up:0.07321793586015701 - timing_s/generation_timing/max:55.49925231933594 - timing_s/generation_timing/min:54.678077697753906 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:57.53016628790647 - timing_s/reward:33.10521795391105 - timing_s/old_log_prob:6.258258887100965 - timing_s/ref:6.1553305990528315 - timing_s/adv:0.018227902008220553 - timing_s/update_actor:24.182917409110814 - timing_s/dump_rollout_generations:0.5188609559554607 - timing_s/step:127.79228029190563 - timing_s/stop_profile:5.181482993066311e-05 - timing_per_token_ms/ref:0.0068449527429525585 - timing_per_token_ms/gen:0.07513260976721949 - timing_per_token_ms/update_actor:0.026892288592518455 - timing_per_token_ms/adv:2.0270093675982072e-05 - perf/total_num_tokens:899251 - perf/time_per_step:127.79228029190563 - perf/throughput:1759.2044643579277
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2453550)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2459507)[0m ✓ [P0] GPTOSS120B: output_len=1164, thinking_len=2076, time=2.1s
+[36m(compute_several pid=2467780)[0m GPTOSS120B using specialized preifix: [32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2453574)[0m ✓ [P0] GPTOSS120B: output_len=1215, thinking_len=1202, time=5.3s[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=2467780)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2467780)[0m     output_len=0, thinking_len=1738 max_tokens=20000, error=None, time=4.991675138473511s
+[36m(compute_several pid=2467780)[0m     Retrying...
+[36m(compute_several pid=2467761)[0m GPTOSS120B using specialized preifix: [32m [repeated 32x across cluster][0m
+[36m(compute_several pid=2453524)[0m ✓ [P0] GPTOSS120B: output_len=1421, thinking_len=1944, time=11.9s[32m [repeated 89x across cluster][0m
+[36m(compute_several pid=2467774)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=2467774)[0m     output_len=0, thinking_len=1947 max_tokens=20000, error=None, time=7.050476789474487s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=2467774)[0m     Retrying...[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=2467761)[0m ✓ [P0] GPTOSS120B: output_len=1828, thinking_len=1514, time=7.7s[32m [repeated 105x across cluster][0m
+[36m(compute_several pid=2453306)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2453306)[0m     output_len=0, thinking_len=1282 max_tokens=20000, error=None, time=6.773229360580444s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2453306)[0m     Retrying...[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2461588)[0m ✓ [P0] GPTOSS120B: output_len=1698, thinking_len=2017, time=13.9s[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=2467780)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)
+[36m(compute_several pid=2467780)[0m     output_len=0, thinking_len=2124 max_tokens=20000, error=None, time=10.284768342971802s
+[36m(compute_several pid=2467780)[0m     Retrying...
+[36m(compute_several pid=2453306)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 3/5)
+[36m(compute_several pid=2453306)[0m     output_len=0, thinking_len=1472 max_tokens=20000, error=None, time=4.429598331451416s
+[36m(compute_several pid=2453306)[0m     Retrying...
+[36m(compute_several pid=2453297)[0m ✓ [P0] GPTOSS120B: output_len=1562, thinking_len=1259, time=11.5s[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2460826)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2460826)[0m     output_len=0, thinking_len=1598 max_tokens=20000, error=None, time=10.303532600402832s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2460826)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2459527)[0m ✓ [P0] GPTOSS120B: output_len=1395, thinking_len=2229, time=13.0s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2453306)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 4/5)
+[36m(compute_several pid=2453306)[0m     output_len=0, thinking_len=2115 max_tokens=20000, error=None, time=5.602434873580933s
+[36m(compute_several pid=2453306)[0m     Retrying...
+[36m(compute_several pid=2460826)[0m ✓ [P0] GPTOSS120B: output_len=1349, thinking_len=891, time=6.2s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Training Progress:  18%|█▊        | 116/650 [3:01:41<19:21:03, 130.46s/it]
+[36m(compute_several pid=2460358)[0m ERROR:2026-03-02 21:27:46,282:Task exception was never retrieved[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m future: <Task finished name='Task-1532' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m Traceback (most recent call last):[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 192x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await self._transport.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await self._pool.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await self._close_connections(closing_connections)[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await connection.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await self._connection.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await self._network_stream.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await self._stream.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     await self.transport_stream.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     self._transport.close()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     self._check_closed()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2460358)[0m RuntimeError: Event loop is closed[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453306)[0m ERROR:2026-03-02 21:29:55,826:Task exception was never retrieved[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m future: <Task finished name='Task-1588' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m Traceback (most recent call last):[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._transport.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._pool.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._close_connections(closing_connections)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._network_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self.transport_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     self._transport.close()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     self._check_closed()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m RuntimeError: Event loop is closed[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453597)[0m ERROR:2026-03-02 21:30:00,906:Task exception was never retrieved[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m future: <Task finished name='Task-1519' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m Traceback (most recent call last):[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 784x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await self._transport.aclose()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await self._pool.aclose()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await self._close_connections(closing_connections)[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await connection.aclose()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await self._connection.aclose()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await self._network_stream.aclose()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await self._stream.aclose()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     await self.transport_stream.aclose()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     self._transport.close()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     self._check_closed()[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=2453597)[0m RuntimeError: Event loop is closed[32m [repeated 98x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 42.29 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.538431704044342
+[36m(compute_several pid=2453306)[0m ✓ [P0] GPTOSS120B: output_len=1477, thinking_len=2407, time=5.5s
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/116.jsonl
+[36m(TaskRunner pid=2429759)[0m step:116 - global_seqlen/min:211358 - global_seqlen/max:242940 - global_seqlen/minmax_diff:31582 - global_seqlen/balanced_min:224904 - global_seqlen/balanced_max:224904 - global_seqlen/mean:224904.0 - reward_extra_info/score:0.7275 - reward_extra_info/bio_correct:0.5625 - reward_extra_info/math_correct:0.5390625 - reward_extra_info/sus_score:0.3740625 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.538431704044342 - advantages/group_mean_mean:0.7275000067893416 - advantages/group_mean_std:0.5894551205247396 - advantages/group_mean_min:-0.5562499761581421 - advantages/group_mean_max:1.8387501239776611 - advantages/group_std_mean:0.5117595293559134 - advantages/group_std_std:0.2070823372818346 - advantages/group_std_min:0.21162213385105133 - advantages/group_std_max:0.9600809216499329 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-8.68749339133501e-09 - advantages/raw_score_std:0.5164138859384674 - advantages/raw_score_min:-2.0712499618530273 - advantages/raw_score_max:1.4562499523162842 - advantages/advantage_mean:-1.862645149230957e-09 - advantages/advantage_std:0.5164138674736023 - advantages/advantage_min:-2.0712499618530273 - advantages/advantage_max:1.4562499523162842 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00023618273189640604 - actor/kl_coef:0.001 - actor/pg_loss:-0.0009242949163308367 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.02053206041455269 - perf/mfu/actor:0.31685029697107175 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:277.7228317260742 - actor/lr:1e-06 - training/global_step:116 - training/epoch:3 - critic/score/mean:0.7274999618530273 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.7274999618530273 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.011348961852490902 - critic/advantages-len-unadj/max:1.4562499523162842 - critic/advantages-len-unadj/min:-2.0712499618530273 - critic/returns/mean:-0.011348961852490902 - critic/returns/max:1.4562499523162842 - critic/returns/min:-2.0712499618530273 - response_length/mean:2950.5 - response_length/max:6144.0 - response_length/min:1220.0 - response_length/clip_ratio:0.03515625 - response_length_non_aborted/mean:2950.5 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1220.0 - response_length_non_aborted/clip_ratio:0.03515625 - response/aborted_ratio:0.0 - prompt_length/mean:563.625 - prompt_length/max:808.0 - prompt_length/min:410.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.96875 - reward/mean@8:0.6484375 - reward/min@8:0.15625 - reward/p25@8:0.4609375 - p75@8:0.8671875 - timing_s/start_profile:6.108405068516731e-05 - timing_s/generate_sequences:52.371002197265625 - timing_s/offload_fsdp_model_to_cpu:0.00015037046978250146 - timing_s/reshard:1.2056879997253418 - timing_s/wake_up:0.07616181671619415 - timing_s/generation_timing/max:57.361846923828125 - timing_s/generation_timing/min:46.67020797729492 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:59.20348416105844 - timing_s/reward:42.5608888999559 - timing_s/old_log_prob:6.2452722219750285 - timing_s/ref:6.058519647922367 - timing_s/adv:0.01870177499949932 - timing_s/update_actor:24.219861077843234 - timing_s/dump_rollout_generations:0.4580339889507741 - timing_s/step:138.78913457505405 - timing_s/stop_profile:5.42420893907547e-05 - timing_per_token_ms/ref:0.006734561910773449 - timing_per_token_ms/gen:0.07838115912697324 - timing_per_token_ms/update_actor:0.02692244366245513 - timing_per_token_ms/adv:2.0788619810562864e-05 - perf/total_num_tokens:899616 - perf/time_per_step:138.78913457505405 - perf/throughput:1620.4726738055779
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2453306)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2453306)[0m ✓ [P0] GPTOSS120B: output_len=872, thinking_len=1294, time=2.5s
+[36m(compute_several pid=2453597)[0m GPTOSS120B using specialized preifix: [32m [repeated 33x across cluster][0m
+[36m(compute_several pid=2460554)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=2460554)[0m     output_len=2174, error=None, time=3.325939893722534s
+[36m(compute_several pid=2460554)[0m     Retrying...
+[36m(compute_several pid=2453306)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2453306)[0m ✓ [P0] GPTOSS120B: output_len=1415, thinking_len=1904, time=7.3s[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=2459527)[0m GPTOSS120B using specialized preifix: [32m [repeated 30x across cluster][0m
+[36m(compute_several pid=2453293)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2431698)[0m     output_len=0, thinking_len=1924 max_tokens=20000, error=None, time=8.084239482879639s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=2431698)[0m     Retrying...[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=2460741)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2461593)[0m ✓ [P0] GPTOSS120B: output_len=2042, thinking_len=2086, time=9.3s[32m [repeated 92x across cluster][0m
+[36m(compute_several pid=2467765)[0m     output_len=0, thinking_len=1691 max_tokens=20000, error=None, time=7.265419244766235s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2467765)[0m     Retrying...[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2467765)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2453550)[0m ✓ [P0] GPTOSS120B: output_len=2166, thinking_len=1710, time=12.0s[32m [repeated 111x across cluster][0m
+[36m(compute_several pid=2474759)[0m     output_len=0, thinking_len=3258 max_tokens=20000, error=None, time=10.20369839668274s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2474759)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2474759)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2459928)[0m ✓ [P0] GPTOSS120B: output_len=1814, thinking_len=2479, time=16.2s[32m [repeated 31x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 29.72 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(compute_several pid=2460741)[0m ✓ [P0] GPTOSS120B: output_len=1501, thinking_len=1187, time=6.3s[32m [repeated 7x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.5487302541732788
+[36m(compute_several pid=2453293)[0m ✓ [P0] GPTOSS120B: output_len=1714, thinking_len=2347, time=18.0s
+[36m(TaskRunner pid=2429759)[0m Training Progress:  18%|█▊        | 117/650 [3:03:46<19:05:11, 128.91s/it]
+[36m(compute_several pid=2459521)[0m ERROR:2026-03-02 21:30:05,318:Task exception was never retrieved[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m future: <Task finished name='Task-1709' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m Traceback (most recent call last):[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 656x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await self._transport.aclose()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await self._pool.aclose()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await self._close_connections(closing_connections)[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await connection.aclose()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await self._connection.aclose()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await self._network_stream.aclose()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await self._stream.aclose()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     await self.transport_stream.aclose()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     self._transport.close()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     self._check_closed()[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2459521)[0m RuntimeError: Event loop is closed[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=2460741)[0m ERROR:2026-03-02 21:32:02,913:Task exception was never retrieved[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m future: <Task finished name='Task-1460' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m Traceback (most recent call last):[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await self._transport.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await self._pool.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await self._close_connections(closing_connections)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await self._connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await self._network_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await self._stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     await self.transport_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     self._transport.close()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     self._check_closed()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460741)[0m RuntimeError: Event loop is closed[32m [repeated 5x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Training Progress:  18%|█▊        | 118/650 [3:05:51<18:51:17, 127.59s/it]
+[36m(compute_several pid=2460492)[0m ERROR:2026-03-02 21:32:07,758:Task exception was never retrieved[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m future: <Task finished name='Task-1542' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m Traceback (most recent call last):[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await self._transport.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await self._pool.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await self._close_connections(closing_connections)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await self._connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await self._network_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await self._stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     await self.transport_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     self._transport.close()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     self._check_closed()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460492)[0m RuntimeError: Event loop is closed[32m [repeated 5x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/117.jsonl
+[36m(TaskRunner pid=2429759)[0m step:117 - global_seqlen/min:189748 - global_seqlen/max:253604 - global_seqlen/minmax_diff:63856 - global_seqlen/balanced_min:217710 - global_seqlen/balanced_max:217710 - global_seqlen/mean:217710.0 - reward_extra_info/score:0.7510546875 - reward_extra_info/bio_correct:0.56640625 - reward_extra_info/math_correct:0.515625 - reward_extra_info/sus_score:0.3309765625 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.5487302541732788 - advantages/group_mean_mean:0.7510546889388934 - advantages/group_mean_std:0.6087901921252374 - advantages/group_mean_min:-0.23999999463558197 - advantages/group_mean_max:1.815000057220459 - advantages/group_std_mean:0.44828158838208765 - advantages/group_std_std:0.20006760186222855 - advantages/group_std_min:0.036547426134347916 - advantages/group_std_max:0.9759244918823242 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-3.2014213502407074e-10 - advantages/raw_score_std:0.4591954895085974 - advantages/raw_score_min:-1.3712499141693115 - advantages/raw_score_max:1.6287500858306885 - advantages/advantage_mean:-1.3969838619232178e-09 - advantages/advantage_std:0.45919549465179443 - advantages/advantage_min:-1.3712499141693115 - advantages/advantage_max:1.6287500858306885 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00023732771842333023 - actor/kl_coef:0.001 - actor/pg_loss:-5.587736814050004e-05 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.019822105765342712 - perf/mfu/actor:0.3178098170562458 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:277.7804069519043 - actor/lr:1e-06 - training/global_step:117 - training/epoch:3 - critic/score/mean:0.7510546445846558 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.7510546445846558 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.004748702049255371 - critic/advantages-len-unadj/max:1.6287500858306885 - critic/advantages-len-unadj/min:-1.3712499141693115 - critic/returns/mean:-0.004748702049255371 - critic/returns/max:1.6287500858306885 - critic/returns/min:-1.3712499141693115 - response_length/mean:2836.40625 - response_length/max:6144.0 - response_length/min:1069.0 - response_length/clip_ratio:0.01953125 - response_length_non_aborted/mean:2836.40625 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1069.0 - response_length_non_aborted/clip_ratio:0.01953125 - response/aborted_ratio:0.0 - prompt_length/mean:565.3125 - prompt_length/max:977.0 - prompt_length/min:372.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.90625 - reward/mean@8:0.6328125 - reward/min@8:0.28125 - reward/p25@8:0.46875 - p75@8:0.8515625 - timing_s/start_profile:5.244789645075798e-05 - timing_s/generate_sequences:52.87468338012695 - timing_s/offload_fsdp_model_to_cpu:9.597651660442352e-05 - timing_s/reshard:1.3985099792480469 - timing_s/wake_up:0.06904266774654388 - timing_s/generation_timing/max:57.60640335083008 - timing_s/generation_timing/min:47.6147575378418 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:59.60362806590274 - timing_s/reward:29.973927361890674 - timing_s/old_log_prob:6.040605766000226 - timing_s/ref:5.866100820014253 - timing_s/adv:0.021125229075551033 - timing_s/update_actor:23.34801301197149 - timing_s/dump_rollout_generations:0.3925924259237945 - timing_s/step:125.27357486309484 - timing_s/stop_profile:6.250105798244476e-05 - timing_per_token_ms/ref:0.006736140760661262 - timing_per_token_ms/gen:0.08208509346375632 - timing_per_token_ms/update_actor:0.026810910169458784 - timing_per_token_ms/adv:2.4258450548379764e-05 - perf/total_num_tokens:870840 - perf/time_per_step:125.27357486309484 - perf/throughput:1737.8764854273877
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2453293)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2474759)[0m ✓ [P0] GPTOSS120B: output_len=1311, thinking_len=1173, time=2.1s
+[36m(compute_several pid=2460492)[0m GPTOSS120B using specialized preifix: [32m [repeated 34x across cluster][0m
+[36m(compute_several pid=2467765)[0m ✓ [P0] GPTOSS120B: output_len=874, thinking_len=1353, time=6.5s[32m [repeated 20x across cluster][0m
+[36m(compute_several pid=2453607)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2453607)[0m     output_len=0, thinking_len=1426 max_tokens=20000, error=None, time=8.021935939788818s
+[36m(compute_several pid=2453607)[0m     Retrying...
+[36m(compute_several pid=2460624)[0m GPTOSS120B using specialized preifix: [32m [repeated 29x across cluster][0m
+[36m(compute_several pid=2431698)[0m ✓ [P0] GPTOSS120B: output_len=1375, thinking_len=1654, time=9.0s[32m [repeated 106x across cluster][0m
+[36m(compute_several pid=2461588)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2461588)[0m     output_len=0, thinking_len=1370 max_tokens=20000, error=None, time=7.265316486358643s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2461588)[0m     Retrying...[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2453582)[0m ✓ [P0] GPTOSS120B: output_len=1747, thinking_len=1544, time=6.8s[32m [repeated 104x across cluster][0m
+[36m(compute_several pid=2467744)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2467744)[0m     output_len=0, thinking_len=2388 max_tokens=20000, error=None, time=9.187652587890625s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2467744)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2460161)[0m ✓ [P0] GPTOSS120B: output_len=1757, thinking_len=669, time=12.5s[32m [repeated 23x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 26.81 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.5611948370933533
+[36m(compute_several pid=2453586)[0m ✓ [P0] GPTOSS120B: output_len=2023, thinking_len=3277, time=17.3s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/118.jsonl
+[36m(compute_several pid=2453524)[0m ERROR:2026-03-02 21:34:11,828:Task exception was never retrieved[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m future: <Task finished name='Task-1626' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await self._transport.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await self._pool.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await self._close_connections(closing_connections)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await connection.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await self._connection.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await self._network_stream.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await self._stream.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     await self.transport_stream.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     self._transport.close()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     self._check_closed()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453524)[0m RuntimeError: Event loop is closed[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Training Progress:  18%|█▊        | 119/650 [3:08:10<19:21:04, 131.20s/it]
+[36m(compute_several pid=2460624)[0m ERROR:2026-03-02 21:34:15,600:Task exception was never retrieved[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m future: <Task finished name='Task-1517' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m Traceback (most recent call last):[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await self._transport.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await self._pool.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await self._close_connections(closing_connections)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await self._connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await self._network_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await self._stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     await self.transport_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     self._transport.close()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     self._check_closed()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460624)[0m RuntimeError: Event loop is closed[32m [repeated 5x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m step:118 - global_seqlen/min:194946 - global_seqlen/max:248064 - global_seqlen/minmax_diff:53118 - global_seqlen/balanced_min:218294 - global_seqlen/balanced_max:218295 - global_seqlen/mean:218294.75 - reward_extra_info/score:0.5956640625 - reward_extra_info/bio_correct:0.51171875 - reward_extra_info/math_correct:0.50390625 - reward_extra_info/sus_score:0.41996093749999996 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.5611948370933533 - advantages/group_mean_mean:0.5956640547374263 - advantages/group_mean_std:0.7308866518960406 - advantages/group_mean_min:-0.5874999761581421 - advantages/group_mean_max:1.871250033378601 - advantages/group_std_mean:0.5537986746057868 - advantages/group_std_std:0.1942919934337291 - advantages/group_std_min:0.2522152066230774 - advantages/group_std_max:1.1222394704818726 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:3.4633558243513107e-09 - advantages/raw_score_std:0.5489873047840477 - advantages/raw_score_min:-1.625 - advantages/raw_score_max:1.472499966621399 - advantages/advantage_mean:7.916241884231567e-09 - advantages/advantage_std:0.5489873290061951 - advantages/advantage_min:-1.625 - advantages/advantage_max:1.472499966621399 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00025045408074220177 - actor/kl_coef:0.001 - actor/pg_loss:0.0013108681596349925 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.026143737137317657 - perf/mfu/actor:0.3178873376629759 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:282.4187126159668 - actor/lr:1e-06 - training/global_step:118 - training/epoch:3 - critic/score/mean:0.5956640243530273 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.5956640243530273 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.0028269458562135696 - critic/advantages-len-unadj/max:1.472499966621399 - critic/advantages-len-unadj/min:-1.625 - critic/returns/mean:-0.0028269458562135696 - critic/returns/max:1.472499966621399 - critic/returns/min:-1.625 - response_length/mean:2871.88671875 - response_length/max:6144.0 - response_length/min:963.0 - response_length/clip_ratio:0.03125 - response_length_non_aborted/mean:2871.88671875 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:963.0 - response_length_non_aborted/clip_ratio:0.03125 - response/aborted_ratio:0.0 - prompt_length/mean:538.96875 - prompt_length/max:963.0 - prompt_length/min:399.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.8125 - reward/mean@8:0.51171875 - reward/min@8:0.1875 - reward/p25@8:0.296875 - p75@8:0.7109375 - timing_s/start_profile:6.286101415753365e-05 - timing_s/generate_sequences:51.862060546875 - timing_s/offload_fsdp_model_to_cpu:0.00010698928963392973 - timing_s/reshard:1.3691829442977905 - timing_s/wake_up:0.09241126477718353 - timing_s/generation_timing/max:59.293663024902344 - timing_s/generation_timing/min:43.89896774291992 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:61.288944486994296 - timing_s/reward:27.051051962189376 - timing_s/old_log_prob:6.222005233867094 - timing_s/ref:5.967943198047578 - timing_s/adv:0.017996545881032944 - timing_s/update_actor:23.454268238972872 - timing_s/dump_rollout_generations:0.42224260699003935 - timing_s/step:124.45086609595455 - timing_s/stop_profile:7.299380376935005e-05 - timing_per_token_ms/ref:0.006834730562745529 - timing_per_token_ms/gen:0.083363294881814 - timing_per_token_ms/update_actor:0.026860779105971254 - timing_per_token_ms/adv:2.061037413981892e-05 - perf/total_num_tokens:873179 - perf/time_per_step:124.45086609595455 - perf/throughput:1754.0637268983696
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2453586)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2460161)[0m ✓ [P0] GPTOSS120B: output_len=1407, thinking_len=1261, time=4.3s
+[36m(compute_several pid=2453297)[0m GPTOSS120B using specialized preifix: [32m [repeated 27x across cluster][0m
+[36m(compute_several pid=2453586)[0m ✓ [P0] GPTOSS120B: output_len=1367, thinking_len=1576, time=9.7s[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=2453292)[0m GPTOSS120B using specialized preifix: [32m [repeated 27x across cluster][0m
+[36m(compute_several pid=2459507)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2459507)[0m     output_len=0, thinking_len=2304 max_tokens=20000, error=None, time=10.541587829589844s
+[36m(compute_several pid=2459507)[0m     Retrying...
+[36m(compute_several pid=2459518)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=2459535)[0m ✓ [P0] GPTOSS120B: output_len=1292, thinking_len=1896, time=8.1s[32m [repeated 107x across cluster][0m
+[36m(compute_several pid=2461588)[0m GPTOSS120B using specialized preifix: [32m [repeated 9x across cluster][0m
+[36m(compute_several pid=2460613)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=2460613)[0m     output_len=0, thinking_len=2448 max_tokens=20000, error=None, time=6.208439588546753s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=2460613)[0m     Retrying...[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=2460613)[0m ✓ [P0] GPTOSS120B: output_len=1548, thinking_len=1871, time=8.7s[32m [repeated 100x across cluster][0m
+[36m(compute_several pid=2453531)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453531)[0m     output_len=0, thinking_len=2620 max_tokens=20000, error=None, time=11.53620457649231s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453531)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2467774)[0m ✓ [P0] GPTOSS120B: output_len=1370, thinking_len=1332, time=8.9s[32m [repeated 9x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 39.15 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(compute_several pid=2459518)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)
+[36m(compute_several pid=2459518)[0m     output_len=0, thinking_len=1844 max_tokens=20000, error=None, time=10.918074607849121s
+[36m(compute_several pid=2459518)[0m     Retrying...
+[36m(compute_several pid=2453531)[0m ✓ [P0] GPTOSS120B: output_len=1830, thinking_len=771, time=6.8s[32m [repeated 6x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.531545102596283
+[36m(compute_several pid=2459518)[0m ✓ [P0] GPTOSS120B: output_len=1554, thinking_len=1352, time=9.6s
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/119.jsonl
+[36m(compute_several pid=2453607)[0m ERROR:2026-03-02 21:36:24,195:Task exception was never retrieved[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m future: <Task finished name='Task-1618' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await self._transport.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await self._pool.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await self._close_connections(closing_connections)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await connection.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await self._connection.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await self._network_stream.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await self._stream.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     await self.transport_stream.aclose()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     self._transport.close()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     self._check_closed()[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2453607)[0m RuntimeError: Event loop is closed[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=2467756)[0m ERROR:2026-03-02 21:36:34,754:Task exception was never retrieved[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m future: <Task finished name='Task-1523' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m Traceback (most recent call last):[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 128x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await self._transport.aclose()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await self._pool.aclose()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await self._close_connections(closing_connections)[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await connection.aclose()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await self._connection.aclose()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await self._network_stream.aclose()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await self._stream.aclose()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     await self.transport_stream.aclose()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     self._transport.close()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     self._check_closed()[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=2467756)[0m RuntimeError: Event loop is closed[32m [repeated 16x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m step:119 - global_seqlen/min:206026 - global_seqlen/max:256566 - global_seqlen/minmax_diff:50540 - global_seqlen/balanced_min:233979 - global_seqlen/balanced_max:233979 - global_seqlen/mean:233979.0 - reward_extra_info/score:0.6190234375 - reward_extra_info/bio_correct:0.54296875 - reward_extra_info/math_correct:0.50390625 - reward_extra_info/sus_score:0.4278515625 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.531545102596283 - advantages/group_mean_mean:0.6190234425012022 - advantages/group_mean_std:0.6833688187156464 - advantages/group_mean_min:-0.48625001311302185 - advantages/group_mean_max:1.7662500143051147 - advantages/group_std_mean:0.5723080402240157 - advantages/group_std_std:0.20489640846744064 - advantages/group_std_min:0.1768776774406433 - advantages/group_std_max:1.0929089784622192 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-4.147295840084553e-09 - advantages/raw_score_std:0.5686203890360154 - advantages/raw_score_min:-1.6325000524520874 - advantages/raw_score_max:1.5912500619888306 - advantages/advantage_mean:-7.450580596923828e-09 - advantages/advantage_std:0.5686203837394714 - advantages/advantage_min:-1.6325000524520874 - advantages/advantage_max:1.5912500619888306 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00024256736469396856 - actor/kl_coef:0.001 - actor/pg_loss:0.0008658810511406045 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.034692324697971344 - perf/mfu/actor:0.32128161677101635 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:275.630672454834 - actor/lr:1e-06 - training/global_step:119 - training/epoch:3 - critic/score/mean:0.6190234422683716 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.6190234422683716 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.020592935383319855 - critic/advantages-len-unadj/max:1.5912500619888306 - critic/advantages-len-unadj/min:-1.6325000524520874 - critic/returns/mean:-0.020592935383319855 - critic/returns/max:1.5912500619888306 - critic/returns/min:-1.6325000524520874 - response_length/mean:3123.640625 - response_length/max:6144.0 - response_length/min:1005.0 - response_length/clip_ratio:0.0546875 - response_length_non_aborted/mean:3123.640625 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1005.0 - response_length_non_aborted/clip_ratio:0.0546875 - response/aborted_ratio:0.0 - prompt_length/mean:532.28125 - prompt_length/max:971.0 - prompt_length/min:390.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.9375 - reward/mean@8:0.578125 - reward/min@8:0.25 - reward/p25@8:0.4453125 - p75@8:0.7265625 - timing_s/start_profile:7.070181891322136e-05 - timing_s/generate_sequences:56.40290832519531 - timing_s/offload_fsdp_model_to_cpu:0.00026821630308404565 - timing_s/reshard:1.3012807369232178 - timing_s/wake_up:0.07150425016880035 - timing_s/generation_timing/max:59.50172805786133 - timing_s/generation_timing/min:51.96144485473633 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:61.42466121702455 - timing_s/reward:39.40551055781543 - timing_s/old_log_prob:6.583343531936407 - timing_s/ref:6.411448260070756 - timing_s/adv:0.016364836832508445 - timing_s/update_actor:25.30783940292895 - timing_s/dump_rollout_generations:0.40641344198957086 - timing_s/step:139.57986036804505 - timing_s/stop_profile:5.383417010307312e-05 - timing_per_token_ms/ref:0.006850452668904855 - timing_per_token_ms/gen:0.07681424071599215 - timing_per_token_ms/update_actor:0.0270407166913793 - timing_per_token_ms/adv:1.7485369234534345e-05 - perf/total_num_tokens:935916 - perf/time_per_step:139.57986036804505 - perf/throughput:1676.309170843435
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2459518)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2459535)[0m ✓ [P0] GPTOSS120B: output_len=1328, thinking_len=1394, time=2.1s
+[36m(compute_several pid=2460358)[0m GPTOSS120B using specialized preifix: [32m [repeated 33x across cluster][0m
+[36m(compute_several pid=2453607)[0m ✓ [P0] GPTOSS120B: output_len=1324, thinking_len=1687, time=6.6s[32m [repeated 19x across cluster][0m
+[36m(compute_several pid=2453528)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2453528)[0m     output_len=0, thinking_len=2034 max_tokens=20000, error=None, time=6.062086820602417s
+[36m(compute_several pid=2453528)[0m     Retrying...
+[36m(compute_several pid=2467756)[0m GPTOSS120B using specialized preifix: [32m [repeated 30x across cluster][0m
+[36m(compute_several pid=2459928)[0m ✓ [P0] GPTOSS120B: output_len=2352, thinking_len=1442, time=10.3s[32m [repeated 102x across cluster][0m
+[36m(compute_several pid=2459515)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2459515)[0m     output_len=0, thinking_len=1866 max_tokens=20000, error=None, time=8.651616096496582s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2459515)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2453582)[0m ✓ [P0] GPTOSS120B: output_len=3021, thinking_len=2471, time=12.3s[32m [repeated 114x across cluster][0m
+[36m(compute_several pid=2453293)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2453293)[0m     output_len=0, thinking_len=1584 max_tokens=20000, error=None, time=10.967105627059937s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2453293)[0m     Retrying...[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2453602)[0m ✓ [P0] GPTOSS120B: output_len=1982, thinking_len=2206, time=15.3s[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=2467828)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)
+[36m(compute_several pid=2467828)[0m     output_len=0, thinking_len=1056 max_tokens=20000, error=None, time=15.997424125671387s
+[36m(compute_several pid=2467828)[0m     Retrying...
+[36m(compute_several pid=2453297)[0m ✓ [P0] GPTOSS120B: output_len=1977, thinking_len=2488, time=11.5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2467828)[0m ✓ [P0] GPTOSS120B: output_len=1903, thinking_len=2079, time=6.3s[32m [repeated 3x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 36.64 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.5588305592536926
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/120.jsonl
+[36m(TaskRunner pid=2429759)[0m test_gen_batch meta info: {'eos_token_id': 151645, 'pad_token_id': 151643, 'recompute_log_prob': False, 'do_sample': False, 'validate': True, 'global_steps': 120}
+[36m(TaskRunner pid=2429759)[0m validation generation end
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2467828)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2467828)[0m ✓ [P0] GPTOSS120B: output_len=1381, thinking_len=1262, time=1.8s
+[36m(compute_several pid=2460624)[0m GPTOSS120B using specialized preifix: [32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=2431776)[0m INFO:2026-03-02 21:39:46,710:[Rank 0] Saved model to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120/actor/model_world_size_4_rank_0.pt
+[36m(WorkerDict pid=2431776)[0m INFO:2026-03-02 21:42:13,054:[Rank 0] Saved optim to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120/actor/optim_world_size_4_rank_0.pt
+[36m(WorkerDict pid=2431777)[0m INFO:2026-03-02 21:39:47,582:[Rank 1] Saved model to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120/actor/model_world_size_4_rank_1.pt[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=2431776)[0m INFO:2026-03-02 21:42:13,457:[Rank 0] Saved extra_state to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120/actor/extra_state_world_size_4_rank_0.pt
+[36m(TaskRunner pid=2429759)[0m Training Progress:  18%|█▊        | 120/650 [3:15:00<31:36:26, 214.69s/it]
+[36m(WorkerDict pid=2431776)[0m INFO:2026-03-02 21:42:14,366:[Rank 0] Saved model config and tokenizer class to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120/actor/huggingface
+[36m(compute_several pid=2453586)[0m ERROR:2026-03-02 21:43:16,653:Task exception was never retrieved
+[36m(compute_several pid=2453586)[0m future: <Task finished name='Task-1751' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2453586)[0m Traceback (most recent call last):
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2453586)[0m     await self._transport.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2453586)[0m     await self._pool.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2453586)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2453586)[0m     await connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2453586)[0m     await self._connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2453586)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2453586)[0m     await self._stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2453586)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2453586)[0m     self._transport.close()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2453586)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2453586)[0m     self._check_closed()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2453586)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2453586)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2453586)[0m ERROR:2026-03-02 21:43:16,698:Task exception was never retrieved
+[36m(compute_several pid=2453586)[0m future: <Task finished name='Task-1752' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2453586)[0m Traceback (most recent call last):
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2453586)[0m     await self._transport.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2453586)[0m     await self._pool.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2453586)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2453586)[0m     await connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2453586)[0m     await self._connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2453586)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2453586)[0m     await self._stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2453586)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2453586)[0m     self._transport.close()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2453586)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2453586)[0m     self._check_closed()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2453586)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2453586)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2453586)[0m ERROR:2026-03-02 21:43:16,703:Task exception was never retrieved
+[36m(compute_several pid=2453586)[0m future: <Task finished name='Task-1753' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2453586)[0m Traceback (most recent call last):
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2453586)[0m     await self._transport.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2453586)[0m     await self._pool.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2453586)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2453586)[0m     await connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2453586)[0m     await self._connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2453586)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2453586)[0m     await self._stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2453586)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2453586)[0m     self._transport.close()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2453586)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2453586)[0m     self._check_closed()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2453586)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2453586)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2453586)[0m ERROR:2026-03-02 21:43:16,707:Task exception was never retrieved
+[36m(compute_several pid=2453586)[0m future: <Task finished name='Task-1754' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2453586)[0m Traceback (most recent call last):
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2453586)[0m     await self._transport.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2453586)[0m     await self._pool.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2453586)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2453586)[0m     await connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2453586)[0m     await self._connection.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2453586)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2453586)[0m     await self._stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2453586)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2453586)[0m     self._transport.close()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2453586)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2453586)[0m     self._check_closed()
+[36m(compute_several pid=2453586)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2453586)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2453586)[0m RuntimeError: Event loop is closed
+[36m(WorkerDict pid=2431778)[0m INFO:2026-03-02 21:42:14,171:[Rank 2] Saved optim to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120/actor/optim_world_size_4_rank_2.pt[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=2431778)[0m INFO:2026-03-02 21:42:14,186:[Rank 2] Saved extra_state to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120/actor/extra_state_world_size_4_rank_2.pt[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2453297)[0m ERROR:2026-03-02 21:43:24,109:Task exception was never retrieved[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m future: <Task finished name='Task-1691' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m Traceback (most recent call last):[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 192x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await self._transport.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await self._pool.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await self._close_connections(closing_connections)[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await connection.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await self._connection.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await self._network_stream.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await self._stream.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     await self.transport_stream.aclose()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     self._transport.close()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     self._check_closed()[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453297)[0m RuntimeError: Event loop is closed[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=2453559)[0m ✓ [P0] GPTOSS120B: output_len=1476, thinking_len=1648, time=6.4s[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=2453297)[0m ✓ [P0] GPTOSS120B: output_len=2270, thinking_len=3715, time=12.0s[32m [repeated 71x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 13.79 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/90 samples timed out (0.0%)
+[36m(TaskRunner pid=2429759)[0m len reward_extra_infos_dict['reward']: 90
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/val/120.jsonl
+[36m(TaskRunner pid=2429759)[0m local_global_step_folder: /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120
+[36m(TaskRunner pid=2429759)[0m step:120 - global_seqlen/min:200690 - global_seqlen/max:227209 - global_seqlen/minmax_diff:26519 - global_seqlen/balanced_min:214230 - global_seqlen/balanced_max:214230 - global_seqlen/mean:214230.0 - reward_extra_info/score:0.7278125000000001 - reward_extra_info/bio_correct:0.61328125 - reward_extra_info/math_correct:0.52734375 - reward_extra_info/sus_score:0.41281249999999997 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.5588305592536926 - advantages/group_mean_mean:0.727812502766028 - advantages/group_mean_std:0.7013095249267307 - advantages/group_mean_min:-0.6962499618530273 - advantages/group_mean_max:1.8899999856948853 - advantages/group_std_mean:0.5484502203762531 - advantages/group_std_std:0.19090397283354155 - advantages/group_std_min:0.1360672116279602 - advantages/group_std_max:0.9877210259437561 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-1.964508555829525e-09 - advantages/raw_score_std:0.5432188501805575 - advantages/raw_score_min:-1.46875 - advantages/raw_score_max:1.7025001049041748 - advantages/advantage_mean:-3.725290298461914e-09 - advantages/advantage_std:0.5432188510894775 - advantages/advantage_min:-1.46875 - advantages/advantage_max:1.7025001049041748 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.0002521378864912549 - actor/kl_coef:0.001 - actor/pg_loss:0.0017018776561599225 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.02369055710732937 - perf/mfu/actor:0.3169182110057792 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:278.781005859375 - actor/lr:1e-06 - valreward:0.6815555551813708 - valreward_extra_info/score:0.6815555555555557 - valreward_extra_info/bio_correct:0.5111111111111111 - valreward_extra_info/math_correct:0.5444444444444444 - valreward_extra_info/sus_score:0.37399999999999994 - valreward_extra_info/bio_extracted:-0.6969 - valreward_extra_info/math_extracted:-0.6969 - valreward_extra_info/bio_expected:-0.6969 - valreward_extra_info/math_expected:-0.6969 - valreward_extra_info/bio_extraction_log:-0.6969 - valreward_extra_info/math_extraction_log:-0.6969 - valreward_extra_info/full_monitor_input:-0.6969 - valreward_extra_info/full_monitor_output:-0.6969 - valreward_extra_info/total_naive_level_retries:0.0 - valreward_extra_info/total_naive_level_timeouts:0.0 - valreward_extra_info/frac_naive_level_timeouts:0.0 - training/global_step:120 - training/epoch:3 - critic/score/mean:0.7278124690055847 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.7278124690055847 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.009423991665244102 - critic/advantages-len-unadj/max:1.7025001049041748 - critic/advantages-len-unadj/min:-1.46875 - critic/returns/mean:-0.009423991665244102 - critic/returns/max:1.7025001049041748 - critic/returns/min:-1.46875 - response_length/mean:2800.71875 - response_length/max:6144.0 - response_length/min:1025.0 - response_length/clip_ratio:0.046875 - response_length_non_aborted/mean:2800.71875 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1025.0 - response_length_non_aborted/clip_ratio:0.046875 - response/aborted_ratio:0.0 - prompt_length/mean:546.625 - prompt_length/max:865.0 - prompt_length/min:388.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.96875 - reward/mean@8:0.625 - reward/min@8:0.28125 - reward/p25@8:0.5 - p75@8:0.75 - timing_s/start_profile:7.212581112980843e-05 - timing_s/generate_sequences:51.18044662475586 - timing_s/offload_fsdp_model_to_cpu:9.021355072036386e-05 - timing_s/reshard:1.3230355978012085 - timing_s/wake_up:0.06558361649513245 - timing_s/generation_timing/max:55.49605178833008 - timing_s/generation_timing/min:45.35541534423828 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:57.40175040694885 - timing_s/reward:36.8662172651384 - timing_s/old_log_prob:5.9202332380227745 - timing_s/ref:5.769498953130096 - timing_s/adv:0.020459359046071768 - timing_s/update_actor:22.99812078103423 - timing_s/dump_rollout_generations:0.3802732927724719 - timing_s/step:129.37748119304888 - timing_s/testing:58.11854707892053 - timing_s/save_checkpoint:221.97369130398147 - timing_s/stop_profile:9.770411998033524e-05 - timing_per_token_ms/ref:0.006732832648473715 - timing_per_token_ms/gen:0.08006001585383893 - timing_per_token_ms/update_actor:0.02683811882210035 - timing_per_token_ms/adv:2.3875459839975455e-05 - perf/total_num_tokens:856920 - perf/time_per_step:129.37748119304888 - perf/throughput:1655.852301532595
+[36m(compute_several pid=2453582)[0m ✓ [P0] GPTOSS120B: output_len=1408, thinking_len=3005, time=11.6s
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2453582)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2453588)[0m ✓ [P0] GPTOSS120B: output_len=1306, thinking_len=1608, time=1.6s
+[36m(compute_several pid=2453583)[0m GPTOSS120B using specialized preifix: [32m [repeated 27x across cluster][0m
+[36m(compute_several pid=2453582)[0m ✓ [P0] GPTOSS120B: output_len=1577, thinking_len=1565, time=7.5s[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=2453292)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2453292)[0m     output_len=0, thinking_len=1258 max_tokens=20000, error=None, time=6.5203537940979s
+[36m(compute_several pid=2453292)[0m     Retrying...
+[36m(compute_several pid=2453582)[0m GPTOSS120B using specialized preifix: [32m [repeated 28x across cluster][0m
+[36m(compute_several pid=2459959)[0m 
+[36m(compute_several pid=2460554)[0m ✓ [P0] GPTOSS120B: output_len=1370, thinking_len=2187, time=7.5s[32m [repeated 87x across cluster][0m
+[36m(compute_several pid=2460050)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2460050)[0m     output_len=0, thinking_len=1533 max_tokens=20000, error=None, time=6.510727643966675s
+[36m(compute_several pid=2460050)[0m     Retrying...
+[36m(compute_several pid=2459507)[0m GPTOSS120B using specialized preifix: [32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2453297)[0m ✓ [P0] GPTOSS120B: output_len=1441, thinking_len=1180, time=7.0s[32m [repeated 102x across cluster][0m
+[36m(compute_several pid=2460161)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2460161)[0m     output_len=0, thinking_len=1680 max_tokens=20000, error=None, time=12.026853799819946s[32m [repeated 5x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Training Progress:  19%|█▊        | 121/650 [3:17:00<27:22:37, 186.31s/it]
+[36m(compute_several pid=2459507)[0m ERROR:2026-03-02 21:45:15,488:Task exception was never retrieved
+[36m(compute_several pid=2459507)[0m future: <Task finished name='Task-1666' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2459507)[0m Traceback (most recent call last):
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2459507)[0m     await self._transport.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2459507)[0m     await self._pool.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2459507)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2459507)[0m     await connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2459507)[0m     await self._connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2459507)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2459507)[0m     await self._stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2459507)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2459507)[0m     self._transport.close()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2459507)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2459507)[0m     self._check_closed()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2459507)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2459507)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2459507)[0m ERROR:2026-03-02 21:45:15,524:Task exception was never retrieved
+[36m(compute_several pid=2459507)[0m future: <Task finished name='Task-1667' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2459507)[0m Traceback (most recent call last):
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2459507)[0m     await self._transport.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2459507)[0m     await self._pool.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2459507)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2459507)[0m     await connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2459507)[0m     await self._connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2459507)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2459507)[0m     await self._stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2459507)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2459507)[0m     self._transport.close()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2459507)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2459507)[0m     self._check_closed()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2459507)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2459507)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2459507)[0m ERROR:2026-03-02 21:45:15,526:Task exception was never retrieved
+[36m(compute_several pid=2459507)[0m future: <Task finished name='Task-1668' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2459507)[0m Traceback (most recent call last):
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2459507)[0m     await self._transport.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2459507)[0m     await self._pool.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2459507)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2459507)[0m     await connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2459507)[0m     await self._connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2459507)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2459507)[0m     await self._stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2459507)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2459507)[0m     self._transport.close()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2459507)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2459507)[0m     self._check_closed()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2459507)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2459507)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2459507)[0m ERROR:2026-03-02 21:45:15,528:Task exception was never retrieved
+[36m(compute_several pid=2459507)[0m future: <Task finished name='Task-1669' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2459507)[0m Traceback (most recent call last):
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2459507)[0m     await self._transport.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2459507)[0m     await self._pool.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2459507)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2459507)[0m     await connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2459507)[0m     await self._connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2459507)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2459507)[0m     await self._stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2459507)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2459507)[0m     self._transport.close()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2459507)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2459507)[0m     self._check_closed()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2459507)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2459507)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2459507)[0m ERROR:2026-03-02 21:45:15,530:Task exception was never retrieved
+[36m(compute_several pid=2459507)[0m future: <Task finished name='Task-1670' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2459507)[0m Traceback (most recent call last):
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2459507)[0m     await self._transport.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2459507)[0m     await self._pool.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2459507)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2459507)[0m     await connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2459507)[0m     await self._connection.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2459507)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2459507)[0m     await self._stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2459507)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2459507)[0m     self._transport.close()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2459507)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2459507)[0m     self._check_closed()
+[36m(compute_several pid=2459507)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2459507)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2459507)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2467744)[0m ERROR:2026-03-02 21:45:21,329:Task exception was never retrieved[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m future: <Task finished name='Task-1586' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m Traceback (most recent call last):[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 352x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await self._transport.aclose()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await self._pool.aclose()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await self._close_connections(closing_connections)[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await connection.aclose()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await self._connection.aclose()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await self._network_stream.aclose()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await self._stream.aclose()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     await self.transport_stream.aclose()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     self._transport.close()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     self._check_closed()[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467744)[0m RuntimeError: Event loop is closed[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2467765)[0m ERROR:2026-03-02 21:45:27,118:Task exception was never retrieved[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m future: <Task finished name='Task-1639' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m Traceback (most recent call last):[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 88x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await self._transport.aclose()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await self._pool.aclose()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await self._close_connections(closing_connections)[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await connection.aclose()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await self._connection.aclose()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await self._network_stream.aclose()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await self._stream.aclose()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     await self.transport_stream.aclose()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     self._transport.close()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     self._check_closed()[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2467765)[0m RuntimeError: Event loop is closed[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=2460161)[0m     Retrying...[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453439)[0m ✓ [P0] GPTOSS120B: output_len=1772, thinking_len=3738, time=13.7s[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=2460050)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2460050)[0m     output_len=0, thinking_len=2143 max_tokens=20000, error=None, time=9.407989740371704s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2460050)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2460161)[0m ✓ [P0] GPTOSS120B: output_len=2041, thinking_len=1970, time=10.2s
+[36m(compute_several pid=2453607)[0m ✓ [P0] GPTOSS120B: output_len=1757, thinking_len=1778, time=7.6s
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 32.13 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.5689674615859985
+[36m(compute_several pid=2460050)[0m ✓ [P0] GPTOSS120B: output_len=1318, thinking_len=1820, time=4.5s[32m [repeated 3x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/121.jsonl
+[36m(TaskRunner pid=2429759)[0m step:121 - global_seqlen/min:179090 - global_seqlen/max:227994 - global_seqlen/minmax_diff:48904 - global_seqlen/balanced_min:200069 - global_seqlen/balanced_max:200070 - global_seqlen/mean:200069.75 - reward_extra_info/score:0.9432421875 - reward_extra_info/bio_correct:0.6484375 - reward_extra_info/math_correct:0.69921875 - reward_extra_info/sus_score:0.4044140625 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.5689674615859985 - advantages/group_mean_mean:0.9432421729434282 - advantages/group_mean_std:0.533613477469021 - advantages/group_mean_min:-0.2887499928474426 - advantages/group_mean_max:1.8700000047683716 - advantages/group_std_mean:0.49467357131652534 - advantages/group_std_std:0.18637131873219548 - advantages/group_std_min:0.10266973078250885 - advantages/group_std_max:1.029157042503357 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:1.021544449031353e-08 - advantages/raw_score_std:0.49447617679311595 - advantages/raw_score_min:-1.7687499523162842 - advantages/raw_score_max:1.2925000190734863 - advantages/advantage_mean:9.313225746154785e-09 - advantages/advantage_std:0.49447616934776306 - advantages/advantage_min:-1.7687499523162842 - advantages/advantage_max:1.2925000190734863 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00031246652464947796 - actor/kl_coef:0.001 - actor/pg_loss:4.955267078392873e-05 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.02231130376458168 - perf/mfu/actor:0.31384068979222784 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:279.07557678222656 - actor/lr:1e-06 - training/global_step:121 - training/epoch:3 - critic/score/mean:0.9432421922683716 - critic/score/max:2.0 - critic/score/min:-0.9599999785423279 - critic/rewards/mean:0.9432421922683716 - critic/rewards/max:2.0 - critic/rewards/min:-0.9599999785423279 - critic/advantages-len-unadj/mean:-0.008554195985198021 - critic/advantages-len-unadj/max:1.2925000190734863 - critic/advantages-len-unadj/min:-1.7687499523162842 - critic/returns/mean:-0.008554195985198021 - critic/returns/max:1.2925000190734863 - critic/returns/min:-1.7687499523162842 - response_length/mean:2535.65234375 - response_length/max:6144.0 - response_length/min:1046.0 - response_length/clip_ratio:0.01171875 - response_length_non_aborted/mean:2535.65234375 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1046.0 - response_length_non_aborted/clip_ratio:0.01171875 - response/aborted_ratio:0.0 - prompt_length/mean:590.4375 - prompt_length/max:963.0 - prompt_length/min:418.0 - prompt_length/clip_ratio:0.0 - reward/max@8:1.0 - reward/mean@8:0.73828125 - reward/min@8:0.3125 - reward/p25@8:0.5625 - p75@8:0.921875 - timing_s/start_profile:7.058004848659039e-05 - timing_s/generate_sequences:47.52748489379883 - timing_s/offload_fsdp_model_to_cpu:9.783351561054587e-05 - timing_s/reshard:0.5317634344100952 - timing_s/wake_up:0.06871062517166138 - timing_s/generation_timing/max:53.80328369140625 - timing_s/generation_timing/min:38.92229080200195 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:54.99560529203154 - timing_s/reward:32.34994672285393 - timing_s/old_log_prob:5.58850780595094 - timing_s/ref:5.355786615982652 - timing_s/adv:0.030591035960242152 - timing_s/update_actor:21.33619143301621 - timing_s/dump_rollout_generations:0.36409049294888973 - timing_s/step:120.05021663499065 - timing_s/stop_profile:5.838694050908089e-05 - timing_per_token_ms/ref:0.0066923992957239305 - timing_per_token_ms/gen:0.0847224122429533 - timing_per_token_ms/update_actor:0.026660941287996075 - timing_per_token_ms/adv:3.822546381979554e-05 - perf/total_num_tokens:800279 - perf/time_per_step:120.05021663499065 - perf/throughput:1666.5505120103742
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2460050)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2453577)[0m GPTOSS120B using specialized preifix: [32m [repeated 33x across cluster][0m
+[36m(compute_several pid=2453582)[0m ✓ [P0] GPTOSS120B: output_len=92, thinking_len=975, time=4.8s
+[36m(compute_several pid=2453597)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2453597)[0m     output_len=0, thinking_len=1045 max_tokens=20000, error=None, time=6.029600620269775s
+[36m(compute_several pid=2453597)[0m     Retrying...
+[36m(compute_several pid=2460492)[0m GPTOSS120B using specialized preifix: [32m [repeated 30x across cluster][0m
+[36m(compute_several pid=2453528)[0m ✓ [P0] GPTOSS120B: output_len=1422, thinking_len=1943, time=8.7s[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=2453596)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2453596)[0m     output_len=0, thinking_len=578 max_tokens=20000, error=None, time=3.5425801277160645s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2453596)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2453292)[0m ✓ [P0] GPTOSS120B: output_len=1984, thinking_len=1620, time=10.3s[32m [repeated 135x across cluster][0m
+[36m(compute_several pid=2467780)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2467780)[0m     output_len=0, thinking_len=2036 max_tokens=20000, error=None, time=9.065999507904053s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2467780)[0m     Retrying...[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=2460613)[0m ✓ [P0] GPTOSS120B: output_len=2375, thinking_len=2150, time=11.2s[32m [repeated 94x across cluster][0m
+[36m(compute_several pid=2459524)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)
+[36m(compute_several pid=2459524)[0m     output_len=0, thinking_len=1547 max_tokens=20000, error=None, time=3.536208391189575s
+[36m(compute_several pid=2459524)[0m     Retrying...
+[36m(compute_several pid=2459524)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 3/5)
+[36m(TaskRunner pid=2429759)[0m Training Progress:  19%|█▉        | 122/650 [3:19:15<25:04:22, 170.95s/it]
+[36m(compute_several pid=2460554)[0m ERROR:2026-03-02 21:47:34,925:Task exception was never retrieved
+[36m(compute_several pid=2460554)[0m future: <Task finished name='Task-1702' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2460554)[0m Traceback (most recent call last):
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2460554)[0m     await self._transport.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2460554)[0m     await self._pool.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2460554)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2460554)[0m     await connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2460554)[0m     await self._connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2460554)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2460554)[0m     await self._stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2460554)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2460554)[0m     self._transport.close()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2460554)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2460554)[0m     self._check_closed()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2460554)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2460554)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2460554)[0m ERROR:2026-03-02 21:47:34,972:Task exception was never retrieved
+[36m(compute_several pid=2460554)[0m future: <Task finished name='Task-1703' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2460554)[0m Traceback (most recent call last):
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2460554)[0m     await self._transport.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2460554)[0m     await self._pool.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2460554)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2460554)[0m     await connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2460554)[0m     await self._connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2460554)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2460554)[0m     await self._stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2460554)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2460554)[0m     self._transport.close()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2460554)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2460554)[0m     self._check_closed()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2460554)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2460554)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2460554)[0m ERROR:2026-03-02 21:47:34,974:Task exception was never retrieved
+[36m(compute_several pid=2460554)[0m future: <Task finished name='Task-1704' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2460554)[0m Traceback (most recent call last):
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2460554)[0m     await self._transport.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2460554)[0m     await self._pool.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2460554)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2460554)[0m     await connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2460554)[0m     await self._connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2460554)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2460554)[0m     await self._stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2460554)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2460554)[0m     self._transport.close()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2460554)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2460554)[0m     self._check_closed()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2460554)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2460554)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2460554)[0m ERROR:2026-03-02 21:47:34,977:Task exception was never retrieved
+[36m(compute_several pid=2460554)[0m future: <Task finished name='Task-1705' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2460554)[0m Traceback (most recent call last):
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2460554)[0m     await self._transport.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2460554)[0m     await self._pool.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2460554)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2460554)[0m     await connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2460554)[0m     await self._connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2460554)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2460554)[0m     await self._stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2460554)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2460554)[0m     self._transport.close()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2460554)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2460554)[0m     self._check_closed()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2460554)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2460554)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2460554)[0m ERROR:2026-03-02 21:47:34,979:Task exception was never retrieved
+[36m(compute_several pid=2460554)[0m future: <Task finished name='Task-1706' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>
+[36m(compute_several pid=2460554)[0m Traceback (most recent call last):
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py", line 1985, in aclose
+[36m(compute_several pid=2460554)[0m     await self._transport.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_transports/default.py", line 406, in aclose
+[36m(compute_several pid=2460554)[0m     await self._pool.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 353, in aclose
+[36m(compute_several pid=2460554)[0m     await self._close_connections(closing_connections)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections
+[36m(compute_several pid=2460554)[0m     await connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection.py", line 173, in aclose
+[36m(compute_several pid=2460554)[0m     await self._connection.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/http11.py", line 258, in aclose
+[36m(compute_several pid=2460554)[0m     await self._network_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_backends/anyio.py", line 53, in aclose
+[36m(compute_several pid=2460554)[0m     await self._stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/streams/tls.py", line 241, in aclose
+[36m(compute_several pid=2460554)[0m     await self.transport_stream.aclose()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose
+[36m(compute_several pid=2460554)[0m     self._transport.close()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close
+[36m(compute_several pid=2460554)[0m     self._loop.call_soon(self._call_connection_lost, None)
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+[36m(compute_several pid=2460554)[0m     self._check_closed()
+[36m(compute_several pid=2460554)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+[36m(compute_several pid=2460554)[0m     raise RuntimeError('Event loop is closed')
+[36m(compute_several pid=2460554)[0m RuntimeError: Event loop is closed
+[36m(compute_several pid=2453583)[0m ERROR:2026-03-02 21:47:40,542:Task exception was never retrieved[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m future: <Task finished name='Task-1749' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m Traceback (most recent call last):[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 336x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await self._transport.aclose()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await self._pool.aclose()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await self._close_connections(closing_connections)[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await connection.aclose()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await self._connection.aclose()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await self._network_stream.aclose()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await self._stream.aclose()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     await self.transport_stream.aclose()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     self._transport.close()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     self._check_closed()[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2453583)[0m RuntimeError: Event loop is closed[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=2460161)[0m ERROR:2026-03-02 21:47:45,514:Task exception was never retrieved[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m future: <Task finished name='Task-1696' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m Traceback (most recent call last):[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 448x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await self._transport.aclose()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await self._pool.aclose()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await self._close_connections(closing_connections)[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await connection.aclose()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await self._connection.aclose()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await self._network_stream.aclose()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await self._stream.aclose()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     await self.transport_stream.aclose()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     self._transport.close()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     self._check_closed()[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2460161)[0m RuntimeError: Event loop is closed[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=2459524)[0m     output_len=0, thinking_len=1024 max_tokens=20000, error=None, time=2.916461229324341s
+[36m(compute_several pid=2459524)[0m     Retrying...
+[36m(compute_several pid=2459515)[0m ✓ [P0] GPTOSS120B: output_len=1255, thinking_len=2913, time=6.9s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=2459524)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 4/5)
+[36m(compute_several pid=2459524)[0m     output_len=0, thinking_len=3475 max_tokens=20000, error=None, time=5.762843370437622s
+[36m(compute_several pid=2459524)[0m     Retrying...
+[36m(compute_several pid=2467780)[0m ✓ [P0] GPTOSS120B: output_len=1736, thinking_len=1544, time=10.5s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 39.39 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(compute_several pid=2459524)[0m ✓ [P0] GPTOSS120B: output_len=1840, thinking_len=1649, time=4.0s
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.5222691297531128
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/122.jsonl
+[36m(TaskRunner pid=2429759)[0m 
+[36m(TaskRunner pid=2429759)[0m step:122 - global_seqlen/min:207650 - global_seqlen/max:236419 - global_seqlen/minmax_diff:28769 - global_seqlen/balanced_min:222082 - global_seqlen/balanced_max:222082 - global_seqlen/mean:222082.0 - reward_extra_info/score:0.8265234375 - reward_extra_info/bio_correct:0.6171875 - reward_extra_info/math_correct:0.58203125 - reward_extra_info/sus_score:0.3726953125 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.5222691297531128 - advantages/group_mean_mean:0.8265234343707561 - advantages/group_mean_std:0.655657826182921 - advantages/group_mean_min:-0.48374998569488525 - advantages/group_mean_max:1.9574999809265137 - advantages/group_std_mean:0.4857683025766164 - advantages/group_std_std:0.2208447365394791 - advantages/group_std_min:0.04166192561388016 - advantages/group_std_max:1.0140864849090576 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-1.1059455573558807e-09 - advantages/raw_score_std:0.4991496163965714 - advantages/raw_score_min:-1.3987499475479126 - advantages/raw_score_max:1.3062500953674316 - advantages/advantage_mean:-5.587935447692871e-09 - advantages/advantage_std:0.4991496205329895 - advantages/advantage_min:-1.3987499475479126 - advantages/advantage_max:1.3062500953674316 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00025606182862247806 - actor/kl_coef:0.001 - actor/pg_loss:6.1041591834509745e-06 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.020531706511974335 - perf/mfu/actor:0.31829594332999844 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:275.53427505493164 - actor/lr:1e-06 - training/global_step:122 - training/epoch:3 - critic/score/mean:0.8265234231948853 - critic/score/max:2.0 - critic/score/min:-0.9599999785423279 - critic/rewards/mean:0.8265234231948853 - critic/rewards/max:2.0 - critic/rewards/min:-0.9599999785423279 - critic/advantages-len-unadj/mean:-0.01745634339749813 - critic/advantages-len-unadj/max:1.3062500953674316 - critic/advantages-len-unadj/min:-1.3987499475479126 - critic/returns/mean:-0.01745634339749813 - critic/returns/max:1.3062500953674316 - critic/returns/min:-1.3987499475479126 - response_length/mean:2928.375 - response_length/max:6144.0 - response_length/min:943.0 - response_length/clip_ratio:0.03515625 - response_length_non_aborted/mean:2928.375 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:943.0 - response_length_non_aborted/clip_ratio:0.03515625 - response/aborted_ratio:0.0 - prompt_length/mean:541.65625 - prompt_length/max:989.0 - prompt_length/min:394.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.90625 - reward/mean@8:0.671875 - reward/min@8:0.34375 - reward/p25@8:0.4921875 - p75@8:0.8515625 - timing_s/start_profile:5.1236944273114204e-05 - timing_s/generate_sequences:52.453033447265625 - timing_s/offload_fsdp_model_to_cpu:9.589653927832842e-05 - timing_s/reshard:1.3983407020568848 - timing_s/wake_up:0.07923103123903275 - timing_s/generation_timing/max:56.63113021850586 - timing_s/generation_timing/min:47.660316467285156 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:58.76716264896095 - timing_s/reward:39.631898432038724 - timing_s/old_log_prob:6.198985293973237 - timing_s/ref:6.009073341963813 - timing_s/adv:0.01689924392849207 - timing_s/update_actor:23.85021694516763 - timing_s/dump_rollout_generations:0.532667645951733 - timing_s/step:135.02809366281144 - timing_s/stop_profile:5.694292485713959e-05 - timing_per_token_ms/ref:0.006764475893998402 - timing_per_token_ms/gen:0.07839133618389164 - timing_per_token_ms/update_actor:0.02684843542606743 - timing_per_token_ms/adv:1.9023653344814157e-05 - perf/total_num_tokens:888328 - perf/time_per_step:135.02809366281144 - perf/throughput:1644.7095858035088
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2459524)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2453588)[0m ✓ [P0] GPTOSS120B: output_len=1959, thinking_len=1760, time=2.2s
+[36m(compute_several pid=2453588)[0m ✓ [P0] GPTOSS120B: output_len=1200, thinking_len=1748, time=2.3s
+[36m(compute_several pid=2453531)[0m GPTOSS120B using specialized preifix: [32m [repeated 27x across cluster][0m
+[36m(compute_several pid=2453588)[0m ✓ [P0] GPTOSS120B: output_len=1824, thinking_len=2114, time=4.0s
+[36m(compute_several pid=2453597)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2453597)[0m     output_len=0, thinking_len=1201 max_tokens=20000, error=None, time=5.80823826789856s
+[36m(compute_several pid=2453597)[0m     Retrying...
+[36m(compute_several pid=2467744)[0m ✓ [P0] GPTOSS120B: output_len=1457, thinking_len=1525, time=7.8s[32m [repeated 19x across cluster][0m
+[36m(compute_several pid=2453588)[0m GPTOSS120B using specialized preifix: [32m [repeated 27x across cluster][0m
+[36m(compute_several pid=2461593)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2461593)[0m     output_len=0, thinking_len=1351 max_tokens=20000, error=None, time=7.508711338043213s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2461593)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2461588)[0m ✓ [P0] GPTOSS120B: output_len=1084, thinking_len=1708, time=8.4s[32m [repeated 91x across cluster][0m
+[36m(compute_several pid=2467828)[0m GPTOSS120B using specialized preifix: [32m [repeated 9x across cluster][0m
+[36m(compute_several pid=2453583)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453583)[0m     output_len=0, thinking_len=1736 max_tokens=20000, error=None, time=8.636813640594482s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453583)[0m     Retrying...[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453306)[0m ✓ [P0] GPTOSS120B: output_len=2161, thinking_len=2609, time=8.9s[32m [repeated 121x across cluster][0m
+[36m(compute_several pid=2453439)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 4x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Training Progress:  19%|█▉        | 123/650 [3:21:48<24:14:51, 165.64s/it]
+[36m(compute_several pid=2453306)[0m ERROR:2026-03-02 21:47:45,974:Task exception was never retrieved[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m future: <Task finished name='Task-1715' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m Traceback (most recent call last):[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 80x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._transport.aclose()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._pool.aclose()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._close_connections(closing_connections)[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await connection.aclose()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._connection.aclose()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._network_stream.aclose()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self._stream.aclose()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     await self.transport_stream.aclose()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     self._transport.close()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     self._check_closed()[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453306)[0m RuntimeError: Event loop is closed[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=2453531)[0m ERROR:2026-03-02 21:50:10,561:Task exception was never retrieved[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m future: <Task finished name='Task-1724' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m Traceback (most recent call last):[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await self._transport.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await self._pool.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await self._close_connections(closing_connections)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await self._connection.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await self._network_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await self._stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     await self.transport_stream.aclose()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     self._transport.close()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     self._check_closed()[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453531)[0m RuntimeError: Event loop is closed[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=2453439)[0m     output_len=0, thinking_len=1404 max_tokens=20000, error=None, time=10.905723333358765s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2453439)[0m     Retrying...[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2460407)[0m ✓ [P0] GPTOSS120B: output_len=899, thinking_len=1080, time=17.6s[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=2453439)[0m ✓ [P0] GPTOSS120B: output_len=758, thinking_len=1751, time=6.9s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2460161)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)
+[36m(compute_several pid=2460161)[0m     output_len=0, thinking_len=1436 max_tokens=20000, error=None, time=9.900564908981323s
+[36m(compute_several pid=2460161)[0m     Retrying...
+[36m(compute_several pid=2460161)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 3/5)
+[36m(compute_several pid=2460161)[0m     output_len=0, thinking_len=1558 max_tokens=20000, error=None, time=7.411434173583984s
+[36m(compute_several pid=2460161)[0m     Retrying...
+[36m(TaskRunner pid=2429759)[0m DEBUG: chunk 0 took 51.10 time
+[36m(TaskRunner pid=2429759)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(compute_several pid=2460161)[0m ✓ [P0] GPTOSS120B: output_len=1027, thinking_len=1168, time=6.5s
+[36m(TaskRunner pid=2429759)[0m DEBUG actor/entropy: 0.516937255859375
+[36m(TaskRunner pid=2429759)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/rollouts/train/123.jsonl
+[36m(TaskRunner pid=2429759)[0m step:123 - global_seqlen/min:188782 - global_seqlen/max:263965 - global_seqlen/minmax_diff:75183 - global_seqlen/balanced_min:229438 - global_seqlen/balanced_max:229439 - global_seqlen/mean:229438.75 - reward_extra_info/score:0.7417968749999999 - reward_extra_info/bio_correct:0.609375 - reward_extra_info/math_correct:0.52734375 - reward_extra_info/sus_score:0.394921875 - reward_extra_info/bio_extracted:-0.6969 - reward_extra_info/math_extracted:-0.6969 - reward_extra_info/bio_expected:-0.6969 - reward_extra_info/math_expected:-0.6969 - reward_extra_info/bio_extraction_log:-0.6969 - reward_extra_info/math_extraction_log:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_output:-0.6969 - reward_extra_info/total_naive_level_retries:0.0 - reward_extra_info/total_naive_level_timeouts:0.0 - reward_extra_info/frac_naive_level_timeouts:0.0 - actor/entropy:0.516937255859375 - advantages/group_mean_mean:0.741796862334013 - advantages/group_mean_std:0.6851148803158126 - advantages/group_mean_min:-0.6887500286102295 - advantages/group_mean_max:1.8299999237060547 - advantages/group_std_mean:0.5517062479630113 - advantages/group_std_std:0.21719194481665768 - advantages/group_std_min:0.2114575356245041 - advantages/group_std_max:0.9548223614692688 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:1.335865817964077e-08 - advantages/raw_score_std:0.554624294979153 - advantages/raw_score_min:-1.6462500095367432 - advantages/raw_score_max:1.6187500953674316 - advantages/advantage_mean:1.30385160446167e-08 - advantages/advantage_std:0.5546242594718933 - advantages/advantage_min:-1.6462500095367432 - advantages/advantage_max:1.6187500953674316 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.00024987654978758655 - actor/kl_coef:0.001 - actor/pg_loss:-0.0011896169967258174 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.02278275601565838 - perf/mfu/actor:0.3190131106274285 - perf/max_memory_allocated_gb:129.57976961135864 - perf/max_memory_reserved_gb:135.861328125 - perf/cpu_memory_used_gb:276.68651962280273 - actor/lr:1e-06 - training/global_step:123 - training/epoch:3 - critic/score/mean:0.7417968511581421 - critic/score/max:2.0 - critic/score/min:-0.9700000286102295 - critic/rewards/mean:0.7417968511581421 - critic/rewards/max:2.0 - critic/rewards/min:-0.9700000286102295 - critic/advantages-len-unadj/mean:-0.012944989837706089 - critic/advantages-len-unadj/max:1.6187500953674316 - critic/advantages-len-unadj/min:-1.6462500095367432 - critic/returns/mean:-0.012944989837706089 - critic/returns/max:1.6187500953674316 - critic/returns/min:-1.6462500095367432 - response_length/mean:3001.19921875 - response_length/max:6144.0 - response_length/min:1078.0 - response_length/clip_ratio:0.05078125 - response_length_non_aborted/mean:3001.19921875 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1078.0 - response_length_non_aborted/clip_ratio:0.05078125 - response/aborted_ratio:0.0 - prompt_length/mean:583.78125 - prompt_length/max:966.0 - prompt_length/min:399.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.90625 - reward/mean@8:0.6328125 - reward/min@8:0.21875 - reward/p25@8:0.4921875 - p75@8:0.8203125 - timing_s/start_profile:6.642797961831093e-05 - timing_s/generate_sequences:52.087650299072266 - timing_s/offload_fsdp_model_to_cpu:9.835168020799756e-05 - timing_s/reshard:1.3443360328674316 - timing_s/wake_up:0.07076208293437958 - timing_s/generation_timing/max:61.74627685546875 - timing_s/generation_timing/min:39.85845947265625 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:63.69106642808765 - timing_s/reward:51.35553561011329 - timing_s/old_log_prob:6.430971673922613 - timing_s/ref:6.2224431179929525 - timing_s/adv:0.01618952094577253 - timing_s/update_actor:24.811022273963317 - timing_s/dump_rollout_generations:0.5771812829189003 - timing_s/step:153.14062767010182 - timing_s/stop_profile:5.580903962254524e-05 - timing_per_token_ms/ref:0.006780069972915377 - timing_per_token_ms/gen:0.0828979384908476 - timing_per_token_ms/update_actor:0.027034472461564707 - timing_per_token_ms/adv:1.7640351668770565e-05 - perf/total_num_tokens:917755 - perf/time_per_step:153.14062767010182 - perf/throughput:1498.2226042214018
+[36m(TaskRunner pid=2429759)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=2429759)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=2460161)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=2459518)[0m GPTOSS120B using specialized preifix: [32m [repeated 30x across cluster][0m
+[36m(compute_several pid=2453586)[0m ✓ [P0] GPTOSS120B: output_len=1068, thinking_len=1064, time=4.3s
+[36m(compute_several pid=2453588)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=2453588)[0m     output_len=0, thinking_len=1311 max_tokens=20000, error=None, time=4.24189305305481s
+[36m(compute_several pid=2453588)[0m     Retrying...
+[36m(compute_several pid=2467774)[0m GPTOSS120B using specialized preifix: [32m [repeated 30x across cluster][0m
+[36m(compute_several pid=2461593)[0m ✓ [P0] GPTOSS120B: output_len=999, thinking_len=1761, time=8.1s[32m [repeated 37x across cluster][0m
+[36m(compute_several pid=2453602)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=2453602)[0m     output_len=0, thinking_len=1010 max_tokens=20000, error=None, time=6.719993352890015s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=2453602)[0m     Retrying...[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=2467742)[0m 
+[36m(compute_several pid=2460050)[0m GPTOSS120B using specialized preifix: [32m [repeated 3x across cluster][0m
+[36m(compute_several pid=2459959)[0m ✓ [P0] GPTOSS120B: output_len=937, thinking_len=1640, time=8.9s[32m [repeated 86x across cluster][0m
+[36m(compute_several pid=2460050)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2460050)[0m     output_len=0, thinking_len=869 max_tokens=20000, error=None, time=5.429027557373047s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2460050)[0m     Retrying...[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=2467742)[0m ✓ [P0] GPTOSS120B: output_len=2017, thinking_len=2421, time=11.5s[32m [repeated 107x across cluster][0m
+[36m(TaskRunner pid=2429759)[0m Training Progress:  19%|█▉        | 124/650 [3:23:56<22:31:06, 154.12s/it]
+[36m(compute_several pid=2460050)[0m ERROR:2026-03-02 21:50:14,486:Task exception was never retrieved[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m future: <Task finished name='Task-1743' coro=<AsyncClient.aclose() done, defined at /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpx/_client.py:1978> exception=RuntimeError('Event loop is closed')>[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m Traceback (most recent call last):[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 1329, in aclose[32m [repeated 248x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await self._transport.aclose()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await self._pool.aclose()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await self._close_connections(closing_connections)[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 345, in _close_connections[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await connection.aclose()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await self._connection.aclose()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await self._network_stream.aclose()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await self._stream.aclose()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     await self.transport_stream.aclose()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     self._transport.close()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/selector_events.py", line 706, in close[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     self._loop.call_soon(self._call_connection_lost, None)[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 753, in call_soon[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     self._check_closed()[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m     raise RuntimeError('Event loop is closed')[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=2460050)[0m RuntimeError: Event loop is closed[32m [repeated 31x across cluster][0m

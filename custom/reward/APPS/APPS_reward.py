@@ -604,13 +604,13 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
 
     def hidden_lengths_reward_adj(hidden_lengths: int, global_step: int) -> float:  # M: <=0
         if (
-            global_step <= PHASE_0_encourage_hidden
+            global_step <= PHASE_0_encourage_hidden + 320
         ):  # encourage hidden lengths frac to get to 1/8 the response, since Qwen3_8B has terrible instruction following
             hidden_lengths_frac = hidden_lengths / len(solution_str)
             if hidden_lengths_frac <= 1 / 8:
                 return hidden_lengths_frac
-            elif hidden_lengths_frac > 1 / 8 and hidden_lengths_frac <= 2 / 8:
-                return 2 / 8 - hidden_lengths_frac
+            elif hidden_lengths_frac > 1 / 8 and hidden_lengths_frac <= 1 / 8:
+                return 1 / 8 - hidden_lengths_frac
             else:
                 return -(hidden_lengths_frac - (2 / 8))
         else:
@@ -631,7 +631,9 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
     hidden_lengths, matches = leqcode_formatter.get_length_hiddens(response_output=solution_str)
 
     ret["hidden_matches"] = str(matches)
-    ret["cur_penalty"] = str(compute_penalty_constant(global_step=global_step))
+    ret["cur_penalty"] = str(
+        compute_penalty_constant(global_step=global_step)
+    )  # M: I have no clue why this is stringified
 
     ret["hidden_lengths"] = hidden_lengths
     hidden_lengths_reward_adjustment = hidden_lengths_reward_adj(hidden_lengths=hidden_lengths, global_step=global_step)
