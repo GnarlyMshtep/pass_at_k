@@ -83,7 +83,9 @@ def create_run_dir(
         resolved_hydra_overrides=resolved_hydra_overrides,
         child_run_ids=[],
     )
-    _write_metadata(run_dir=run_dir, metadata=metadata)
+    # NOTE: metadata is NOT written to disk here. The caller (_prepare_new)
+    # appends VFH-managed overrides (default_local_dir, rollout dirs, wandb_run_id)
+    # and then calls write_run_metadata() once all overrides are finalized.
 
     return metadata
 
@@ -111,7 +113,91 @@ def register_child_run(
     parent_path = Path(parent_run_dir)
     metadata = load_run_metadata(run_dir=parent_run_dir)
     metadata.child_run_ids.append(child_run_id)
-    _write_metadata(run_dir=parent_path, metadata=metadata)
+    write_run_metadata(run_dir=parent_run_dir, metadata=metadata)
+
+
+def validate_run_metadata(metadata: RunMetadata) -> None:
+    """Sanity-check resolved_hydra_overrides before launching verl.
+
+    Catches missing VFH-managed overrides (default_local_dir, rollout dirs,
+    wandb_run_id) and missing resume overrides for fork/continue runs.
+    Raises ValueError with all issues listed if any checks fail.
+    """
+    # Build key→value lookup from overrides (split on first '=')
+    overrides: dict[str, str] = {}
+    for entry in metadata.resolved_hydra_overrides:
+        if "=" in entry:
+            key, value = entry.split("=", 1)
+            overrides[key] = value
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    run_dir = metadata.run_dir
+
+    # --- Always required: VFH-managed paths ---
+    for key, label in [
+        ("trainer.default_local_dir", "checkpoint dir"),
+        ("trainer.rollout_data_dir", "rollout train dir"),
+        ("trainer.validation_data_dir", "rollout val dir"),
+    ]:
+        if key not in overrides:
+            errors.append(f"Missing {label} override: {key}")
+        elif run_dir not in overrides[key]:
+            errors.append(
+                f"{label} ({key}) does not point inside run_dir: "
+                f"{overrides[key]!r} vs {run_dir!r}"
+            )
+
+    # --- Always required: wandb_run_id ---
+    wandb_key = "+trainer.wandb_run_id"
+    if wandb_key not in overrides:
+        errors.append(f"Missing wandb run ID override: {wandb_key}")
+    elif overrides[wandb_key] != metadata.wandb_run_id:
+        errors.append(
+            f"wandb_run_id mismatch: override={overrides[wandb_key]!r} "
+            f"vs metadata={metadata.wandb_run_id!r}"
+        )
+
+    # --- Fork/continue: resume overrides required ---
+    if metadata.origin.fork_reason in (ForkReason.INTENTIONAL_FORK, ForkReason.CONTINUE):
+        if overrides.get("trainer.resume_mode") != "resume_path":
+            errors.append(
+                f"Fork/continue run (fork_reason={metadata.origin.fork_reason.value}) "
+                f"missing trainer.resume_mode=resume_path "
+                f"(got {overrides.get('trainer.resume_mode', '<not set>')!r})"
+            )
+        resume_path = overrides.get("trainer.resume_from_path")
+        if not resume_path:
+            errors.append(
+                f"Fork/continue run missing trainer.resume_from_path"
+            )
+        elif "global_step_" not in resume_path:
+            errors.append(
+                f"trainer.resume_from_path does not contain 'global_step_': "
+                f"{resume_path!r}"
+            )
+
+    # --- Root: warn if resume overrides are suspiciously present ---
+    if metadata.origin.fork_reason == ForkReason.ROOT:
+        if overrides.get("trainer.resume_mode") == "resume_path":
+            warnings.append(
+                "Root run has trainer.resume_mode=resume_path — "
+                "this is unusual (expected for fork/continue only)"
+            )
+
+    # --- Report ---
+    if warnings:
+        for w in warnings:
+            print(f"\033[1;33m⚠ METADATA WARNING: {w}\033[0m")
+
+    if errors:
+        error_list = "\n  ".join(errors)
+        raise ValueError(
+            f"run_metadata.json5 sanity check failed for {metadata.run_id}:\n"
+            f"  {error_list}\n"
+            f"This likely means the metadata was written before all overrides "
+            f"were finalized. Re-prepare the run to fix."
+        )
 
 
 def load_run_metadata(run_dir: str) -> RunMetadata:
@@ -155,8 +241,9 @@ def _serialize_for_json(obj: Any) -> Any:
     return obj
 
 
-def _write_metadata(run_dir: Path, metadata: RunMetadata) -> None:
-    meta_path = run_dir / "run_metadata.json5"
+def write_run_metadata(run_dir: str, metadata: RunMetadata) -> None:
+    """Write (or overwrite) run_metadata.json5 in the given run directory."""
+    meta_path = Path(run_dir) / "run_metadata.json5"
     raw = _serialize_for_json(obj=dataclasses.asdict(metadata))
     with open(meta_path, "w") as f:
         json.dump(obj=raw, fp=f, indent=2)

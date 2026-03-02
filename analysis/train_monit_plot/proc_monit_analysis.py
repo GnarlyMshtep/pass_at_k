@@ -121,6 +121,55 @@ def bootstrap_ci(
     return point, ci_lo, ci_hi
 
 
+def stratified_bootstrap_pearson(
+    arr: np.ndarray,
+    n_bootstrap: int,
+    ci: float,
+    rng: np.random.Generator,
+    n_strata: int = 4,
+) -> tuple[float, float, float]:
+    """Pearson r(col0, col1) with bootstrap stratified by quantile bins of col0.
+
+    Stratifies rows into n_strata quantile bins of col0, resamples within
+    each stratum independently (with replacement), then computes Pearson on
+    the recombined sample.
+    Returns (point_estimate, ci_lo, ci_hi).
+    """
+    if len(arr) < 4:
+        return float("nan"), float("nan"), float("nan")
+
+    from scipy.stats import pearsonr
+
+    def _r(data: np.ndarray) -> float:
+        if np.std(data[:, 0]) < 1e-10 or np.std(data[:, 1]) < 1e-10:
+            return float("nan")
+        r, _ = pearsonr(data[:, 0], data[:, 1])
+        return float(r)
+
+    # Build quantile-based strata on col0
+    edges = np.percentile(arr[:, 0], np.linspace(0, 100, n_strata + 1))
+    edges[-1] += 1e-10  # include max value in last bin
+    strata: list[np.ndarray] = []
+    for i in range(n_strata):
+        idx = np.where((arr[:, 0] >= edges[i]) & (arr[:, 0] < edges[i + 1]))[0]
+        if len(idx) > 0:
+            strata.append(idx)
+
+    point = _r(arr)
+
+    boot_stats: list[float] = []
+    for _ in range(n_bootstrap):
+        parts = [arr[rng.choice(idx, size=len(idx), replace=True)] for idx in strata]
+        resampled = np.vstack(parts)
+        boot_stats.append(_r(resampled))
+
+    boot_arr = np.array(boot_stats)
+    alpha = (1 - ci) / 2
+    ci_lo = float(np.nanpercentile(boot_arr, 100 * alpha))
+    ci_hi = float(np.nanpercentile(boot_arr, 100 * (1 - alpha)))
+    return point, ci_lo, ci_hi
+
+
 # ---------------------------------------------------------------------------
 # Stat computations  (each returns point, ci_lo, ci_hi)
 # ---------------------------------------------------------------------------
@@ -232,6 +281,52 @@ def _get_cov_diffs_pairs(
     return np.array(paired)
 
 
+def _get_pearson_delta_max_pairs(
+    train_samples: list[Sample],
+    base_by_qid: dict[str, Sample],
+    binarized: bool = False,
+) -> np.ndarray:
+    """Build paired array: (max(δpproc, δbtp), δsus) per matched q_id.
+
+    max(δpproc, δbtp) = max(pproc_train - pproc_base, btp_train - btp_base)
+    δsus              = sus_train - sus_base
+    Returns shape (N, 2) or (0, 2).
+    """
+    paired: list[tuple[float, float]] = []
+    for s in train_samples:
+        if s.q_id not in base_by_qid:
+            continue
+        base = base_by_qid[s.q_id]
+        s_pm = s.binarized_pproc if binarized else s.proc_monit_score
+        b_pm = base.binarized_pproc if binarized else base.proc_monit_score
+        if s_pm is None or b_pm is None:
+            continue
+        delta_pproc = s_pm - b_pm
+        delta_btp = s.btp - base.btp
+        x = max(delta_pproc, delta_btp)
+        delta_sus = s.sus_score - base.sus_score
+        paired.append((x, delta_sus))
+
+    if not paired:
+        return np.empty((0, 2))
+    return np.array(paired)
+
+
+def compute_pearson_delta_max(
+    train_samples: list[Sample],
+    base_by_qid: dict[str, Sample],
+    rng: np.random.Generator,
+    n_boot: int,
+    ci: float,
+    binarized: bool = False,
+) -> tuple[float, float, float]:
+    """r(δmax(btp,pproc), δsus), stratified bootstrap by δmax(btp,pproc)."""
+    arr = _get_cov_diffs_pairs(train_samples, base_by_qid, binarized=binarized)
+    if len(arr) < 4:
+        return float("nan"), float("nan"), float("nan")
+    return stratified_bootstrap_pearson(arr, n_bootstrap=n_boot, ci=ci, rng=rng)
+
+
 def compute_mse_diffs(
     train_samples: list[Sample],
     base_by_qid: dict[str, Sample],
@@ -265,13 +360,15 @@ class StatDef:
 
 
 STAT_DEFS: list[StatDef] = [
-    StatDef(name="proc_v_pout",          ylabel="E[PM | btp=1]",                       needs_pairing=False),
-    StatDef(name="proc_v_pout_bin",      ylabel="E[PM_bin | btp=1]",                   needs_pairing=False, binarized=True),
-    StatDef(name="pproc_adv",            ylabel="MSE_marg(b=1) − MSE_marg(b=0)",       needs_pairing=False),
-    StatDef(name="pproc_adv_bin",        ylabel="MSE_marg_bin(b=1) − MSE_marg_bin(b=0)", needs_pairing=False, binarized=True),
-    StatDef(name="uncertainty_frac",     ylabel="Frac btp=0",                           needs_pairing=False),
-    StatDef(name="mse_diffs",            ylabel="E_x E_y [(Δmax−Δsus)²]",              needs_pairing=True),
-    StatDef(name="mse_diffs_bin",        ylabel="E_x E_y [(Δmax_bin−Δsus)²]",          needs_pairing=True,  binarized=True),
+    StatDef(name="proc_v_pout",           ylabel="E[PM | btp=1]",                                      needs_pairing=False),
+    StatDef(name="proc_v_pout_bin",       ylabel="E[PM_bin | btp=1]",                                  needs_pairing=False, binarized=True),
+    StatDef(name="pproc_adv",             ylabel="r(sus,pproc|b=0) − r(sus,pproc|b=1)",                needs_pairing=False),
+    StatDef(name="pproc_adv_bin",         ylabel="r(sus,pproc_bin|b=0) − r(sus,pproc_bin|b=1)",        needs_pairing=False, binarized=True),
+    StatDef(name="uncertainty_frac",      ylabel="Frac btp=0",                                          needs_pairing=False),
+    StatDef(name="mse_diffs",             ylabel="E_x E_y [(Δmax(btp,pm) − Δsus)²]",                  needs_pairing=True),
+    StatDef(name="mse_diffs_bin",         ylabel="E_x E_y [(Δmax(btp,pm_bin) − Δsus)²]",              needs_pairing=True,  binarized=True),
+    StatDef(name="pearson_delta_max",     ylabel="r(Δmax(btp,pproc), Δsus)\n[strat. bootstrap]",     needs_pairing=True),
+    StatDef(name="pearson_delta_max_bin", ylabel="r(Δmax(btp,pproc_bin), Δsus)\n[strat. bootstrap]", needs_pairing=True,  binarized=True),
 ]
 
 
@@ -293,6 +390,9 @@ def _dispatch_stat(
     elif stat_name in ("mse_diffs", "mse_diffs_bin"):
         return compute_mse_diffs(src_samples, base_by_qid,
                                  rng=rng, n_boot=n_boot, ci=ci, binarized=binarized)
+    elif stat_name in ("pearson_delta_max", "pearson_delta_max_bin"):
+        return compute_pearson_delta_max(src_samples, base_by_qid,
+                                         rng=rng, n_boot=n_boot, ci=ci, binarized=binarized)
     else:
         raise ValueError(f"Unknown stat: {stat_name}")
 
@@ -476,6 +576,245 @@ def plot_mse_marginal_scatter(
 
 
 # ---------------------------------------------------------------------------
+# Andrew stat (03-02)
+# OLS slope of δmax(btp,pproc) → δM_norm_base, no intercept
+# ---------------------------------------------------------------------------
+
+def compute_andrew_mse(
+    train_samples: list[Sample],
+    base_by_qid: dict[str, Sample],
+    sus_base_std: float,
+    n_bootstrap: int,
+    ci: float,
+    rng: np.random.Generator,
+    normalize: bool = True,
+) -> tuple[float, float, float]:
+    """Bootstrap CI for OLS residual MSE: mean((y - slope*x)²), no intercept.
+
+    Resamples (x, y) pairs, refits OLS each time, computes mean(residuals²).
+    Returns (point_mse, ci_lo, ci_hi).
+    """
+    import statsmodels.api as sm
+
+    arr = _get_cov_diffs_pairs(train_samples, base_by_qid, binarized=False)
+    if len(arr) < 2:
+        return float("nan"), float("nan"), float("nan")
+
+    x = arr[:, 0]
+    y = arr[:, 1] / sus_base_std if normalize else arr[:, 1]
+
+    def _mse(data: np.ndarray) -> float:
+        xi, yi = data[:, 0], data[:, 1]
+        if np.std(xi) < 1e-10:
+            return float("nan")
+        slope = sm.OLS(yi, xi).fit().params[0]
+        return float(np.mean((yi - slope * xi) ** 2))
+
+    point = _mse(np.column_stack([x, y]))
+    boot_stats = []
+    for _ in range(n_bootstrap):
+        idx = rng.integers(0, len(arr), size=len(arr))
+        boot_stats.append(_mse(np.column_stack([x[idx], y[idx]])))
+
+    boot_arr = np.array(boot_stats)
+    alpha = (1 - ci) / 2
+    return point, float(np.nanpercentile(boot_arr, 100 * alpha)), float(np.nanpercentile(boot_arr, 100 * (1 - alpha)))
+
+
+def compute_andrew_stat(
+    train_samples: list[Sample],
+    base_by_qid: dict[str, Sample],
+    sus_base_std: float,
+    normalize: bool = True,
+) -> tuple[float, float, float]:
+    """OLS slope of δmax(btp,pproc) → δsus[/std(sus_base)], no intercept.
+
+    Returns (slope, ci_lo, ci_hi) using model.conf_int(alpha=0.05).
+    Returns NaNs if insufficient data or degenerate x.
+    """
+    import statsmodels.api as sm
+
+    arr = _get_cov_diffs_pairs(train_samples, base_by_qid, binarized=False)
+    if len(arr) < 2:
+        return float("nan"), float("nan"), float("nan")
+
+    x = arr[:, 0]
+    y = arr[:, 1] / sus_base_std if normalize else arr[:, 1]
+
+    if np.std(x) < 1e-10:
+        return float("nan"), float("nan"), float("nan")
+
+    model = sm.OLS(y, x).fit()
+    slope = float(model.params[0])
+    ci = model.conf_int(alpha=0.05)
+    ci_lo = float(ci[0][0])
+    ci_hi = float(ci[0][1])
+    return slope, ci_lo, ci_hi
+
+
+def plot_andrew_stat_scatter(
+    step_sources: list[str],
+    by_source: dict[str, list[Sample]],
+    base_by_qid: dict[str, Sample],
+    sus_base_std: float,
+    output: str,
+    normalize: bool = True,
+) -> None:
+    """Scatter of δmax(btp,pproc) vs δM_norm_base with fitted OLS line per step."""
+    import statsmodels.api as sm
+
+    if not step_sources:
+        return
+
+    ncols = min(len(step_sources), 4)
+    nrows = (len(step_sources) + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4.5 * nrows), squeeze=False)
+
+    for idx, src in enumerate(step_sources):
+        ax = axes[idx // ncols][idx % ncols]
+        arr = _get_cov_diffs_pairs(train_samples=by_source[src], base_by_qid=base_by_qid)
+
+        if len(arr) < 2:
+            ax.text(0.5, 0.5, f"No paired q_ids\n({src})",
+                    ha="center", va="center", transform=ax.transAxes, color="gray")
+            ax.set_title(src, fontsize=11, fontweight="bold")
+            continue
+
+        x = arr[:, 0]
+        y = arr[:, 1] / sus_base_std if normalize else arr[:, 1]
+
+        ax.scatter(x, y, alpha=0.35, s=15, edgecolors="none", color="#4C72B0")
+
+        # Fit OLS no intercept and draw line
+        model = sm.OLS(y, x).fit()
+        slope = float(model.params[0])
+        ci = model.conf_int(alpha=0.05)
+        ci_lo, ci_hi = float(ci[0][0]), float(ci[0][1])
+        r2 = float(model.rsquared)
+        residuals = y - slope * x
+        mse = float(np.mean(residuals ** 2))
+
+        x_line = np.linspace(x.min(), x.max(), 200)
+        ax.plot(x_line, slope * x_line, color="#C44E52", linewidth=2,
+                label=f"slope={slope:+.3f}\n95% CI [{ci_lo:+.3f}, {ci_hi:+.3f}]")
+        ax.fill_between(x_line, ci_lo * x_line, ci_hi * x_line,
+                        color="#C44E52", alpha=0.15)
+
+        ax.text(0.03, 0.97,
+                f"R²={r2:.3f}\nMSE={mse:.4f}\nn={len(x)}",
+                ha="left", va="top", transform=ax.transAxes, fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8))
+
+        ax.axhline(0, color="gray", linewidth=0.5, linestyle="--")
+        ax.axvline(0, color="gray", linewidth=0.5, linestyle="--")
+        ax.set_xlabel("δmax(btp, pproc)", fontsize=9)
+        ax.set_ylabel("δsus / std(sus_base)" if normalize else "δsus", fontsize=9)
+        ax.set_title(src, fontsize=11, fontweight="bold")
+        ax.legend(fontsize=8, loc="lower right")
+
+    for idx in range(len(step_sources), nrows * ncols):
+        axes[idx // ncols][idx % ncols].set_visible(False)
+
+    fig.suptitle(
+        "andrew_stat_03_02 scatter: δmax(btp,pproc) vs δM_norm_base\n"
+        "OLS fit (no intercept), 95% CI shaded",
+        fontsize=13, fontweight="bold",
+    )
+    plt.tight_layout()
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=150, bbox_inches="tight")
+    print(f"Andrew stat scatter saved to {output}")
+
+
+def plot_andrew_mse(
+    step_sources: list[str],
+    mse_results: dict[str, tuple[float, float, float]],
+    output: str,
+) -> None:
+    """Bar chart of bootstrapped OLS residual MSE per training step."""
+    x = np.arange(len(step_sources))
+    points = [mse_results[s][0] for s in step_sources]
+    ci_los  = [mse_results[s][1] for s in step_sources]
+    ci_his  = [mse_results[s][2] for s in step_sources]
+
+    err_lo = [p - lo if not (np.isnan(p) or np.isnan(lo)) else 0.0
+              for p, lo in zip(points, ci_los)]
+    err_hi = [hi - p if not (np.isnan(p) or np.isnan(hi)) else 0.0
+              for p, hi in zip(points, ci_his)]
+    plot_pts = [0.0 if np.isnan(p) else p for p in points]
+
+    colors = [COLORS[i % len(COLORS)] for i in range(len(step_sources))]
+    fig, ax = plt.subplots(figsize=(max(6, 1.2 * len(step_sources)), 5))
+    ax.bar(x, plot_pts, yerr=[err_lo, err_hi], color=colors, capsize=5,
+           edgecolor="black", linewidth=0.5)
+
+    for i, p in enumerate(points):
+        if np.isnan(p):
+            ax.text(i, 0, "N/A", ha="center", va="bottom",
+                    fontsize=8, color="gray", fontstyle="italic")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([s.replace("step_", "s") for s in step_sources],
+                       rotation=45, ha="right", fontsize=10)
+    ax.set_ylabel("MSE of residuals", fontsize=12)
+    ax.set_title(
+        "andrew_stat_03_02 — OLS residual MSE\n"
+        r"$E[(y - \hat{slope} \cdot x)^2]$, bootstrap 95% CI",
+        fontsize=11, fontweight="bold",
+    )
+    ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
+    plt.tight_layout()
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=150, bbox_inches="tight")
+    print(f"Andrew MSE plot saved to {output}")
+
+
+def plot_andrew_stat(
+    step_sources: list[str],
+    andrew_results: dict[str, tuple[float, float, float]],
+    output: str,
+) -> None:
+    """Bar chart of andrew_stat_03_02 slope per training step."""
+    sources = [s for s in step_sources]  # baseline excluded (needs pairing)
+    x = np.arange(len(sources))
+    points = [andrew_results[s][0] for s in sources]
+    ci_los = [andrew_results[s][1] for s in sources]
+    ci_his = [andrew_results[s][2] for s in sources]
+
+    err_lo = [p - lo if not (np.isnan(p) or np.isnan(lo)) else 0.0
+              for p, lo in zip(points, ci_los)]
+    err_hi = [hi - p if not (np.isnan(p) or np.isnan(hi)) else 0.0
+              for p, hi in zip(points, ci_his)]
+    plot_pts = [0.0 if np.isnan(p) else p for p in points]
+
+    colors = [COLORS[i % len(COLORS)] for i in range(len(sources))]
+    fig, ax = plt.subplots(figsize=(max(6, 1.2 * len(sources)), 5))
+    ax.bar(x, plot_pts, yerr=[err_lo, err_hi], color=colors, capsize=5,
+           edgecolor="black", linewidth=0.5)
+
+    for i, p in enumerate(points):
+        if np.isnan(p):
+            ax.text(i, 0, "N/A", ha="center", va="bottom",
+                    fontsize=8, color="gray", fontstyle="italic")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([s.replace("step_", "s") for s in sources],
+                       rotation=45, ha="right", fontsize=10)
+    ax.set_ylabel("OLS slope", fontsize=12)
+    ax.set_title(
+        "andrew_stat_03_02\n"
+        r"OLS: $\delta M_{norm} \sim \delta\max(btp, pproc)$  [no intercept]"
+        f"\n95% CI from model.conf_int(α=0.05)",
+        fontsize=11, fontweight="bold",
+    )
+    ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
+    plt.tight_layout()
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=150, bbox_inches="tight")
+    print(f"Andrew stat plot saved to {output}")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -552,8 +891,81 @@ def main() -> None:
     # Plot bars
     plot_results(results=results, sources=sources, output=cfg.output)
 
-    # Scatter plots for debugging
+    # Andrew stat (03-02): OLS slope, no intercept, normalised by std(sus_base)
+    sus_base_std = float(np.std([s.sus_score for s in baseline_samples]))
+    print(f"\n  std(sus_base) = {sus_base_std:.4f}  (normalization for andrew_stat)")
     step_sources = [s for s in sources if s != "baseline"]
+    andrew_results: dict[str, tuple[float, float, float]] = {}
+    for src in step_sources:
+        slope, lo, hi = compute_andrew_stat(
+            train_samples=by_source[src],
+            base_by_qid=base_by_qid,
+            sus_base_std=sus_base_std,
+        )
+        andrew_results[src] = (slope, lo, hi)
+        tag = f"{slope:+.4f} [{lo:+.4f}, {hi:+.4f}]" if not np.isnan(slope) else "NaN"
+        print(f"  andrew_stat_03_02 | {src:>12}: {tag}")
+    andrew_path = cfg.output.replace(".png", "_andrew_stat_03_02.png")
+    plot_andrew_stat(step_sources=step_sources, andrew_results=andrew_results, output=andrew_path)
+    print("\n--- Andrew stat MSE (bootstrap) ---")
+    mse_results: dict[str, tuple[float, float, float]] = {}
+    for src in step_sources:
+        mse, lo, hi = compute_andrew_mse(
+            train_samples=by_source[src],
+            base_by_qid=base_by_qid,
+            sus_base_std=sus_base_std,
+            n_bootstrap=cfg.n_bootstrap,
+            ci=cfg.ci,
+            rng=rng,
+        )
+        mse_results[src] = (mse, lo, hi)
+        tag = f"{mse:+.4f} [{lo:+.4f}, {hi:+.4f}]" if not np.isnan(mse) else "NaN"
+        print(f"  andrew_mse | {src:>12}: {tag}")
+    andrew_mse_path = cfg.output.replace(".png", "_andrew_stat_03_02_mse.png")
+    plot_andrew_mse(step_sources=step_sources, mse_results=mse_results, output=andrew_mse_path)
+
+    andrew_scatter_path = cfg.output.replace(".png", "_andrew_stat_03_02_scatter.png")
+    plot_andrew_stat_scatter(
+        step_sources=step_sources, by_source=by_source, base_by_qid=base_by_qid,
+        sus_base_std=sus_base_std, output=andrew_scatter_path, normalize=True,
+    )
+
+    # Unnormalized variants
+    print("\n--- Andrew stat (unnormalized) ---")
+    andrew_unnorm_results: dict[str, tuple[float, float, float]] = {}
+    for src in step_sources:
+        slope, lo, hi = compute_andrew_stat(
+            train_samples=by_source[src], base_by_qid=base_by_qid,
+            sus_base_std=sus_base_std, normalize=False,
+        )
+        andrew_unnorm_results[src] = (slope, lo, hi)
+        tag = f"{slope:+.4f} [{lo:+.4f}, {hi:+.4f}]" if not np.isnan(slope) else "NaN"
+        print(f"  andrew_stat_unnorm | {src:>12}: {tag}")
+    plot_andrew_stat(
+        step_sources=step_sources, andrew_results=andrew_unnorm_results,
+        output=cfg.output.replace(".png", "_andrew_stat_03_02_unnorm.png"),
+    )
+
+    mse_unnorm_results: dict[str, tuple[float, float, float]] = {}
+    for src in step_sources:
+        mse, lo, hi = compute_andrew_mse(
+            train_samples=by_source[src], base_by_qid=base_by_qid,
+            sus_base_std=sus_base_std, n_bootstrap=cfg.n_bootstrap,
+            ci=cfg.ci, rng=rng, normalize=False,
+        )
+        mse_unnorm_results[src] = (mse, lo, hi)
+    plot_andrew_mse(
+        step_sources=step_sources, mse_results=mse_unnorm_results,
+        output=cfg.output.replace(".png", "_andrew_stat_03_02_unnorm_mse.png"),
+    )
+    plot_andrew_stat_scatter(
+        step_sources=step_sources, by_source=by_source, base_by_qid=base_by_qid,
+        sus_base_std=sus_base_std,
+        output=cfg.output.replace(".png", "_andrew_stat_03_02_unnorm_scatter.png"),
+        normalize=False,
+    )
+
+    # Scatter plots for debugging
     scatter_path = cfg.output.replace(".png", "_scatter.png")
     plot_cov_diffs_scatter(
         by_source=by_source,

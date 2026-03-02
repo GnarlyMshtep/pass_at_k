@@ -1,0 +1,16 @@
+{
+  "rollout_dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+  "baseline_path": "rescore_test_inspect_test_entire_qwen3_4b_I_local_gpt_oss_120b_12_26+Qwen3_4B_local+GPTOSS120B_15_05#1/scored_generations.jsonl",
+  "steps": [
+    1,
+    100,
+    200,
+    300,
+    400,
+    500
+  ],
+  "n_samples": 200,
+  "seed": 42,
+  "all_baseline": false,
+  "limit": 20
+}

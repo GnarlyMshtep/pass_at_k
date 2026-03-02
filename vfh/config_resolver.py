@@ -51,7 +51,15 @@ def resolve_config(
 
     merged = _expand_env_vars(d=merged)
     hydra_overrides = _flatten_to_hydra_overrides(d=merged)
-    hydra_overrides.extend(extra_hydra_overrides)
+
+    if extra_hydra_overrides:
+        resolved_keys = {entry.split("=", 1)[0].lstrip("+") for entry in hydra_overrides}
+        _validate_extra_overrides(
+            extra_overrides=extra_hydra_overrides,
+            resolved_keys=resolved_keys,
+        )
+        hydra_overrides.extend(extra_hydra_overrides)
+
     return merged, hydra_overrides
 
 
@@ -161,6 +169,53 @@ def _flatten_to_hydra_overrides(
             overrides.append(f"{hydra_key}={_format_scalar(v=value)}")
 
     return overrides
+
+
+def _validate_extra_overrides(
+    extra_overrides: list[str],
+    resolved_keys: set[str],
+) -> None:
+    """Validate --extra-overrides against the resolved config keys.
+
+    Rules:
+        1. Each override must be key=value (contain '=').
+        2. '+' prefix not allowed — new fields belong in JSON5 configs.
+        3. Key must exist in the resolved config (from base + overrides JSON5).
+
+    Raises ValueError listing all issues.
+    """
+    errors: list[str] = []
+    for entry in extra_overrides:
+        if "=" not in entry:
+            errors.append(f"Not a key=value pair: {entry!r}")
+            continue
+        key = entry.split("=", 1)[0]
+        if key.startswith("+"):
+            errors.append(
+                f"'+' prefix not allowed in --extra-overrides (new fields belong "
+                f"in JSON5 configs): {entry!r}"
+            )
+            continue
+        if key not in resolved_keys:
+            errors.append(
+                f"Key {key!r} not found in resolved config. "
+                f"Typo? Available keys with same prefix: "
+                f"{_suggest_keys(key=key, resolved_keys=resolved_keys)}"
+            )
+    if errors:
+        error_list = "\n  ".join(errors)
+        raise ValueError(
+            f"--extra-overrides validation failed:\n  {error_list}"
+        )
+
+
+def _suggest_keys(key: str, resolved_keys: set[str], max_suggestions: int = 5) -> str:
+    """Suggest similar keys from the resolved set for error messages."""
+    prefix = key.split(".")[0]
+    matches = sorted(k for k in resolved_keys if k.startswith(prefix))[:max_suggestions]
+    if matches:
+        return ", ".join(matches)
+    return "(none)"
 
 
 def _format_scalar(v: Any) -> str:

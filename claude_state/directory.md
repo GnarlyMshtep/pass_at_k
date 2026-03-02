@@ -5,3 +5,4 @@
 - `monit_cache/` — Monitor caching data
 - `vfh_CLAUDE.md` → symlink to `vfh/CLAUDE.md` — VFH orchestrator: purpose, architecture, design choices, key files, TODOs
 - `proc_monit_pipeline.md` — Process monitor pipeline: data collection (Kimi K2.5), analysis stats (proc_v_pout, pproc_adv, uncertainty_frac, cov_diffs), plotting, key files, typical workflow
+- `fix_dvc_git_conflicts.md` — DVC push failures due to .dvc files being git-ignored under logs/; diagnosis and fix plan for womonitor/wmonitor backdoor checkpoint runs

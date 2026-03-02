@@ -43,7 +43,7 @@ Terminal (you run: python -m vfh.orchestrator new ...)
 ```
 
 ### Checkpoint daemon
-Background process spawned by the orchestrator (stdout/stderr silenced via DEVNULL). Watches the verl PID (via `os.kill(pid, 0)`). Two-phase backup pass each poll:
+Background process spawned by the orchestrator (stdout/stderr silenced via DEVNULL, `start_new_session=True` so it runs in its own process group — prevents SLURM from waiting on it when verl exits). Watches the verl PID (via `os.kill(pid, 0)`). Two-phase backup pass each poll:
 1. **Phase 1 — Backup**: discovers new complete checkpoints, runs `dvc add` + `dvc push` **per global_step** (each step gets its own `.dvc` file), verifies via `dvc status --cloud`
 2. **Phase 2 — Clean**: iterates ALL previously backed-up steps, cleans any that are no longer the latest (removes contents, keeps empty dir + `.cleaned_by_daemon` marker)
 
@@ -88,6 +88,9 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 | `vfh/direct_launch_test.sh` | Direct verl launch (bypasses orchestrator) for isolation testing |
 | `verl/utils/tracking.py` | Patched: accepts `wandb_run_id` param |
 | `verl/trainer/ppo/ray_trainer.py` | Patched: threads `wandb_run_id` to Tracking |
+
+### Metadata sanity check
+`validate_run_metadata()` in `run_manager.py` checks `resolved_hydra_overrides` before verl launches. Called both at prepare-time (in `_prepare_new`) and at run-time (in `run-prepared`). Checks: VFH-managed paths (`default_local_dir`, `rollout_data_dir`, `validation_data_dir`) exist and point inside `run_dir`; `wandb_run_id` matches metadata; fork/continue runs have `resume_mode=resume_path` + valid `resume_from_path`; root runs with `resume_path` get a warning. Raises `ValueError` listing all issues.
 
 ### Sbatch integration
 `--sbatch --time HH:MM:SS` on `new` or `continue` generates a SLURM sbatch script instead of launching directly. Two-phase design:

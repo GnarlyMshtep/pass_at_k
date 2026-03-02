@@ -6,10 +6,8 @@ slurm/
 1.jsonl
 *.csv
 **/*.pt
-**/checkpoints
-!logs/VerlRun/**/checkpoints/
-!logs/VerlRun/**/checkpoints/*.dvc
-!logs/VerlRun/**/checkpoints/.gitignore
+# Checkpoint step dirs (large model weights) — ignore leaves, not roots, so .dvc files are never swallowed
+**/global_step_*/
 **/wget-log
 **/_build/
 **/*.ckpt
@@ -17,7 +15,9 @@ slurm/
 **/*.tar.gz
 **/playground
 **/wandb
-**/rollouts
+# Rollout data files — ignore leaves only
+**/train/*.jsonl
+**/val/*.jsonl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -132,8 +132,6 @@ ENV/
 
 
 # local logs
-logs/*
-logs/VerlRun/
 log
 outputs
 .history

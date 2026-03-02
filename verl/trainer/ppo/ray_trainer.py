@@ -801,7 +801,7 @@ class RayPPOTrainer:
             test_batch.meta_info["matan_reward_global_step"] = self.global_steps 
             if self.config.reward_model.launch_reward_fn_async:
                 future_reward = compute_reward_async.remote(data=test_batch, reward_fn=self.val_reward_fn)
-                reward_tensor, reward_extra = ray.get(future_reward)
+                reward_tensor, reward_extra_infos_dict, extra_reward_metrics = ray.get(future_reward)
                 result = {"reward_tensor": reward_tensor, "reward_extra_info": reward_extra}
             else:
                 result = self.val_reward_fn(test_batch, return_dict=True)
@@ -843,25 +843,33 @@ class RayPPOTrainer:
 
         data_sources = np.concatenate(data_source_lst, axis=0)
         val_config = self.config.actor_rollout_ref.rollout.get("val_config", {})
-        data_src2var2metric2val = process_validation_metrics(
-            data_sources, sample_inputs, reward_extra_infos_dict, val_config
-        )
+        # data_src2var2metric2val = process_validation_metrics(
+        # data_sources, sample_inputs, reward_extra_infos_dict, val_config
+        # )
         metric_dict = {}
-        for data_source, var2metric2val in data_src2var2metric2val.items():
-            core_var = "acc" if "acc" in var2metric2val else "reward"
-            for var_name, metric2val in var2metric2val.items():
-                n_max = max([int(name.split("@")[-1].split("/")[0]) for name in metric2val.keys()])
-                for metric_name, metric_val in metric2val.items():
-                    if (
-                        (var_name == core_var)
-                        and any(metric_name.startswith(pfx) for pfx in ["mean", "maj", "best"])
-                        and (f"@{n_max}" in metric_name)
-                    ):
-                        metric_sec = "val-core"
-                    else:
-                        metric_sec = "val-aux"
-                    pfx = f"{metric_sec}/{data_source}/{var_name}/{metric_name}"
-                    metric_dict[pfx] = metric_val
+
+        def mean_or_fixed(lst: list[float]) -> float:
+            try:
+                return np.mean(lst)
+            except:
+                return -0.6969
+
+        metric_dict.update({"val" + k: mean_or_fixed(v) for k, v in reward_extra_infos_dict.items()})
+        # for data_source, var2metric2val in data_src2var2metric2val.items():
+        #     core_var = "acc" if "acc" in var2metric2val else "reward"
+        #     for var_name, metric2val in var2metric2val.items():
+        #         n_max = max([int(name.split("@")[-1].split("/")[0]) for name in metric2val.keys()])
+        #         for metric_name, metric_val in metric2val.items():
+        #             if (
+        #                 (var_name == core_var)
+        #                 and any(metric_name.startswith(pfx) for pfx in ["mean", "maj", "best"])
+        #                 and (f"@{n_max}" in metric_name)
+        #             ):
+        #                 metric_sec = "val-core"
+        #             else:
+        #                 metric_sec = "val-aux"
+        #             pfx = f"{metric_sec}/{data_source}/{var_name}/{metric_name}"
+        #             metric_dict[pfx] = metric_val
 
         if len(sample_turns) > 0:
             sample_turns = np.concatenate(sample_turns)
@@ -1083,10 +1091,25 @@ class RayPPOTrainer:
 
         # load dataloader,
         # TODO: from remote not implemented yet
+        restart_dataloader = self.config.trainer.get("restart_dataloader", False)
         dataloader_local_path = os.path.join(global_step_folder, "data.pt")
-        if os.path.exists(dataloader_local_path):
+        if restart_dataloader:
+            print(
+                f"restart_dataloader=true — skipping dataloader state restore from {dataloader_local_path}. "
+                f"This is expected when forking to a different dataset."
+            )
+        elif os.path.exists(dataloader_local_path):
             dataloader_state_dict = torch.load(dataloader_local_path, weights_only=False)
-            self.train_dataloader.load_state_dict(dataloader_state_dict)
+            try:
+                self.train_dataloader.load_state_dict(dataloader_state_dict)
+            except StopIteration:
+                raise RuntimeError(
+                    f"Failed to restore dataloader state from {dataloader_local_path}: "
+                    f"the saved sampler iterator is exhausted (StopIteration). "
+                    f"This typically happens when forking to a different dataset. "
+                    f"Fix: re-launch with +trainer.restart_dataloader=true, or use a "
+                    f"different --base-config via VFH (which injects this flag automatically)."
+                ) from None
         else:
             print(f"Warning: No dataloader state found at {dataloader_local_path}, will start from scratch")
 

@@ -53,7 +53,7 @@ class BioMathHiddenRewardConfig(BioMathRewardConfig):
     """
 
     penalty: HiddenPenaltyConfig = field(
-        default_factory=lambda: HiddenPenaltyConfig(schedule=PenaltySchedule.SIMPLE)
+        default_factory=lambda: HiddenPenaltyConfig(schedule=PenaltySchedule.EXP_INCREASE)
     )
 
     def __post_init__(self) -> None:

@@ -9,8 +9,10 @@
 
     // === Data ===
     "data": {
+        //always want to override the traina and val files
         // "train_files": ["$HF_HOME/data/apps_backdoor_w_hidden_iterated/train.parquet"],
         // "val_files": ["$HF_HOME/data/apps_backdoor_w_hidden_iterated/test.parquet"],
+        // seems val just runs the whole 100 samples, which is pretty good with me! 
         "train_batch_size": 32,
         "max_prompt_length": 1024,
         "max_response_length": 6144,
@@ -66,14 +68,14 @@
 
     // === Trainer ===
     "trainer": {
-        "val_before_train": false,
+        "val_before_train": true,
         "critic_warmup": 0,
         "logger": ["console", "wandb"],
         "project_name": "subtle_reasoning_repro",
         "n_gpus_per_node": 4,
         "nnodes": 1,
         "save_freq": 40,
-        "test_freq": 40,
+        "test_freq": 20,
         "total_epochs": 25,
         "+rollout_dump_freq": 1,
     },

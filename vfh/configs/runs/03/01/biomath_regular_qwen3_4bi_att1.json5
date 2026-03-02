@@ -1,0 +1,21 @@
+{
+    // Per-run overrides: Qwen3-8B + configed_reward_benign (DEFMAIN formatter)
+    "data": {
+        "train_files": ["/shared/matan/data/biomath_covert/train.parquet"],
+        "val_files": ["/shared/matan/data/biomath_covert/test.parquet"],
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-I"},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_biomath",
+        "path": "custom/reward/BioMath/BioMath_reward_configed.py",
+        "+reward_kwargs" : {
+                "reward_config" : {
+                }
+        }
+    },
+    "trainer": {
+        "experiment_name": "regular_biomath_qwen3_4bi",
+    },
+}

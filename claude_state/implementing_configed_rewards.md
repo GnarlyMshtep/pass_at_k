@@ -114,6 +114,10 @@ for k, v in result.items():
     print(f'{k}: {v}')
 ```
 
+## Pitfall: AsyncOpenAI in Ray Workers
+
+`AsyncOpenAI` clients in reward modules: can't instantiate eagerly (RLock not picklable by Ray) or per-call (GC'd after `asyncio.run()` closes loop). **Use lazy singleton:** `_var = None` + `_get_var()`. See `BioMath_reward_configed.py:~41`.
+
 ## Key Files Reference
 - Config threading: `verl/trainer/ppo/reward.py` (get_custom_reward_fn, _call_with_kwargs)
 - Reward execution: `verl/workers/reward_manager/naive.py` (NaiveRewardManager, process_one)

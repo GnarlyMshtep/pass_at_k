@@ -1,0 +1,7 @@
+  Checkpoint daemon PID: 1108599
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (53 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/02/28/hidden_womonitor_backdoor_qwen3_8b_remov_11_40_emuzpj2s/verl_output.log
+2026-02-28 12:47:38,193	INFO worker.py:1998 -- Started a local Ray instance. View the dashboard at [1m[32m127.0.0.1:8266 [39m[22m
+[2026-02-28 12:48:09,495 E 1108458 1108458] core_worker_process.cc:224: Failed to register worker to Raylet: IOError: Failed to read data from the socket: End of file worker_id=01000000ffffffffffffffffffffffffffffffffffffffffffffffff

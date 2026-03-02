@@ -39,6 +39,8 @@ from vfh.run_manager import (
     create_run_subdirs,
     load_run_metadata,
     register_child_run,
+    validate_run_metadata,
+    write_run_metadata,
 )
 from vfh.vfh_types import (
     CheckpointDaemonConfig,
@@ -122,6 +124,9 @@ def exec_prepared(
 
     # --- Unset ROCR_VISIBLE_DEVICES (SLURM sets it, conflicts with CUDA_VISIBLE_DEVICES) ---
     os.environ.pop("ROCR_VISIBLE_DEVICES", None)
+
+    # --- Disable uvloop in Ray workers (causes transport cleanup crashes with httpx) ---
+    os.environ["RAY_USE_UVLOOP"] = "0"
 
     # --- Create subdirs (after validation, so validate_env doesn't see empty dirs) ---
     create_run_subdirs(run_dir=run_dir)
@@ -243,7 +248,7 @@ def _spawn_checkpoint_daemon(
     if daemon_cfg.clean_after_backup:
         cmd.append("--clean-after-backup")
 
-    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     print(f"  Checkpoint daemon PID: {proc.pid}")
     return proc
 
@@ -300,11 +305,46 @@ def _prepare_new(
                 "trainer.resume_mode=resume_path",
                 f"trainer.resume_from_path={resume_path}",
             ])
+
+            # Detect dataset change: compare resolved data.train_files between
+            # parent and child. If different, the saved dataloader sampler state
+            # won't match the new dataset → tell verl to skip restoring it.
+            parent_metadata = load_run_metadata(run_dir=parent_dir)
+            parent_train = _extract_override_value(
+                overrides=parent_metadata.resolved_hydra_overrides,
+                key="data.train_files",
+            )
+            child_train = _extract_override_value(
+                overrides=hydra_overrides,
+                key="data.train_files",
+            )
+            if parent_train and child_train and parent_train != child_train:
+                hydra_overrides.append("+trainer.restart_dataloader=true")
+                print(
+                    f"\n  \033[1;34m⚠️ [VFH] Dataset change detected during fork:\033[0m\n"
+                    f"    parent data.train_files: {parent_train}\n"
+                    f"    child  data.train_files: {child_train}\n"
+                    f"    \033[1;34m→ injecting +trainer.restart_dataloader=true "
+                    f"(dataloader state will NOT be restored from checkpoint)\033[0m\n"
+                )
+            elif not parent_train:
+                print(
+                    f"\n  \033[1;33m⚠️ [VFH] Warning: could not find data.train_files in parent's "
+                    f"resolved overrides — cannot auto-detect dataset change.\033[0m\n"
+                    f"    If you changed the dataset, add --extra-overrides "
+                    f"'+trainer.restart_dataloader=true' manually.\n"
+                )
             # Register as child in parent metadata
             register_child_run(
                 parent_run_dir=parent_dir,
                 child_run_id=run_metadata.run_id,
             )
+
+    # Write metadata to disk now that ALL overrides are finalized
+    write_run_metadata(run_dir=run_metadata.run_dir, metadata=run_metadata)
+
+    # Sanity-check: catch bugs at prepare-time, not just run-time
+    validate_run_metadata(metadata=run_metadata)
 
     return merged_config, hydra_overrides, run_metadata
 
@@ -445,6 +485,23 @@ def _run_validation(
 # ---------------------------------------------------------------------------
 
 
+def _extract_override_value(overrides: list[str], key: str) -> Optional[str]:
+    """Extract the value for a given key from a list of Hydra overrides.
+
+    Searches for 'key=value' or '+key=value'. Returns the last match (since
+    later overrides take precedence), or None if not found.
+    """
+    result: Optional[str] = None
+    for entry in overrides:
+        if "=" not in entry:
+            continue
+        k, v = entry.split("=", 1)
+        # Strip leading "+" from key for comparison
+        if k.lstrip("+") == key.lstrip("+"):
+            result = v
+    return result
+
+
 def _get_nested(
     d: dict[str, Any],
     keys: list[str],
@@ -481,6 +538,8 @@ _SLURM_NODE_MAP: dict[int, str] = {
     1: "bleak-mushroom-dove",
     2: "better-ginkgo-dragonfly",
 }
+_SLURM_NODE_CPUS = 160
+_SLURM_NODE_MEM_MB = 154812
 
 
 def _generate_sbatch(
@@ -490,6 +549,7 @@ def _generate_sbatch(
     use_dummy_verl: bool,
     requires_openrouter: bool,
     node_num: Optional[int] = None,
+    divide_resources_by: int = 1,
 ) -> Path:
     """Generate an sbatch script for a prepared run.
 
@@ -556,8 +616,8 @@ def _generate_sbatch(
 #SBATCH --job-name={job_name}
 #SBATCH --nodes=1
 #SBATCH --gpus-per-node={n_gpus}
-#SBATCH --cpus-per-task=80
-#SBATCH --mem=0
+#SBATCH --cpus-per-task={_SLURM_NODE_CPUS // divide_resources_by}
+#SBATCH --mem={_SLURM_NODE_MEM_MB // divide_resources_by // 1024}G
 #SBATCH --time={time_limit}
 #SBATCH --output={sbatch_log_dir.resolve()}/run.out
 #SBATCH --error={sbatch_log_dir.resolve()}/run.err
@@ -588,6 +648,7 @@ def _append_sbatch_jsonl(
     sbatch_script_path: Path,
     time_limit: str,
     n_gpus: int,
+    launch_command: str,
 ) -> None:
     """Append an entry to both sbatch_runs.jsonl and sbatch_runs_editable.jsonl."""
     meta = prepared.run_metadata
@@ -600,6 +661,7 @@ def _append_sbatch_jsonl(
         "slurm_time_limit": time_limit,
         "n_gpus": n_gpus,
         "wandb_url": meta.wandb_url,
+        "launch_command": launch_command,
     }
     line = json.dumps(obj=entry) + "\n"
 
@@ -877,6 +939,12 @@ daemons, sets up output tee, and os.execvp into verl.
             help="SLURM node to run on: 1=bleak-mushroom-dove, 2=better-ginkgo-dragonfly. "
                  "If omitted, SLURM picks automatically.",
         )
+        p.add_argument(
+            "--divide-resources-by", type=int, default=None, metavar="N",
+            help="Divide node CPUs and memory by N for SLURM resource requests "
+                 f"(node has {_SLURM_NODE_CPUS} CPUs, {_SLURM_NODE_MEM_MB // 1024}G mem). "
+                 "Required with --sbatch. E.g. --divide-resources-by 2 for two jobs per node.",
+        )
 
     return parser
 
@@ -889,6 +957,7 @@ def main() -> None:
     if args.command == "run-prepared":
         orch_config = load_orchestrator_config(config_path=args.orch_config)
         run_metadata = load_run_metadata(run_dir=args.run_dir)
+        validate_run_metadata(metadata=run_metadata)
         prepared = PreparedRun(
             merged_config={},  # not needed — validation already ran
             hydra_overrides=run_metadata.resolved_hydra_overrides,
@@ -912,8 +981,11 @@ def main() -> None:
         val_mode = ValidationMode.FULL
 
     # Validate sbatch flags
-    if args.sbatch and not args.time:
-        parser.error("--time is required when using --sbatch (format: HH:MM:SS)")
+    if args.sbatch:
+        if not args.time:
+            parser.error("--time is required when using --sbatch (format: HH:MM:SS)")
+        if not args.divide_resources_by:
+            parser.error("--divide-resources-by is required when using --sbatch")
     if args.time:
         _validate_time_format(time_str=args.time)
 
@@ -984,6 +1056,7 @@ def main() -> None:
             use_dummy_verl=args.dummy,
             requires_openrouter=requires_openrouter,
             node_num=args.node,
+            divide_resources_by=args.divide_resources_by,
         )
 
         n_gpus: int = _get_nested(
@@ -996,6 +1069,7 @@ def main() -> None:
             sbatch_script_path=script_path,
             time_limit=args.time,
             n_gpus=n_gpus,
+            launch_command=" ".join(sys.argv),
         )
 
         if not args.dont_auto_sbatch:
