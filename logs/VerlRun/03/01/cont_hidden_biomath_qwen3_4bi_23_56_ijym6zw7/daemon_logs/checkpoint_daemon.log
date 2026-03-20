@@ -1,0 +1,13 @@
+2026-03-01 19:04:51,607 [INFO] ============================================================
+2026-03-01 19:04:51,607 [INFO] Checkpoint daemon started
+2026-03-01 19:04:51,607 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/03/01/cont_hidden_biomath_qwen3_4bi_23_56_ijym6zw7
+2026-03-01 19:04:51,607 [INFO]   verl_pid:           3411797
+2026-03-01 19:04:51,607 [INFO]   poll_interval:      300.0s
+2026-03-01 19:04:51,607 [INFO]   clean_after_backup: True
+2026-03-01 19:04:51,607 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-03-01 19:04:51,607 [INFO] ============================================================
+2026-03-01 19:04:51,607 [DEBUG] No non-empty checkpoints found
+2026-03-01 19:04:51,607 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 19:09:51,708 [INFO] Verl process (PID 3411797) has exited. Running final backup pass.
+2026-03-01 19:09:51,708 [DEBUG] No non-empty checkpoints found
+2026-03-01 19:09:51,708 [INFO] Final backup pass complete. Daemon exiting.

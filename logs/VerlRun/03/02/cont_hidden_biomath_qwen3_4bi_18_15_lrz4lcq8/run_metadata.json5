@@ -74,5 +74,7 @@
     "trainer.resume_mode=resume_path",
     "trainer.resume_from_path=/shared/matan/code/pass_at_k/logs/VerlRun/03/01/hidden_biomath_qwen3_4bi_18_12_zbvd2l2n/checkpoints/global_step_80"
   ],
-  "child_run_ids": []
+  "child_run_ids": [
+    "g5wwtnrn"
+  ]
 }

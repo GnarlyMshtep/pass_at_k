@@ -1,0 +1,17 @@
+2026-03-01 11:59:45,345 [INFO] ============================================================
+2026-03-01 11:59:45,345 [INFO] Checkpoint daemon started
+2026-03-01 11:59:45,345 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_16_59_87byyfuk
+2026-03-01 11:59:45,345 [INFO]   verl_pid:           2636207
+2026-03-01 11:59:45,345 [INFO]   poll_interval:      300.0s
+2026-03-01 11:59:45,345 [INFO]   clean_after_backup: True
+2026-03-01 11:59:45,361 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-03-01 11:59:45,362 [INFO] ============================================================
+2026-03-01 11:59:45,372 [DEBUG] No non-empty checkpoints found
+2026-03-01 11:59:45,372 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 12:04:45,503 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:04:45,506 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 12:09:45,628 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:09:45,634 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 12:14:45,734 [INFO] Verl process (PID 2636207) has exited. Running final backup pass.
+2026-03-01 12:14:45,769 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:14:45,770 [INFO] Final backup pass complete. Daemon exiting.

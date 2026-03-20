@@ -1,0 +1,11 @@
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (59 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_12_32_1nidf2c9/verl_output.log
+Could not override 'custom_reward_function.reward_kwargs.reward_config.formatter'.
+To append to your config use +custom_reward_function.reward_kwargs.reward_config.formatter=w_hidden
+Key 'reward_kwargs' is not in struct
+    full_key: custom_reward_function.reward_kwargs
+    object_type=dict
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

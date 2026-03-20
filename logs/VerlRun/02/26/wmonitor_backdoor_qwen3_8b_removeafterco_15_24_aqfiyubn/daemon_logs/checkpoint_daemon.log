@@ -1,0 +1,462 @@
+2026-02-26 10:25:01,202 [INFO] ============================================================
+2026-02-26 10:25:01,202 [INFO] Checkpoint daemon started
+2026-02-26 10:25:01,202 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn
+2026-02-26 10:25:01,202 [INFO]   verl_pid:           126543
+2026-02-26 10:25:01,202 [INFO]   poll_interval:      300.0s
+2026-02-26 10:25:01,202 [INFO]   clean_after_backup: True
+2026-02-26 10:25:01,203 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-02-26 10:25:01,203 [INFO] ============================================================
+2026-02-26 10:25:01,203 [DEBUG] No non-empty checkpoints found
+2026-02-26 10:25:01,203 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 10:30:01,301 [DEBUG] No non-empty checkpoints found
+2026-02-26 10:30:01,301 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 10:35:01,400 [DEBUG] No non-empty checkpoints found
+2026-02-26 10:35:01,400 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 10:40:01,500 [DEBUG] No non-empty checkpoints found
+2026-02-26 10:40:01,500 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 10:45:01,600 [DEBUG] No non-empty checkpoints found
+2026-02-26 10:45:01,600 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 10:50:01,694 [DEBUG] No non-empty checkpoints found
+2026-02-26 10:50:01,694 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 10:55:01,793 [DEBUG] No non-empty checkpoints found
+2026-02-26 10:55:01,793 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:00:01,893 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:00:01,894 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:05:01,990 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:05:01,990 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:10:02,062 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:10:02,062 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:15:02,162 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:15:02,162 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:20:02,262 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:20:02,262 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:25:02,352 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:25:02,352 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:30:02,451 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:30:02,452 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:35:02,553 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:35:02,553 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:40:02,651 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:40:02,652 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:45:02,750 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:45:02,750 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:50:02,848 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:50:02,848 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 11:55:02,946 [DEBUG] No non-empty checkpoints found
+2026-02-26 11:55:02,946 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:00:03,044 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:00:03,044 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:05:03,142 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:05:03,142 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:10:03,159 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:10:03,159 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:15:03,260 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:15:03,260 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:20:03,358 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:20:03,358 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:25:03,441 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:25:03,441 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:30:03,539 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:30:03,539 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:35:03,639 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:35:03,639 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:40:03,738 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:40:03,738 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:45:03,838 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:45:03,838 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:50:03,938 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:50:03,938 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 12:55:04,039 [DEBUG] No non-empty checkpoints found
+2026-02-26 12:55:04,039 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:00:04,138 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:00:04,138 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:05:04,238 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:05:04,238 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:10:04,338 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:10:04,338 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:15:04,435 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:15:04,435 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:20:04,526 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:20:04,526 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:25:04,620 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:25:04,620 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:30:04,720 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:30:04,720 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:35:04,819 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:35:04,819 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:40:04,918 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:40:04,918 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:45:05,014 [DEBUG] No non-empty checkpoints found
+2026-02-26 13:45:05,014 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:50:05,114 [INFO] New complete checkpoints to backup: [360]
+2026-02-26 13:50:05,114 [INFO] Running: dvc add logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/checkpoints
+2026-02-26 13:51:31,543 [DEBUG] dvc add stdout: 
+2026-02-26 13:51:31,543 [INFO] Running: dvc push
+2026-02-26 13:51:31,953 [INFO] dvc push complete: Everything is up to date.
+2026-02-26 13:51:31,953 [INFO] Running: dvc gc --not-in-remote -w -f -v
+2026-02-26 13:51:40,349 [INFO] dvc gc complete: 2026-02-26 18:51:32,041 DEBUG: v3.66.1 (conda), CPython 3.10.19 on Linux-5.15.0-170-generic-x86_64-with-glibc2.35
+2026-02-26 18:51:32,041 DEBUG: command: /home/matan/shared/.conda/envs/hope/bin/dvc gc --not-in-remote -w -f -v
+2026-02-26 18:51:32,271 DEBUG: Querying 0 oids via object_exists
+2026-02-26 18:51:32,502 DEBUG: Querying 0 oids via object_exists
+2026-02-26 18:51:32,549 DEBUG: Estimated remote size: 256 files
+2026-02-26 18:51:32,551 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/97/633f5aff553ead9dcd273e1162b195.dir.unpacked'
+2026-02-26 18:51:32,553 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/97/633f5aff553ead9dcd273e1162b195.dir'
+2026-02-26 18:51:32,553 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/83/ef9bad4f4e2b80d43f4983e35a5fd4'
+2026-02-26 18:51:33,900 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ae/518d20e400c6e67716982491e5c37d'
+2026-02-26 18:51:33,901 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/07/e63eaac7e1ec202d15196750bd2838'
+2026-02-26 18:51:33,901 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/7c/1a5154a63f4be8092f98a9387727b3'
+2026-02-26 18:51:34,585 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/08ee87a0925280424b5caa0906752f'
+2026-02-26 18:51:34,587 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/e3/9e4763347acccfe31e9e25730a8842'
+2026-02-26 18:51:35,316 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/0b/ff4ad1020cab604b2f6eb07ea40803'
+2026-02-26 18:51:36,477 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/dc/194c07c6312f7c8988b3ffb97b90e8'
+2026-02-26 18:51:37,083 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/0f/18fdb85b6ef4702dd3c0e13986aefc'
+2026-02-26 18:51:37,083 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/32/599c7c17168fcb838624f245e100ec'
+2026-02-26 18:51:37,083 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4c/39c2b176118c282572880ae4deaea0'
+2026-02-26 18:51:37,648 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/8e/d93fe8c3623622f055e0b89a5d0bea'
+2026-02-26 18:51:37,649 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/1e/e520ff5ac68bc3b1e820340fa986e1'
+2026-02-26 18:51:38,798 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/d4/1d8cd98f00b204e9800998ecf8427e'
+2026-02-26 18:51:38,798 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4e/6d7381b084bb04b0d35f8fd4b0d185'
+2026-02-26 18:51:38,798 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/01/d18457eaf5504d9ec8f4a0941cd4f8'
+2026-02-26 18:51:38,798 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/8d/bf2b0d49248adea36cbe45d8a5c154'
+2026-02-26 18:51:40,071 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/b1/32519f6f12fc23cfdae088429be0f0'
+2026-02-26 18:51:40,071 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/77/4652cf0eb7731f526c66dd0031d877'
+2026-02-26 18:51:40,071 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/72/dacf1de43bc354dc3c521e44ed0b24'
+2026-02-26 18:51:40,071 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/64/23133b9cc1a2077b57822c30c211aa'
+2026-02-26 18:51:40,072 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/61/3b8e4a622c4a2c90e9e1245fc540d6'
+2026-02-26 18:51:40,072 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/61/dfb2182cbaba178eac1809004c67ad'
+2026-02-26 18:51:40,073 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/e7/b24b112a44fdd9ee93bdf998c6ca0e'
+2026-02-26 18:51:40,073 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/e7/c071bc6d40b37abaf68a29d757dee0'
+Removed 26 objects from repo cache.
+2026-02-26 18:51:40,073 DEBUG: Estimated remote size: 256 files
+No unused 'legacy' cache to remove.
+2026-02-26 18:51:40,089 DEBUG: Analytics is enabled.
+2026-02-26 18:51:40,144 DEBUG: Trying to spawn ['daemon', 'analytics', '/tmp/tmpq39btpb1', '-v']
+2026-02-26 18:51:40,151 DEBUG: Spawned ['daemon', 'analytics', '/tmp/tmpq39btpb1', '-v'] with pid 1393241
+2026-02-26 13:51:40,350 [INFO] Verifying backup status with dvc status --cloud
+2026-02-26 13:51:40,761 [DEBUG] Not backed up: 0 items
+2026-02-26 13:51:40,761 [INFO] global_step_360: backup confirmed
+2026-02-26 13:51:40,761 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 13:51:40,761 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 13:56:40,858 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 13:56:40,859 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 13:56:40,859 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:01:40,956 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:01:40,956 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:01:40,956 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:06:41,056 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:06:41,057 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:06:41,057 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:11:41,156 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:11:41,157 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:11:41,157 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:16:41,255 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:16:41,255 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:16:41,255 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:21:41,353 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:21:41,353 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:21:41,353 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:26:41,450 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:26:41,451 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:26:41,451 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:31:41,525 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:31:41,525 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:31:41,525 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:36:41,626 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:36:41,626 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:36:41,626 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:41:41,726 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:41:41,726 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:41:41,726 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:46:41,826 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:46:41,826 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:46:41,826 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:51:41,920 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:51:41,921 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:51:41,921 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 14:56:42,018 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 14:56:42,018 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 14:56:42,019 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:01:42,114 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:01:42,115 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:01:42,115 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:06:42,211 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:06:42,211 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:06:42,211 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:11:42,309 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:11:42,309 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:11:42,309 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:16:42,401 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:16:42,401 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:16:42,401 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:21:42,500 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:21:42,500 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:21:42,500 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:26:42,598 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:26:42,598 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:26:42,598 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:31:42,698 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:31:42,698 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:31:42,698 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:36:42,797 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:36:42,797 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:36:42,797 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:41:42,897 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:41:42,897 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:41:42,897 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:46:42,995 [DEBUG] No new checkpoints to backup (already backed up: [360])
+2026-02-26 15:46:42,995 [DEBUG] global_step_360: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:46:42,995 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 15:51:43,095 [INFO] New complete checkpoints to backup: [400]
+2026-02-26 15:51:43,095 [INFO] Running: dvc add logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/checkpoints
+2026-02-26 15:54:50,228 [DEBUG] dvc add stdout: 
+2026-02-26 15:54:50,228 [INFO] Running: dvc push
+2026-02-26 15:54:50,686 [INFO] dvc push complete: Everything is up to date.
+2026-02-26 15:54:50,686 [INFO] Running: dvc gc --not-in-remote -w -f -v
+2026-02-26 15:55:28,006 [INFO] dvc gc complete: 2026-02-26 20:54:50,785 DEBUG: v3.66.1 (conda), CPython 3.10.19 on Linux-5.15.0-170-generic-x86_64-with-glibc2.35
+2026-02-26 20:54:50,785 DEBUG: command: /home/matan/shared/.conda/envs/hope/bin/dvc gc --not-in-remote -w -f -v
+2026-02-26 20:54:51,028 DEBUG: Querying 0 oids via object_exists
+2026-02-26 20:54:51,275 DEBUG: Querying 0 oids via object_exists
+2026-02-26 20:54:51,327 DEBUG: Estimated remote size: 256 files
+2026-02-26 20:54:51,330 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/1c/88a7ce1a594efa9d4cfa37f27b4ca0.dir.unpacked'
+2026-02-26 20:54:51,331 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/5e/aef8e5ddbd4ea0c828f53b07cbdd46.dir.unpacked'
+2026-02-26 20:54:51,333 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/1c/88a7ce1a594efa9d4cfa37f27b4ca0.dir'
+2026-02-26 20:54:51,333 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/5e/aef8e5ddbd4ea0c828f53b07cbdd46.dir'
+2026-02-26 20:54:51,333 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/83/ef9bad4f4e2b80d43f4983e35a5fd4'
+2026-02-26 20:54:52,808 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ae/518d20e400c6e67716982491e5c37d'
+2026-02-26 20:54:52,809 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ff/baaec9d8c3b5985725795eaf0e38ac'
+2026-02-26 20:54:53,035 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ff/ebe8c0c11ad80f72913fe7d7bb3881'
+2026-02-26 20:54:54,267 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ad/28e1f4be23e24097d4ded2395db18e'
+2026-02-26 20:54:54,268 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ef/5dd156c1b4fec0d2c5b2a32b3c40aa'
+2026-02-26 20:54:54,864 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/07/e63eaac7e1ec202d15196750bd2838'
+2026-02-26 20:54:54,864 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/07/6caf72e31cfa48db3aaac68901a3ef'
+2026-02-26 20:54:54,864 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/2d/11ecfa92e003521dfc08f34d862885'
+2026-02-26 20:54:54,864 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/7c/1a5154a63f4be8092f98a9387727b3'
+2026-02-26 20:54:55,484 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/c7/4f426d91160220176675aa965b89dc'
+2026-02-26 20:54:55,634 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/6f/6f849f7d36b5c0a731185aa7cd5ca3'
+2026-02-26 20:54:55,634 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ba/8da8fc43f4c996a52f2dba5430a0cc'
+2026-02-26 20:54:55,712 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/7f/8e0248c5c32d29ce3b8f47e813d98f'
+2026-02-26 20:54:56,297 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/65/e5842fda5bb11ec0cf20ca4da67637'
+2026-02-26 20:54:56,451 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/08ee87a0925280424b5caa0906752f'
+2026-02-26 20:54:56,451 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/b3716448214861222998e136d9ee48'
+2026-02-26 20:54:56,527 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/74c076ba848e36b984c01cb30b7ff8'
+2026-02-26 20:54:57,137 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/e3/9e4763347acccfe31e9e25730a8842'
+2026-02-26 20:54:57,736 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ce/d0ce173db3e173b0b793aef249ba4a'
+2026-02-26 20:54:57,736 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ca/ba69643125ae2eb7bf203ffbcc89a9'
+2026-02-26 20:54:58,386 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/85/d3daaecbbea6ad9ac60c0898d795e7'
+2026-02-26 20:54:59,574 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/0b/ff4ad1020cab604b2f6eb07ea40803'
+2026-02-26 20:55:01,546 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/09/2ed6f14f0ccd0589641510966c14d0'
+2026-02-26 20:55:01,547 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/e6/2fbc25edf8e6dfc7852dba5ae721ee'
+2026-02-26 20:55:01,547 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/e6/5d4d6c15beff0b7e9de2d379568f3a'
+2026-02-26 20:55:02,757 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/35/c1f863852fb877ea113bf605ad62b7'
+2026-02-26 20:55:02,833 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/81/bd308e9a6e3f638743e4d0b955f63c'
+2026-02-26 20:55:04,035 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/b0/2ead64e478f7c941686efc4bca9c75'
+2026-02-26 20:55:04,036 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/fc/81933f5d04f0a22c4857a6a7980355'
+2026-02-26 20:55:04,121 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/dc/194c07c6312f7c8988b3ffb97b90e8'
+2026-02-26 20:55:04,798 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/dc/322311bb4c5995c425fb08213979dc'
+2026-02-26 20:55:05,993 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/cd/10cf7b09227c16d4460c7878697ca3'
+2026-02-26 20:55:05,994 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/36/71d68942f3f61e01a485b69c58ab0d'
+2026-02-26 20:55:05,994 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/42/46ba0a8388a39fe080f6c75a4ac37a'
+2026-02-26 20:55:05,994 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/39/9d6c6e19ccdc3006567e3a424cdaee'
+2026-02-26 20:55:05,994 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/cc/296bf2fae78c5fe29166b6d37e6336'
+2026-02-26 20:55:05,994 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/9b/8b098d4abf68d10b10ceb8b9812649'
+2026-02-26 20:55:06,674 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/c6/37b74072f2e7281fe9ced102874691'
+2026-02-26 20:55:06,674 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4b/6655ae6f0d9a890b16b13dbaa09855'
+2026-02-26 20:55:06,917 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/54/f603d0f7e16f8874cc4d3be2a2b244'
+2026-02-26 20:55:07,523 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4f/fa4727dd69d32389c3d1f2e6795f3e'
+2026-02-26 20:55:07,975 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/1c/b96604061bbbc5be66ad4b29b8cb59'
+2026-02-26 20:55:08,580 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/0f/18fdb85b6ef4702dd3c0e13986aefc'
+2026-02-26 20:55:08,580 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/32/599c7c17168fcb838624f245e100ec'
+2026-02-26 20:55:08,580 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/32/0722549d1751cf3f247855f937b982'
+2026-02-26 20:55:08,580 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/37/28d793aa78d38813ccfeb24efecfb4'
+2026-02-26 20:55:08,580 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/d2/4d72a6f9bca6b2cf7b1a2169c61892'
+2026-02-26 20:55:08,742 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/62/375f89477b5a6c632e04ab8d7865ff'
+2026-02-26 20:55:08,742 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/f9/223ee59e73874f5a8e16ea96757b22'
+2026-02-26 20:55:08,742 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/51/1c45355d007af78216e7f5820b4bd2'
+2026-02-26 20:55:08,742 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/fe/47fc4dd7e46882b1e96b6ee399d46e'
+2026-02-26 20:55:08,742 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/a2/aee379f9c5915f2a4a1e219f6c050c'
+2026-02-26 20:55:08,742 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/84/67f5d4fb782c0f2d496d8abce768b6'
+2026-02-26 20:55:09,667 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/31/d25de931bd2e48bc7f490681767ee6'
+2026-02-26 20:55:10,572 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/31/f6a0644a32e99fb488643fef91de1a'
+2026-02-26 20:55:11,162 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/31/4b7cd0e3688b6b4fd8a5579db70d09'
+2026-02-26 20:55:11,162 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/d3/709218591efde68e15577b464d9440'
+2026-02-26 20:55:12,476 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4c/39c2b176118c282572880ae4deaea0'
+2026-02-26 20:55:13,209 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/94/9ed0ebe5e07bbf63c145aa42f83d13'
+2026-02-26 20:55:13,210 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/3c/22b080054de6037a85a440ad786447'
+2026-02-26 20:55:14,026 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/46/da1bfc4f0bbde3f17eec977eaf16ed'
+2026-02-26 20:55:14,111 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/8e/d93fe8c3623622f055e0b89a5d0bea'
+2026-02-26 20:55:14,111 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/5d/b261d238f87d432d6c2e9740b34de2'
+2026-02-26 20:55:14,707 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/70/924a84daf151addd6c867ba1e0c439'
+2026-02-26 20:55:14,707 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/5e/9c6dac50cd91a01204f923e4a897f9'
+2026-02-26 20:55:15,328 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/1e/e520ff5ac68bc3b1e820340fa986e1'
+2026-02-26 20:55:17,066 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/d4/935a6a5cf29d62a84368040d51b8ad'
+2026-02-26 20:55:17,066 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/d4/1d8cd98f00b204e9800998ecf8427e'
+2026-02-26 20:55:17,066 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4e/6d7381b084bb04b0d35f8fd4b0d185'
+2026-02-26 20:55:17,066 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/01/d18457eaf5504d9ec8f4a0941cd4f8'
+2026-02-26 20:55:17,066 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/8d/bf2b0d49248adea36cbe45d8a5c154'
+2026-02-26 20:55:18,485 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/93/7dfd63f94fb95f021a6d44d22a67d7'
+2026-02-26 20:55:18,641 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/f2/91237dcd9e9d6f52dd28a2c210e8f0'
+2026-02-26 20:55:18,641 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/34/992d5308cbe0bd65dfbe1c384ca08f'
+2026-02-26 20:55:20,008 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/34/645413af793cc18d51f03c76efb24e'
+2026-02-26 20:55:20,585 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/34/a47d78732c4d1cc2ceefa794dc301f'
+2026-02-26 20:55:21,297 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/b1/a7f60f7b232df4275c8874a3b27455'
+2026-02-26 20:55:21,297 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/b1/32519f6f12fc23cfdae088429be0f0'
+2026-02-26 20:55:21,297 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/77/4652cf0eb7731f526c66dd0031d877'
+2026-02-26 20:55:21,297 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/20/62af69e20ca0656d5bbb489b1fa940'
+2026-02-26 20:55:21,297 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/72/dacf1de43bc354dc3c521e44ed0b24'
+2026-02-26 20:55:21,297 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/5a/dd73ae6bba43bf43f27ce89d83d72e'
+2026-02-26 20:55:22,536 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/18/d8042386b79e2c279fd162df0205c8'
+2026-02-26 20:55:22,536 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/64/23133b9cc1a2077b57822c30c211aa'
+2026-02-26 20:55:22,537 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/64/e788e9718ed2f25c4a94577ff45234'
+2026-02-26 20:55:24,180 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/61/3b8e4a622c4a2c90e9e1245fc540d6'
+2026-02-26 20:55:24,180 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/61/dfb2182cbaba178eac1809004c67ad'
+2026-02-26 20:55:24,181 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/2c/46e691f3b7dfde63ed89e66e96852f'
+2026-02-26 20:55:24,181 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/2c/8bd74394ff4e32f50d6405888767b6'
+2026-02-26 20:55:25,578 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/e7/c071bc6d40b37abaf68a29d757dee0'
+2026-02-26 20:55:25,578 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/40/7f221c03b78573960db4df010c3822'
+2026-02-26 20:55:26,874 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/2f/e7874ad1fb78e8824334bca421b82f'
+2026-02-26 20:55:27,574 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/98/6e7f185b09c6a7eaa9ed72b8060c1f'
+2026-02-26 20:55:27,741 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/23/88bfffc8656a609e8f3d7da42b7158'
+Removed 97 objects from repo cache.
+2026-02-26 20:55:27,742 DEBUG: Estimated remote size: 256 files
+No unused 'legacy' cache to remove.
+2026-02-26 20:55:27,757 DEBUG: Analytics is enabled.
+2026-02-26 20:55:27,811 DEBUG: Trying to spawn ['daemon', 'analytics', '/tmp/tmpnl_5mhtr', '-v']
+2026-02-26 20:55:27,819 DEBUG: Spawned ['daemon', 'analytics', '/tmp/tmpnl_5mhtr', '-v'] with pid 2177797
+2026-02-26 15:55:28,006 [INFO] Verifying backup status with dvc status --cloud
+2026-02-26 15:55:28,426 [DEBUG] Not backed up: 0 items
+2026-02-26 15:55:28,427 [INFO] global_step_400: backup confirmed
+2026-02-26 15:55:36,502 [INFO] Cleaned global_step_360 (kept empty dir as marker)
+2026-02-26 15:55:36,502 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 15:55:36,502 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:00:36,602 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:00:36,602 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:00:36,602 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:05:36,702 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:05:36,702 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:05:36,703 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:10:36,799 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:10:36,800 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:10:36,800 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:15:36,900 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:15:36,900 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:15:36,900 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:20:36,998 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:20:36,998 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:20:36,998 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:25:37,098 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:25:37,098 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:25:37,098 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:30:37,193 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:30:37,193 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:30:37,193 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:35:37,293 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:35:37,293 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:35:37,293 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:40:37,371 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:40:37,372 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:40:37,372 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:45:37,471 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:45:37,472 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:45:37,472 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:50:37,570 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:50:37,571 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:50:37,571 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 16:55:37,671 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 16:55:37,671 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 16:55:37,671 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:00:37,770 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:00:37,771 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:00:37,771 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:05:37,870 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:05:37,871 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:05:37,871 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:10:37,970 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:10:37,970 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:10:37,971 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:15:38,070 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:15:38,070 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:15:38,070 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:20:38,170 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:20:38,171 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:20:38,171 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:25:38,270 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:25:38,271 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:25:38,271 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:30:38,371 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:30:38,372 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:30:38,372 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:35:38,469 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:35:38,470 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:35:38,470 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:40:38,570 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:40:38,570 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:40:38,570 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:45:38,670 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:45:38,670 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:45:38,670 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:50:38,770 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:50:38,770 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:50:38,770 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 17:55:38,870 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 17:55:38,870 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 17:55:38,870 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:00:38,970 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:00:38,970 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:00:38,970 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:05:39,067 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:05:39,068 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:05:39,068 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:10:39,168 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:10:39,168 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:10:39,168 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:15:39,268 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:15:39,268 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:15:39,268 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:20:39,368 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:20:39,368 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:20:39,368 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:25:39,466 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:25:39,467 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:25:39,467 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:30:39,566 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:30:39,567 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:30:39,567 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:35:39,667 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:35:39,667 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:35:39,667 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:40:39,766 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:40:39,767 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:40:39,767 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:45:39,866 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:45:39,867 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:45:39,867 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:50:39,967 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:50:39,967 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:50:39,967 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 18:55:40,066 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 18:55:40,067 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 18:55:40,067 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:00:40,166 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:00:40,166 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:00:40,166 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:05:40,266 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:05:40,267 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:05:40,267 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:10:40,367 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:10:40,367 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:10:40,367 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:15:40,467 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:15:40,467 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:15:40,468 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:20:40,568 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:20:40,568 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:20:40,568 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:25:40,668 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:25:40,669 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:25:40,669 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:30:40,766 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:30:40,767 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:30:40,767 [DEBUG] Sleeping 300.0s until next poll
+2026-02-26 19:35:40,863 [DEBUG] No new checkpoints to backup (already backed up: [360, 400])
+2026-02-26 19:35:40,863 [DEBUG] global_step_400: not cleaning (latest non-empty checkpoint)
+2026-02-26 19:35:40,863 [DEBUG] Sleeping 300.0s until next poll

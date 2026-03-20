@@ -1,0 +1,10 @@
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (59 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_12_27_vhiry2np/verl_output.log
+Could not append to config. An item is already at 'custom_reward_function.name'.
+Either remove + prefix: 'custom_reward_function.name=configed_reward_biomath_w_hidden'
+Or add a second + to add or override 'custom_reward_function.name': '++custom_reward_function.name=configed_reward_biomath_w_hidden'
+
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

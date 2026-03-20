@@ -1,0 +1,314 @@
+2026-03-02 13:18:30,578 [INFO] ============================================================
+2026-03-02 13:18:30,579 [INFO] Checkpoint daemon started
+2026-03-02 13:18:30,579 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t
+2026-03-02 13:18:30,579 [INFO]   verl_pid:           2418535
+2026-03-02 13:18:30,579 [INFO]   poll_interval:      300.0s
+2026-03-02 13:18:30,579 [INFO]   clean_after_backup: True
+2026-03-02 13:18:30,585 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-03-02 13:18:30,585 [INFO] ============================================================
+2026-03-02 13:18:30,594 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:18:30,594 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:23:30,868 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:23:30,897 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:28:31,007 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:28:31,009 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:33:31,118 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:33:31,119 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:38:31,235 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:38:31,237 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:43:31,326 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:43:31,327 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:48:31,440 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:48:31,442 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:53:31,548 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:53:31,550 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 13:58:31,663 [DEBUG] No non-empty checkpoints found
+2026-03-02 13:58:31,665 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:03:31,768 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:03:31,770 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:08:31,878 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:08:31,880 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:13:31,986 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:13:31,989 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:18:32,095 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:18:32,096 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:23:32,203 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:23:32,204 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:28:32,319 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:28:32,321 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:33:32,428 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:33:32,430 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:38:32,577 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:38:32,631 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:43:32,744 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:43:32,746 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:48:32,898 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:48:32,922 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:53:33,034 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:53:33,035 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 14:58:33,135 [DEBUG] No non-empty checkpoints found
+2026-03-02 14:58:33,137 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:03:33,656 [DEBUG] New steps [80] but none confirmed complete (complete_step=None)
+2026-03-02 15:03:33,723 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:08:33,838 [INFO] New complete checkpoints to backup: [80]
+2026-03-02 15:08:33,843 [INFO] Running: dvc add logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_80
+2026-03-02 15:12:50,067 [DEBUG] dvc add stdout: 
+2026-03-02 15:12:50,069 [INFO] Running: dvc push logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_80.dvc
+2026-03-02 15:19:54,552 [INFO] dvc push complete for global_step_80: 14 files pushed
+2026-03-02 15:19:54,554 [INFO] Verifying backup: dvc status --cloud logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_80.dvc
+2026-03-02 15:20:08,506 [INFO] global_step_80: backup confirmed
+2026-03-02 15:20:08,506 [INFO] Running: dvc gc --not-in-remote -w -f -v
+2026-03-02 15:20:46,383 [INFO] dvc gc complete: 2026-03-02 20:20:08,683 DEBUG: v3.66.1 (conda), CPython 3.10.19 on Linux-5.15.0-161-generic-x86_64-with-glibc2.35
+2026-03-02 20:20:08,684 DEBUG: command: /home/matan/shared/.conda/envs/hope/bin/dvc gc --not-in-remote -w -f -v
+2026-03-02 20:20:10,836 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:10,837 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:10,837 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:10,838 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:10,838 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:10,839 DEBUG: Querying 2 oids via object_exists
+2026-03-02 20:20:13,296 DEBUG: Querying 1 oids via object_exists
+2026-03-02 20:20:13,863 DEBUG: Indexing new .dir '57e6ad92d563948f0c4f40fef99c2180.dir' with '236' nested files
+2026-03-02 20:20:14,515 DEBUG: transfer dir: md5: 57e6ad92d563948f0c4f40fef99c2180.dir with 0 files
+2026-03-02 20:20:14,813 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:14,813 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:14,813 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:14,813 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:14,814 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:14,815 DEBUG: Querying 3 oids via object_exists
+2026-03-02 20:20:16,713 DEBUG: Querying 0 oids via object_exists
+2026-03-02 20:20:17,879 DEBUG: transfer dir: md5: 23e4c21324a93f04221a77a6b826c122.dir with 0 files
+2026-03-02 20:20:18,231 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:18,231 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:18,231 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:18,231 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:18,231 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:18,233 DEBUG: Querying 3 oids via object_exists
+2026-03-02 20:20:20,077 DEBUG: Querying 1 oids via object_exists
+2026-03-02 20:20:20,731 DEBUG: Querying 1 oids via object_exists
+2026-03-02 20:20:21,220 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:21,220 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:21,220 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 20:20:21,220 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:21,220 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 20:20:21,222 DEBUG: Querying 3 oids via object_exists
+2026-03-02 20:20:23,158 DEBUG: Querying 1 oids via object_exists
+2026-03-02 20:20:23,634 DEBUG: Querying 1 oids via object_exists
+2026-03-02 20:20:24,315 DEBUG: Querying 158 oids via object_exists
+2026-03-02 20:20:29,171 DEBUG: Querying 158 oids via object_exists
+2026-03-02 20:20:40,831 DEBUG: Estimated remote size: 256 files
+2026-03-02 20:20:40,908 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/e6ad92d563948f0c4f40fef99c2180.dir.unpacked'
+2026-03-02 20:20:41,208 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/60/7971874a7d57b6b0978f811b4c26a2.dir.unpacked'
+2026-03-02 20:20:41,348 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/23/e4c21324a93f04221a77a6b826c122.dir.unpacked'
+2026-03-02 20:20:41,353 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/e6ad92d563948f0c4f40fef99c2180.dir'
+2026-03-02 20:20:41,359 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/60/7971874a7d57b6b0978f811b4c26a2.dir'
+2026-03-02 20:20:41,364 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/23/e4c21324a93f04221a77a6b826c122.dir'
+2026-03-02 20:20:41,368 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/7c/dd24f6e27c599ceaa7260bfe4a2b62'
+2026-03-02 20:20:41,370 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/d7/bfe0ecfa87bf87c01070c7951d8f23'
+2026-03-02 20:20:41,373 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/95f12e815eef069e10dd289b80ad4c'
+2026-03-02 20:20:41,375 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/08ee87a0925280424b5caa0906752f'
+2026-03-02 20:20:41,377 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/f4/e844ebd85ebb4c8ea40a38b829d3bb'
+2026-03-02 20:20:41,380 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ee/6c6ffe0b80f355f6796ad2e01c8d1d'
+2026-03-02 20:20:41,749 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/80/f15aa28d9880cf1d68eda437c1348b'
+2026-03-02 20:20:42,131 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/55/53c70149d276ee5d34011d1be1b06b'
+2026-03-02 20:20:42,719 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/a1/290e795fee329b50f9abc1dc609289'
+2026-03-02 20:20:42,723 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/bb/73b9cdc769794800774909bfd50494'
+2026-03-02 20:20:43,102 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/bb/8a8e8a5b3a747669f827993f1c8d12'
+2026-03-02 20:20:43,480 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/a2/6047c450777d94419b7517c0324801'
+2026-03-02 20:20:43,484 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/0a/bfe8f8cd7cfdc7ee5c94e9f0f48644'
+2026-03-02 20:20:43,487 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/de/afdabeff32caed808d2c6417c854f4'
+2026-03-02 20:20:43,489 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/5e/bab99134187f3ac0c16cbe0b58e7c7'
+2026-03-02 20:20:43,493 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4e/6d7381b084bb04b0d35f8fd4b0d185'
+2026-03-02 20:20:43,496 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/9f/e21ae1041a04712b78835d812e9402'
+2026-03-02 20:20:44,114 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/7b/0ed2329d570141c07afafb9786422d'
+2026-03-02 20:20:44,726 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/01/d18457eaf5504d9ec8f4a0941cd4f8'
+2026-03-02 20:20:44,730 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/72/dacf1de43bc354dc3c521e44ed0b24'
+2026-03-02 20:20:44,733 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/64/23133b9cc1a2077b57822c30c211aa'
+2026-03-02 20:20:44,737 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/61/3b8e4a622c4a2c90e9e1245fc540d6'
+2026-03-02 20:20:44,741 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/92/eb2347f6de782671afefebf1654973'
+Removed 26 objects from repo cache.
+2026-03-02 20:20:45,452 DEBUG: Estimated remote size: 256 files
+No unused 'legacy' cache to remove.
+2026-03-02 20:20:46,045 DEBUG: Analytics is enabled.
+2026-03-02 20:20:46,103 DEBUG: Trying to spawn ['daemon', 'analytics', '/tmp/tmpg_u6te5i', '-v']
+2026-03-02 20:20:46,113 DEBUG: Spawned ['daemon', 'analytics', '/tmp/tmpg_u6te5i', '-v'] with pid 2737101
+2026-03-02 15:20:46,390 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:20:46,390 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:25:46,512 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 15:25:46,518 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:25:46,518 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:30:46,644 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 15:30:46,651 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:30:46,651 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:35:46,942 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 15:35:47,010 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:35:47,010 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:40:47,129 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 15:40:47,135 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:40:47,136 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:45:47,254 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 15:45:47,261 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:45:47,261 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:50:47,386 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 15:50:47,393 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:50:47,393 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 15:55:47,526 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 15:55:47,533 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 15:55:47,533 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:00:47,670 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:00:47,678 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:00:47,678 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:05:47,793 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:05:47,800 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:05:47,800 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:10:47,926 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:10:47,934 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:10:47,934 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:15:48,058 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:15:48,065 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:15:48,065 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:20:48,178 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:20:48,184 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:20:48,184 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:25:48,560 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:25:48,619 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:25:48,619 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:30:48,777 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:30:48,787 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:30:48,787 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:35:48,900 [DEBUG] No new checkpoints to backup (already backed up: [80])
+2026-03-02 16:35:48,907 [DEBUG] global_step_80: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:35:48,907 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:40:49,719 [DEBUG] New steps [120] but none confirmed complete (complete_step=80)
+2026-03-02 16:40:59,148 [INFO] Cleaned global_step_80 (kept empty dir as marker)
+2026-03-02 16:40:59,149 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 16:45:59,276 [INFO] New complete checkpoints to backup: [120]
+2026-03-02 16:45:59,279 [INFO] Running: dvc add logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120
+2026-03-02 16:50:47,292 [DEBUG] dvc add stdout: 
+2026-03-02 16:50:47,295 [INFO] Running: dvc push logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120.dvc
+2026-03-02 16:58:17,264 [INFO] dvc push complete for global_step_120: 10 files pushed
+2026-03-02 16:58:17,266 [INFO] Verifying backup: dvc status --cloud logs/VerlRun/03/02/cont_hidden_biomath_qwen3_4bi_18_16_ijn60q0t/checkpoints/global_step_120.dvc
+2026-03-02 16:58:30,518 [INFO] global_step_120: backup confirmed
+2026-03-02 16:58:30,518 [INFO] Running: dvc gc --not-in-remote -w -f -v
+2026-03-02 16:59:22,408 [INFO] dvc gc complete: 2026-03-02 21:58:30,701 DEBUG: v3.66.1 (conda), CPython 3.10.19 on Linux-5.15.0-161-generic-x86_64-with-glibc2.35
+2026-03-02 21:58:30,701 DEBUG: command: /home/matan/shared/.conda/envs/hope/bin/dvc gc --not-in-remote -w -f -v
+2026-03-02 21:58:33,012 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:33,012 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:33,012 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:33,013 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:33,013 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:33,015 DEBUG: Querying 6 oids via object_exists
+2026-03-02 21:58:35,183 DEBUG: Querying 0 oids via object_exists
+2026-03-02 21:58:36,391 DEBUG: transfer dir: md5: 57e6ad92d563948f0c4f40fef99c2180.dir with 0 files
+2026-03-02 21:58:36,850 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:36,850 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:36,850 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:36,851 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:36,851 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:36,853 DEBUG: Querying 6 oids via object_exists
+2026-03-02 21:58:38,593 DEBUG: Querying 0 oids via object_exists
+2026-03-02 21:58:39,810 DEBUG: transfer dir: md5: 607971874a7d57b6b0978f811b4c26a2.dir with 0 files
+2026-03-02 21:58:40,180 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:40,180 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:40,180 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:40,180 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:40,180 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:40,182 DEBUG: Querying 6 oids via object_exists
+2026-03-02 21:58:42,028 DEBUG: Querying 0 oids via object_exists
+2026-03-02 21:58:43,264 DEBUG: transfer dir: md5: 23e4c21324a93f04221a77a6b826c122.dir with 0 files
+2026-03-02 21:58:43,475 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:43,475 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:43,475 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:43,476 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:43,476 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:43,477 DEBUG: Querying 6 oids via object_exists
+2026-03-02 21:58:45,291 DEBUG: Querying 0 oids via object_exists
+2026-03-02 21:58:46,380 DEBUG: transfer dir: md5: a0784a19a4eff25fac6d848fece99fae.dir with 0 files
+2026-03-02 21:58:46,730 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:46,730 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:46,730 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:46,730 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:46,730 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:46,732 DEBUG: Querying 6 oids via object_exists
+2026-03-02 21:58:48,372 DEBUG: Querying 0 oids via object_exists
+2026-03-02 21:58:49,468 DEBUG: transfer dir: md5: bf3dcf169deacee4a24a66b7626c92f0.dir with 0 files
+2026-03-02 21:58:49,832 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:49,832 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:49,832 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:49,832 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:49,832 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:49,834 DEBUG: Querying 6 oids via object_exists
+2026-03-02 21:58:51,389 DEBUG: Querying 1 oids via object_exists
+2026-03-02 21:58:51,825 DEBUG: Querying 1 oids via object_exists
+2026-03-02 21:58:52,155 DEBUG: Preparing to transfer data from 's3://matan-ml-exp-bucket/dvc-storage/files/md5' to '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:52,156 DEBUG: Preparing to collect status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:52,156 DEBUG: Collecting status from '/shared/matan/code/pass_at_k/.dvc/cache/files/md5'
+2026-03-02 21:58:52,156 DEBUG: Preparing to collect status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:52,156 DEBUG: Collecting status from 'matan-ml-exp-bucket/dvc-storage/files/md5'
+2026-03-02 21:58:52,158 DEBUG: Querying 6 oids via object_exists
+2026-03-02 21:58:53,961 DEBUG: Querying 1 oids via object_exists
+2026-03-02 21:58:54,417 DEBUG: Querying 1 oids via object_exists
+2026-03-02 21:58:55,044 DEBUG: Querying 205 oids via object_exists
+2026-03-02 21:59:00,409 DEBUG: Querying 205 oids via object_exists
+2026-03-02 21:59:14,391 DEBUG: Estimated remote size: 256 files
+2026-03-02 21:59:14,469 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/e6ad92d563948f0c4f40fef99c2180.dir.unpacked'
+2026-03-02 21:59:14,600 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/59/59d041bbc0cd2361ed38d105f7e9eb.dir.unpacked'
+2026-03-02 21:59:14,701 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/bf/3dcf169deacee4a24a66b7626c92f0.dir.unpacked'
+2026-03-02 21:59:14,731 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/60/7971874a7d57b6b0978f811b4c26a2.dir.unpacked'
+2026-03-02 21:59:14,737 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ec/6ff6278ba9ba95ba78bdbe4e117fa4.dir.unpacked'
+2026-03-02 21:59:14,803 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/a0/784a19a4eff25fac6d848fece99fae.dir.unpacked'
+2026-03-02 21:59:14,833 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/23/e4c21324a93f04221a77a6b826c122.dir.unpacked'
+2026-03-02 21:59:14,837 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/e6ad92d563948f0c4f40fef99c2180.dir'
+2026-03-02 21:59:14,841 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/59/59d041bbc0cd2361ed38d105f7e9eb.dir'
+2026-03-02 21:59:14,843 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/bf/3dcf169deacee4a24a66b7626c92f0.dir'
+2026-03-02 21:59:14,846 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/60/7971874a7d57b6b0978f811b4c26a2.dir'
+2026-03-02 21:59:14,849 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/ec/6ff6278ba9ba95ba78bdbe4e117fa4.dir'
+2026-03-02 21:59:14,853 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/a0/784a19a4eff25fac6d848fece99fae.dir'
+2026-03-02 21:59:14,857 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/23/e4c21324a93f04221a77a6b826c122.dir'
+2026-03-02 21:59:14,861 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/b8/835292da83b2f972ed6ff765471275'
+2026-03-02 21:59:15,477 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/7c/016df1d22f30b4ef51c7f2c7cb2e38'
+2026-03-02 21:59:15,481 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/c7/9d63e552f24f6397d57003741dce17'
+2026-03-02 21:59:16,186 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/d7/bfe0ecfa87bf87c01070c7951d8f23'
+2026-03-02 21:59:16,191 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/65/29c765935d81602f198e51f256a6ba'
+2026-03-02 21:59:16,194 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/95f12e815eef069e10dd289b80ad4c'
+2026-03-02 21:59:16,198 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/57/08ee87a0925280424b5caa0906752f'
+2026-03-02 21:59:16,200 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/5f/3aef73b8ec8979c85d8aa55acba5fe'
+2026-03-02 21:59:16,576 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/3f/9674a62c20a890b1eb305a6516db70'
+2026-03-02 21:59:16,956 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/f4/e844ebd85ebb4c8ea40a38b829d3bb'
+2026-03-02 21:59:16,958 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/89/ad236ee69028d10324e775e6112bca'
+2026-03-02 21:59:17,000 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/06/fca9b7c94a15708ebd9cf7d2d7cc4f'
+2026-03-02 21:59:17,375 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/42/2ed4ede927cb3bbf7c22b4758f1a8c'
+2026-03-02 21:59:17,378 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/87/916c703906f9c16d5cdae9a309dfd4'
+2026-03-02 21:59:18,103 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/6b/ba56782bb3334808af86d3350fd22c'
+2026-03-02 21:59:18,108 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/f9/e858c34d66c1d2210116b86fb0b5dc'
+2026-03-02 21:59:18,110 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/1f/cea39865e0f1dbd25ef4fb2b5af00b'
+2026-03-02 21:59:18,113 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/19/8b721217801891726800ca66e0e4c2'
+2026-03-02 21:59:18,117 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/14/dc2a273769e9867406253383cd5e39'
+2026-03-02 21:59:18,162 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/de/afdabeff32caed808d2c6417c854f4'
+2026-03-02 21:59:18,165 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/b9/da578263d87125fbbcb723672de5b7'
+2026-03-02 21:59:18,168 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/c3/6e6a0f4cc5f6faea54e474777d9e59'
+2026-03-02 21:59:18,171 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/2b/2edf16e1d0cd4065e1e51e4e1b5d8b'
+2026-03-02 21:59:18,225 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/4e/6d7381b084bb04b0d35f8fd4b0d185'
+2026-03-02 21:59:18,228 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/01/d18457eaf5504d9ec8f4a0941cd4f8'
+2026-03-02 21:59:18,231 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/10/b459e9efd1da8a00002c7b2b0d049d'
+2026-03-02 21:59:18,870 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/03/3d25e6b3b954e14dcdbe8e4d24c373'
+2026-03-02 21:59:20,158 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/72/dacf1de43bc354dc3c521e44ed0b24'
+2026-03-02 21:59:20,162 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/64/23133b9cc1a2077b57822c30c211aa'
+2026-03-02 21:59:20,167 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/61/3b8e4a622c4a2c90e9e1245fc540d6'
+2026-03-02 21:59:20,170 DEBUG: Removing '/shared/matan/code/pass_at_k/.dvc/cache/files/md5/95/16e5778b5e9c33074b48719f09460a'
+Removed 38 objects from repo cache.
+2026-03-02 21:59:20,173 DEBUG: Estimated remote size: 256 files
+No unused 'legacy' cache to remove.
+2026-03-02 21:59:20,571 DEBUG: Analytics is enabled.
+2026-03-02 21:59:22,151 DEBUG: Trying to spawn ['daemon', 'analytics', '/tmp/tmpoeydl7uq', '-v']
+2026-03-02 21:59:22,161 DEBUG: Spawned ['daemon', 'analytics', '/tmp/tmpoeydl7uq', '-v'] with pid 2982283
+2026-03-02 16:59:22,419 [DEBUG] global_step_120: not cleaning (latest non-empty checkpoint)
+2026-03-02 16:59:22,419 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 17:04:22,542 [DEBUG] No new checkpoints to backup (already backed up: [80, 120])
+2026-03-02 17:04:22,553 [DEBUG] global_step_120: not cleaning (latest non-empty checkpoint)
+2026-03-02 17:04:22,553 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 17:09:23,266 [DEBUG] No new checkpoints to backup (already backed up: [80, 120])
+2026-03-02 17:09:23,547 [DEBUG] global_step_120: not cleaning (latest non-empty checkpoint)
+2026-03-02 17:09:23,547 [DEBUG] Sleeping 300.0s until next poll
+2026-03-02 17:14:23,673 [DEBUG] No new checkpoints to backup (already backed up: [80, 120])
+2026-03-02 17:14:23,684 [DEBUG] global_step_120: not cleaning (latest non-empty checkpoint)
+2026-03-02 17:14:23,684 [DEBUG] Sleeping 300.0s until next poll

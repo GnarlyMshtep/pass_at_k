@@ -1,0 +1,14 @@
+2026-02-21 17:19:27,316 [INFO] ============================================================
+2026-02-21 17:19:27,316 [INFO] Checkpoint daemon started
+2026-02-21 17:19:27,316 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/02/21/benign_qwen3_8b_defmain_17_18_os3h3fom
+2026-02-21 17:19:27,316 [INFO]   verl_pid:           311963
+2026-02-21 17:19:27,316 [INFO]   poll_interval:      300.0s
+2026-02-21 17:19:27,316 [INFO]   clean_after_backup: True
+2026-02-21 17:19:27,316 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-02-21 17:19:27,316 [INFO] ============================================================
+2026-02-21 17:19:27,316 [DEBUG] No non-empty checkpoints found
+2026-02-21 17:19:27,316 [DEBUG] Sleeping 300.0s until next poll
+2026-02-21 17:24:27,394 [DEBUG] No non-empty checkpoints found
+2026-02-21 17:24:27,394 [DEBUG] Sleeping 300.0s until next poll
+2026-02-21 17:29:27,483 [DEBUG] No non-empty checkpoints found
+2026-02-21 17:29:27,483 [DEBUG] Sleeping 300.0s until next poll

@@ -1,0 +1,1369 @@
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (59 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/verl_output.log
+2026-02-26 15:25:10,192	INFO worker.py:1998 -- Started a local Ray instance. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/worker.py:2046: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+DEBUG: in run_ppo
+\DEBUG: nInitializing a new ray env becase not trying to connect to the same cluster because scared it won't work
+
+ray init kwargs: {'num_cpus': None, 'runtime_env': {'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN', 'VLLM_LOGGING_LEVEL': 'WARN', 'VLLM_ALLOW_RUNTIME_LORA_UPDATING': 'true', 'CUDA_DEVICE_MAX_CONNECTIONS': '1', 'RAY_DEBUG': '0', 'RAY_DEBUG_POST_MORTEM': '0'}, 'working_dir': None}}
+[36m(TaskRunner pid=136720)[0m TaskRunner hostname: bleak-mushroom-dove, PID: 136720
+[36m(TaskRunner pid=136720)[0m {'actor_rollout_ref': {'actor': {'_target_': 'verl.workers.config.FSDPActorConfig',
+[36m(TaskRunner pid=136720)[0m                                  'checkpoint': {'_target_': 'verl.trainer.config.CheckpointConfig',
+[36m(TaskRunner pid=136720)[0m                                                 'async_save': False,
+[36m(TaskRunner pid=136720)[0m                                                 'load_contents': ['model',
+[36m(TaskRunner pid=136720)[0m                                                                   'optimizer',
+[36m(TaskRunner pid=136720)[0m                                                                   'extra'],
+[36m(TaskRunner pid=136720)[0m                                                 'save_contents': ['model',
+[36m(TaskRunner pid=136720)[0m                                                                   'optimizer',
+[36m(TaskRunner pid=136720)[0m                                                                   'extra']},
+[36m(TaskRunner pid=136720)[0m                                  'clip_ratio': 0.2,
+[36m(TaskRunner pid=136720)[0m                                  'clip_ratio_c': 3.0,
+[36m(TaskRunner pid=136720)[0m                                  'clip_ratio_high': 0.2,
+[36m(TaskRunner pid=136720)[0m                                  'clip_ratio_low': 0.2,
+[36m(TaskRunner pid=136720)[0m                                  'entropy_checkpointing': False,
+[36m(TaskRunner pid=136720)[0m                                  'entropy_coeff': 0,
+[36m(TaskRunner pid=136720)[0m                                  'entropy_from_logits_with_chunking': False,
+[36m(TaskRunner pid=136720)[0m                                  'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=136720)[0m                                                  'forward_prefetch': False,
+[36m(TaskRunner pid=136720)[0m                                                  'fsdp_size': -1,
+[36m(TaskRunner pid=136720)[0m                                                  'offload_policy': False,
+[36m(TaskRunner pid=136720)[0m                                                  'optimizer_offload': False,
+[36m(TaskRunner pid=136720)[0m                                                  'param_offload': False,
+[36m(TaskRunner pid=136720)[0m                                                  'reshard_after_forward': True,
+[36m(TaskRunner pid=136720)[0m                                                  'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=136720)[0m                                  'grad_clip': 1.0,
+[36m(TaskRunner pid=136720)[0m                                  'kl_loss_coef': 0.001,
+[36m(TaskRunner pid=136720)[0m                                  'kl_loss_type': 'low_var_kl',
+[36m(TaskRunner pid=136720)[0m                                  'loss_agg_mode': 'token-mean',
+[36m(TaskRunner pid=136720)[0m                                  'optim': {'_target_': 'verl.workers.config.FSDPOptimizerConfig',
+[36m(TaskRunner pid=136720)[0m                                            'lr': 1e-06,
+[36m(TaskRunner pid=136720)[0m                                            'lr_warmup_steps': 25,
+[36m(TaskRunner pid=136720)[0m                                            'lr_warmup_steps_ratio': 0.0,
+[36m(TaskRunner pid=136720)[0m                                            'min_lr_ratio': 0.0,
+[36m(TaskRunner pid=136720)[0m                                            'num_cycles': 0.5,
+[36m(TaskRunner pid=136720)[0m                                            'total_training_steps': -1,
+[36m(TaskRunner pid=136720)[0m                                            'warmup_style': 'constant',
+[36m(TaskRunner pid=136720)[0m                                            'weight_decay': 0.01},
+[36m(TaskRunner pid=136720)[0m                                  'policy_loss': {'_target_': 'verl.workers.config.PolicyLossConfig',
+[36m(TaskRunner pid=136720)[0m                                                  'clip_cov_lb': 1.0,
+[36m(TaskRunner pid=136720)[0m                                                  'clip_cov_ratio': 0.0002,
+[36m(TaskRunner pid=136720)[0m                                                  'clip_cov_ub': 5.0,
+[36m(TaskRunner pid=136720)[0m                                                  'kl_cov_ratio': 0.0002,
+[36m(TaskRunner pid=136720)[0m                                                  'loss_mode': 'vanilla',
+[36m(TaskRunner pid=136720)[0m                                                  'ppo_kl_coef': 0.1},
+[36m(TaskRunner pid=136720)[0m                                  'ppo_epochs': 1,
+[36m(TaskRunner pid=136720)[0m                                  'ppo_max_token_len_per_gpu': 30000,
+[36m(TaskRunner pid=136720)[0m                                  'ppo_micro_batch_size': None,
+[36m(TaskRunner pid=136720)[0m                                  'ppo_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=136720)[0m                                  'ppo_mini_batch_size': 256,
+[36m(TaskRunner pid=136720)[0m                                  'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=136720)[0m                                               'all_ranks': False,
+[36m(TaskRunner pid=136720)[0m                                               'enable': False,
+[36m(TaskRunner pid=136720)[0m                                               'ranks': [],
+[36m(TaskRunner pid=136720)[0m                                               'save_path': 'outputs/profile',
+[36m(TaskRunner pid=136720)[0m                                               'tool': None,
+[36m(TaskRunner pid=136720)[0m                                               'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                       'analysis': True,
+[36m(TaskRunner pid=136720)[0m                                                                       'contents': [],
+[36m(TaskRunner pid=136720)[0m                                                                       'discrete': False,
+[36m(TaskRunner pid=136720)[0m                                                                       'level': 'level1'},
+[36m(TaskRunner pid=136720)[0m                                                               'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                        'discrete': False},
+[36m(TaskRunner pid=136720)[0m                                                               'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                         'step_end': None,
+[36m(TaskRunner pid=136720)[0m                                                                         'step_start': 0}}},
+[36m(TaskRunner pid=136720)[0m                                  'shuffle': False,
+[36m(TaskRunner pid=136720)[0m                                  'strategy': 'fsdp',
+[36m(TaskRunner pid=136720)[0m                                  'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=136720)[0m                                  'use_dynamic_bsz': True,
+[36m(TaskRunner pid=136720)[0m                                  'use_fused_kernels': False,
+[36m(TaskRunner pid=136720)[0m                                  'use_kl_loss': True,
+[36m(TaskRunner pid=136720)[0m                                  'use_remove_padding': True,
+[36m(TaskRunner pid=136720)[0m                                  'use_torch_compile': True},
+[36m(TaskRunner pid=136720)[0m                        'hybrid_engine': True,
+[36m(TaskRunner pid=136720)[0m                        'model': {'custom_chat_template': None,
+[36m(TaskRunner pid=136720)[0m                                  'enable_activation_offload': False,
+[36m(TaskRunner pid=136720)[0m                                  'enable_gradient_checkpointing': True,
+[36m(TaskRunner pid=136720)[0m                                  'exclude_modules': None,
+[36m(TaskRunner pid=136720)[0m                                  'external_lib'
+[36m(TaskRunner pid=136720)[0m : None,
+[36m(TaskRunner pid=136720)[0m                                  'fused_kernel_options': {'impl_backend': 'torch'},
+[36m(TaskRunner pid=136720)[0m                                  'lora_alpha': 16,
+[36m(TaskRunner pid=136720)[0m                                  'lora_rank': 0,
+[36m(TaskRunner pid=136720)[0m                                  'override_config': {},
+[36m(TaskRunner pid=136720)[0m                                  'path': '/shared/matan/models/Qwen3-8B',
+[36m(TaskRunner pid=136720)[0m                                  'target_modules': 'all-linear',
+[36m(TaskRunner pid=136720)[0m                                  'trust_remote_code': False,
+[36m(TaskRunner pid=136720)[0m                                  'use_fused_kernels': False,
+[36m(TaskRunner pid=136720)[0m                                  'use_liger': False,
+[36m(TaskRunner pid=136720)[0m                                  'use_remove_padding': True,
+[36m(TaskRunner pid=136720)[0m                                  'use_shm': False},
+[36m(TaskRunner pid=136720)[0m                        'nccl_timeout': 600,
+[36m(TaskRunner pid=136720)[0m                        'ref': {'entropy_checkpointing': False,
+[36m(TaskRunner pid=136720)[0m                                'entropy_from_logits_with_chunking': False,
+[36m(TaskRunner pid=136720)[0m                                'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=136720)[0m                                                'forward_prefetch': False,
+[36m(TaskRunner pid=136720)[0m                                                'param_offload': True,
+[36m(TaskRunner pid=136720)[0m                                                'reshard_after_forward': True,
+[36m(TaskRunner pid=136720)[0m                                                'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=136720)[0m                                'log_prob_max_token_len_per_gpu': 36000,
+[36m(TaskRunner pid=136720)[0m                                'log_prob_micro_batch_size': None,
+[36m(TaskRunner pid=136720)[0m                                'log_prob_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=136720)[0m                                'log_prob_use_dynamic_bsz': True,
+[36m(TaskRunner pid=136720)[0m                                'model': None,
+[36m(TaskRunner pid=136720)[0m                                'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=136720)[0m                                             'all_ranks': False,
+[36m(TaskRunner pid=136720)[0m                                             'enable': False,
+[36m(TaskRunner pid=136720)[0m                                             'ranks': [],
+[36m(TaskRunner pid=136720)[0m                                             'save_path': 'outputs/profile',
+[36m(TaskRunner pid=136720)[0m                                             'tool': None,
+[36m(TaskRunner pid=136720)[0m                                             'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                     'analysis': True,
+[36m(TaskRunner pid=136720)[0m                                                                     'contents': [],
+[36m(TaskRunner pid=136720)[0m                                                                     'discrete': False,
+[36m(TaskRunner pid=136720)[0m                                                                     'level': 'level1'},
+[36m(TaskRunner pid=136720)[0m                                                             'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                      'discrete': False},
+[36m(TaskRunner pid=136720)[0m                                                             'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                       'step_end': None,
+[36m(TaskRunner pid=136720)[0m                                                                       'step_start': 0}}},
+[36m(TaskRunner pid=136720)[0m                                'strategy': 'fsdp',
+[36m(TaskRunner pid=136720)[0m                                'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=136720)[0m                                'use_torch_compile': True},
+[36m(TaskRunner pid=136720)[0m                        'rollout': {'_target_': 'verl.workers.config.RolloutConfig',
+[36m(TaskRunner pid=136720)[0m                                    'agent': {'_target_': 'verl.workers.config.AgentLoopConfig',
+[36m(TaskRunner pid=136720)[0m                                              'agent_loop_config_path': None,
+[36m(TaskRunner pid=136720)[0m                                              'custom_async_server': {'_target_': 'verl.workers.config.CustomAsyncServerConfig',
+[36m(TaskRunner pid=136720)[0m                                                                      'name': None,
+[36m(TaskRunner pid=136720)[0m                                                                      'path': None},
+[36m(TaskRunner pid=136720)[0m                                              'num_workers': 8},
+[36m(TaskRunner pid=136720)[0m                                    'calculate_log_probs': False,
+[36m(TaskRunner pid=136720)[0m                                    'cudagraph_capture_sizes': None,
+[36m(TaskRunner pid=136720)[0m                                    'disable_log_stats': True,
+[36m(TaskRunner pid=136720)[0m                                    'do_sample': True,
+[36m(TaskRunner pid=136720)[0m                                    'dtype': 'bfloat16',
+[36m(TaskRunner pid=136720)[0m                                    'enable_chunked_prefill': True,
+[36m(TaskRunner pid=136720)[0m                                    'enforce_eager': False,
+[36m(TaskRunner pid=136720)[0m                                    'engine_kwargs': {'sglang': {}, 'vllm': {}},
+[36m(TaskRunner pid=136720)[0m                                    'free_cache_engine': True,
+[36m(TaskRunner pid=136720)[0m                                    'gpu_memory_utilization': 0.6,
+[36m(TaskRunner pid=136720)[0m                                    'ignore_eos': False,
+[36m(TaskRunner pid=136720)[0m                                    'layered_summon': False,
+[36m(TaskRunner pid=136720)[0m                                    'load_format': 'dummy_dtensor',
+[36m(TaskRunner pid=136720)[0m                                    'log_prob_max_token_len_per_gpu': 36000,
+[36m(TaskRunner pid=136720)[0m                                    'log_prob_micro_batch_size': None,
+[36m(TaskRunner pid=136720)[0m                                    'log_prob_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=136720)[0m                                    'log_prob_use_dynamic_bsz': True,
+[36m(TaskRunner pid=136720)[0m                                    'max_model_len': None,
+[36m(TaskRunner pid=136720)[0m                                    'max_num_batched_tokens': 8192,
+[36m(TaskRunner pid=136720)[0m                                    'max_num_seqs': 1024,
+[36m(TaskRunner pid=136720)[0m                                    'mode': 'sync',
+[36m(TaskRunner pid=136720)[0m                                    'multi_stage_wake_up': False,
+[36m(TaskRunner pid=136720)[0m                                    'multi_turn': {'_target_': 'verl.workers.config.MultiTurnConfig',
+[36m(TaskRunner pid=136720)[0m                                                   'enable': False,
+[36m(TaskRunner pid=136720)[0m                                                   'format': 'hermes',
+[36m(TaskRunner pid=136720)[0m                                                   'interaction_config_path': None,
+[36m(TaskRunner pid=136720)[0m                                                   'max_assistant_turns': None,
+[36m(TaskRunner pid=136720)[0m                                                   'max_parallel_calls': 1,
+[36m(TaskRunner pid=136720)[0m                                                   'max_tool_response_length': 256,
+[36m(TaskRunner pid=136720)[0m                                                   'max_user_turns': None,
+[36m(TaskRunner pid=136720)[0m                                                   'tokenization_sanity_check_mode': 'strict',
+[36m(TaskRunner pid=136720)[0m                                                   'tool_config_path': None,
+[36m(TaskRunner pid=136720)[0m                                                   'tool_response_truncate_side': 'middle',
+[36m(TaskRunner pid=136720)[0m                                                   'use_inference_chat_template': False},
+[36m(TaskRunner pid=136720)[0m                                    'n': 8,
+[36m(TaskRunner pid=136720)[0m                                    'name': 'vllm',
+[36m(TaskRunner pid=136720)[0m                                    'over_sample_rate': 0,
+[36m(TaskRunner pid=136720)[0m                                    'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=136720)[0m                                                 'all_ranks': False,
+[36m(TaskRunner pid=136720)[0m                                                 'enable': False,
+[36m(TaskRunner pid=136720)[0m                                                 'ranks': [],
+[36m(TaskRunner pid=136720)[0m                                                 'save_path': 'outputs/profile',
+[36m(TaskRunner pid=136720)[0m                                                 'tool': None,
+[36m(TaskRunner pid=136720)[0m                                                 'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                         'analysis': True,
+[36m(TaskRunner pid=136720)[0m                                                                         'contents': [],
+[36m(TaskRunner pid=136720)[0m                                                                         'discrete': False,
+[36m(TaskRunner pid=136720)[0m                                                                         'level': 'level1'},
+[36m(TaskRunner pid=136720)[0m                                                                 'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                                          'discrete': False},
+[36m(TaskRunner pid=136720)[0m                                                                 'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig'
+[36m(TaskRunner pid=136720)[0m ,
+[36m(TaskRunner pid=136720)[0m                                                                           'step_end': None,
+[36m(TaskRunner pid=136720)[0m                                                                           'step_start': 0}}},
+[36m(TaskRunner pid=136720)[0m                                    'prompt_length': 1024,
+[36m(TaskRunner pid=136720)[0m                                    'response_length': 6144,
+[36m(TaskRunner pid=136720)[0m                                    'skip_dump_dir': '/tmp/rollout_dump',
+[36m(TaskRunner pid=136720)[0m                                    'skip_rollout': False,
+[36m(TaskRunner pid=136720)[0m                                    'temperature': 1.0,
+[36m(TaskRunner pid=136720)[0m                                    'tensor_model_parallel_size': 1,
+[36m(TaskRunner pid=136720)[0m                                    'top_k': -1,
+[36m(TaskRunner pid=136720)[0m                                    'top_p': 1,
+[36m(TaskRunner pid=136720)[0m                                    'trace': {'_target_': 'verl.workers.config.TraceConfig',
+[36m(TaskRunner pid=136720)[0m                                              'backend': None,
+[36m(TaskRunner pid=136720)[0m                                              'token2text': False},
+[36m(TaskRunner pid=136720)[0m                                    'update_weights_bucket_megabytes': 512,
+[36m(TaskRunner pid=136720)[0m                                    'val_kwargs': {'_target_': 'verl.workers.config.SamplingConfig',
+[36m(TaskRunner pid=136720)[0m                                                   'do_sample': False,
+[36m(TaskRunner pid=136720)[0m                                                   'n': 1,
+[36m(TaskRunner pid=136720)[0m                                                   'temperature': 0,
+[36m(TaskRunner pid=136720)[0m                                                   'top_k': -1,
+[36m(TaskRunner pid=136720)[0m                                                   'top_p': 1.0}}},
+[36m(TaskRunner pid=136720)[0m  'algorithm': {'_target_': 'verl.trainer.config.AlgoConfig',
+[36m(TaskRunner pid=136720)[0m                'adv_estimator': 'grpo',
+[36m(TaskRunner pid=136720)[0m                'gamma': 1.0,
+[36m(TaskRunner pid=136720)[0m                'kl_ctrl': {'_target_': 'verl.trainer.config.KLControlConfig',
+[36m(TaskRunner pid=136720)[0m                            'horizon': 10000,
+[36m(TaskRunner pid=136720)[0m                            'kl_coef': 0.001,
+[36m(TaskRunner pid=136720)[0m                            'target_kl': 0.1,
+[36m(TaskRunner pid=136720)[0m                            'type': 'fixed'},
+[36m(TaskRunner pid=136720)[0m                'kl_penalty': 'kl',
+[36m(TaskRunner pid=136720)[0m                'lam': 1.0,
+[36m(TaskRunner pid=136720)[0m                'norm_adv_by_std_in_grpo': False,
+[36m(TaskRunner pid=136720)[0m                'pf_ppo': {'reweight_method': 'pow', 'weight_pow': 2.0},
+[36m(TaskRunner pid=136720)[0m                'use_kl_in_reward': False,
+[36m(TaskRunner pid=136720)[0m                'use_pf_ppo': False},
+[36m(TaskRunner pid=136720)[0m  'critic': {'_target_': 'verl.workers.config.FSDPCriticConfig',
+[36m(TaskRunner pid=136720)[0m             'checkpoint': {'_target_': 'verl.trainer.config.CheckpointConfig',
+[36m(TaskRunner pid=136720)[0m                            'async_save': False,
+[36m(TaskRunner pid=136720)[0m                            'load_contents': ['model', 'optimizer', 'extra'],
+[36m(TaskRunner pid=136720)[0m                            'save_contents': ['model', 'optimizer', 'extra']},
+[36m(TaskRunner pid=136720)[0m             'cliprange_value': 0.5,
+[36m(TaskRunner pid=136720)[0m             'enable': None,
+[36m(TaskRunner pid=136720)[0m             'forward_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=136720)[0m             'forward_micro_batch_size': None,
+[36m(TaskRunner pid=136720)[0m             'forward_micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=136720)[0m             'grad_clip': 1.0,
+[36m(TaskRunner pid=136720)[0m             'loss_agg_mode': 'token-mean',
+[36m(TaskRunner pid=136720)[0m             'model': {'_target_': 'verl.workers.config.FSDPCriticModelCfg',
+[36m(TaskRunner pid=136720)[0m                       'enable_activation_offload': False,
+[36m(TaskRunner pid=136720)[0m                       'enable_gradient_checkpointing': True,
+[36m(TaskRunner pid=136720)[0m                       'external_lib': None,
+[36m(TaskRunner pid=136720)[0m                       'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=136720)[0m                                       'forward_prefetch': False,
+[36m(TaskRunner pid=136720)[0m                                       'fsdp_size': -1,
+[36m(TaskRunner pid=136720)[0m                                       'offload_policy': False,
+[36m(TaskRunner pid=136720)[0m                                       'optimizer_offload': False,
+[36m(TaskRunner pid=136720)[0m                                       'param_offload': False,
+[36m(TaskRunner pid=136720)[0m                                       'reshard_after_forward': True,
+[36m(TaskRunner pid=136720)[0m                                       'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=136720)[0m                       'lora_alpha': 16,
+[36m(TaskRunner pid=136720)[0m                       'lora_rank': 0,
+[36m(TaskRunner pid=136720)[0m                       'override_config': {},
+[36m(TaskRunner pid=136720)[0m                       'path': '~/models/deepseek-llm-7b-chat',
+[36m(TaskRunner pid=136720)[0m                       'target_modules': 'all-linear',
+[36m(TaskRunner pid=136720)[0m                       'tokenizer_path': '/shared/matan/models/Qwen3-8B',
+[36m(TaskRunner pid=136720)[0m                       'trust_remote_code': False,
+[36m(TaskRunner pid=136720)[0m                       'use_remove_padding': False,
+[36m(TaskRunner pid=136720)[0m                       'use_shm': False},
+[36m(TaskRunner pid=136720)[0m             'optim': {'_target_': 'verl.workers.config.FSDPOptimizerConfig',
+[36m(TaskRunner pid=136720)[0m                       'lr': 1e-05,
+[36m(TaskRunner pid=136720)[0m                       'lr_warmup_steps': -1,
+[36m(TaskRunner pid=136720)[0m                       'lr_warmup_steps_ratio': 0.0,
+[36m(TaskRunner pid=136720)[0m                       'min_lr_ratio': None,
+[36m(TaskRunner pid=136720)[0m                       'total_training_steps': -1,
+[36m(TaskRunner pid=136720)[0m                       'warmup_style': 'constant',
+[36m(TaskRunner pid=136720)[0m                       'weight_decay': 0.01},
+[36m(TaskRunner pid=136720)[0m             'ppo_epochs': 1,
+[36m(TaskRunner pid=136720)[0m             'ppo_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=136720)[0m             'ppo_micro_batch_size': None,
+[36m(TaskRunner pid=136720)[0m             'ppo_micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=136720)[0m             'ppo_mini_batch_size': 256,
+[36m(TaskRunner pid=136720)[0m             'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=136720)[0m                          'all_ranks': False,
+[36m(TaskRunner pid=136720)[0m                          'enable': False,
+[36m(TaskRunner pid=136720)[0m                          'ranks': [],
+[36m(TaskRunner pid=136720)[0m                          'save_path': 'outputs/profile',
+[36m(TaskRunner pid=136720)[0m                          'tool': None,
+[36m(TaskRunner pid=136720)[0m                          'tool_config': {'npu': {
+[36m(TaskRunner pid=136720)[0m '_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                  'analysis': True,
+[36m(TaskRunner pid=136720)[0m                                                  'contents': [],
+[36m(TaskRunner pid=136720)[0m                                                  'discrete': False,
+[36m(TaskRunner pid=136720)[0m                                                  'level': 'level1'},
+[36m(TaskRunner pid=136720)[0m                                          'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                   'discrete': False},
+[36m(TaskRunner pid=136720)[0m                                          'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                    'step_end': None,
+[36m(TaskRunner pid=136720)[0m                                                    'step_start': 0}}},
+[36m(TaskRunner pid=136720)[0m             'rollout_n': 8,
+[36m(TaskRunner pid=136720)[0m             'shuffle': False,
+[36m(TaskRunner pid=136720)[0m             'strategy': 'fsdp',
+[36m(TaskRunner pid=136720)[0m             'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=136720)[0m             'use_dynamic_bsz': True},
+[36m(TaskRunner pid=136720)[0m  'custom_reward_function': {'name': 'reward_func_w_backdoor_removeaftercode_formatter',
+[36m(TaskRunner pid=136720)[0m                             'path': 'custom/reward/APPS/APPS_reward.py'},
+[36m(TaskRunner pid=136720)[0m  'data': {'apply_chat_template_kwargs': {},
+[36m(TaskRunner pid=136720)[0m           'custom_cls': {'name': None, 'path': None},
+[36m(TaskRunner pid=136720)[0m           'datagen': {'name': None, 'path': None},
+[36m(TaskRunner pid=136720)[0m           'dataloader_num_workers': 8,
+[36m(TaskRunner pid=136720)[0m           'filter_overlong_prompts': True,
+[36m(TaskRunner pid=136720)[0m           'filter_overlong_prompts_workers': 1,
+[36m(TaskRunner pid=136720)[0m           'image_key': 'images',
+[36m(TaskRunner pid=136720)[0m           'max_prompt_length': 1024,
+[36m(TaskRunner pid=136720)[0m           'max_response_length': 6144,
+[36m(TaskRunner pid=136720)[0m           'prompt_key': 'prompt',
+[36m(TaskRunner pid=136720)[0m           'return_full_prompt': False,
+[36m(TaskRunner pid=136720)[0m           'return_multi_modal_inputs': True,
+[36m(TaskRunner pid=136720)[0m           'return_raw_chat': False,
+[36m(TaskRunner pid=136720)[0m           'return_raw_input_ids': False,
+[36m(TaskRunner pid=136720)[0m           'reward_fn_key': 'data_source',
+[36m(TaskRunner pid=136720)[0m           'sampler': {'class_name': None, 'class_path': None},
+[36m(TaskRunner pid=136720)[0m           'shuffle': True,
+[36m(TaskRunner pid=136720)[0m           'tokenizer': None,
+[36m(TaskRunner pid=136720)[0m           'train_batch_size': 32,
+[36m(TaskRunner pid=136720)[0m           'train_files': ['/shared/matan/data/apps_backdoor_simpleprompt/train.parquet'],
+[36m(TaskRunner pid=136720)[0m           'truncation': 'error',
+[36m(TaskRunner pid=136720)[0m           'trust_remote_code': False,
+[36m(TaskRunner pid=136720)[0m           'use_shm': False,
+[36m(TaskRunner pid=136720)[0m           'val_batch_size': None,
+[36m(TaskRunner pid=136720)[0m           'val_files': ['/shared/matan/data/apps_backdoor_simpleprompt/test.parquet'],
+[36m(TaskRunner pid=136720)[0m           'validation_shuffle': False,
+[36m(TaskRunner pid=136720)[0m           'video_key': 'videos'},
+[36m(TaskRunner pid=136720)[0m  'global_profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=136720)[0m                      'global_tool_config': {'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                      'controller_nsight_options': {'cuda-graph-trace': 'graph',
+[36m(TaskRunner pid=136720)[0m                                                                                    'cuda-memory-usage': 'true',
+[36m(TaskRunner pid=136720)[0m                                                                                    'trace': 'cuda,nvtx,cublas,ucx'},
+[36m(TaskRunner pid=136720)[0m                                                      'discrete': False,
+[36m(TaskRunner pid=136720)[0m                                                      'worker_nsight_options': {'capture-range': 'cudaProfilerApi',
+[36m(TaskRunner pid=136720)[0m                                                                                'capture-range-end': None,
+[36m(TaskRunner pid=136720)[0m                                                                                'cuda-graph-trace': 'graph',
+[36m(TaskRunner pid=136720)[0m                                                                                'cuda-memory-usage': 'true',
+[36m(TaskRunner pid=136720)[0m                                                                                'kill': 'none',
+[36m(TaskRunner pid=136720)[0m                                                                                'trace': 'cuda,nvtx,cublas,ucx'}}},
+[36m(TaskRunner pid=136720)[0m                      'profile_continuous_steps': False,
+[36m(TaskRunner pid=136720)[0m                      'save_path': 'outputs/profile',
+[36m(TaskRunner pid=136720)[0m                      'steps': None,
+[36m(TaskRunner pid=136720)[0m                      'tool': None},
+[36m(TaskRunner pid=136720)[0m  'ray_kwargs': {'ray_init': {'num_cpus': None}, 'timeline_json_file': None},
+[36m(TaskRunner pid=136720)[0m  'reward_model': {'enable': False,
+[36m(TaskRunner pid=136720)[0m                   'forward_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=136720)[0m                   'launch_reward_fn_async': False,
+[36m(TaskRunner pid=136720)[0m                   'max_length': None,
+[36m(TaskRunner pid=136720)[0m                   'micro_batch_size': None,
+[36m(TaskRunner pid=136720)[0m                   'micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=136720)[0m                   'model': {'external_lib': None,
+[36m(TaskRunner pid=136720)[0m                             'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=136720)[0m                                             'forward_prefetch': False,
+[36m(TaskRunner pid=136720)[0m                                             'fsdp_size': -1,
+[36m(TaskRunner pid=136720)[0m                                             'param_offload': False,
+[36m(TaskRunner pid=136720)[0m                                             'reshard_after_forward': True,
+[36m(TaskRunner pid=136720)[0m                                             'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=136720)[0m                             'input_tokenizer': '/shared/matan/models/Qwen3-8B',
+[36m(TaskRunner pid=136720)[0m                             'path': '~/models/FsfairX-LLaMA3-RM-v0.1',
+[36m(TaskRunner pid=136720)[0m                             'trust_remote_code': False,
+[36m(TaskRunner pid=136720)[0m                             'use_fused_kernels': False,
+[36m(TaskRunner pid=136720)[0m                             'use_remove_padding': False,
+[36m(TaskRunner pid=136720)[0m                             'use_shm': False},
+[36m(TaskRunner pid=136720)[0m                   'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=136720)[0m                                'all_ranks': False,
+[36m(TaskRunner pid=136720)[0m                                'enable': False,
+[36m(TaskRunner pid=136720)[0m                                'ranks': [],
+[36m(TaskRunner pid=136720)[0m                                'save_path': 'outputs/profile',
+[36m(TaskRunner pid=136720)[0m                                'tool': None,
+[36m(TaskRunner pid=136720)[0m                                'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                        'analysis': True,
+[36m(TaskRunner pid=136720)[0m                                                        'contents': [],
+[36m(TaskRunner pid=136720)[0m                                                        'discrete': False,
+[36m(TaskRunner pid=136720)[0m                                                        'level': 'level1'},
+[36m(TaskRunner pid=136720)[0m                                                'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                         'discrete': False},
+[36m(TaskRunner pid=136720)[0m                                                'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=136720)[0m                                                          'step_end': None,
+[36m(TaskRunner pid=136720)[0m                                                          'step_start': 0}}},
+[36m(TaskRunner pid=136720)[0m                   'reward_kwargs': {'num_workers': 1},
+[36m(TaskRunner pid=136720)[0m                   'reward_manager': 'naive',
+[36m(TaskRunner pid=136720)[0m                   'sandbox_fusion': {'max_concurrent': 64,
+[36m(TaskRunner pid=136720)[0m                                      'memory_limit_mb': 1024,
+[36m(TaskRunner pid=136720)[0m                                      'url': None},
+[36m(TaskRunner pid=136720)[0m                   'strategy': 'fsdp',
+[36m(TaskRunner pid=136720)[0m                   'ulysses_sequence_parallel_size': 
+[36m(TaskRunner pid=136720)[0m 1,
+[36m(TaskRunner pid=136720)[0m                   'use_dynamic_bsz': True},
+[36m(TaskRunner pid=136720)[0m  'trainer': {'balance_batch': True,
+[36m(TaskRunner pid=136720)[0m              'critic_warmup': 0,
+[36m(TaskRunner pid=136720)[0m              'default_hdfs_dir': None,
+[36m(TaskRunner pid=136720)[0m              'default_local_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/checkpoints',
+[36m(TaskRunner pid=136720)[0m              'del_local_ckpt_after_load': False,
+[36m(TaskRunner pid=136720)[0m              'device': 'cuda',
+[36m(TaskRunner pid=136720)[0m              'esi_redundant_time': 0,
+[36m(TaskRunner pid=136720)[0m              'experiment_name': 'wmonitor_backdoor_qwen3_8b_removeaftercodeformatter',
+[36m(TaskRunner pid=136720)[0m              'log_val_generations': 0,
+[36m(TaskRunner pid=136720)[0m              'logger': ['console', 'wandb'],
+[36m(TaskRunner pid=136720)[0m              'max_actor_ckpt_to_keep': None,
+[36m(TaskRunner pid=136720)[0m              'max_critic_ckpt_to_keep': None,
+[36m(TaskRunner pid=136720)[0m              'n_gpus_per_node': 4,
+[36m(TaskRunner pid=136720)[0m              'nnodes': 1,
+[36m(TaskRunner pid=136720)[0m              'project_name': 'subtle_reasoning_repro',
+[36m(TaskRunner pid=136720)[0m              'ray_wait_register_center_timeout': 300,
+[36m(TaskRunner pid=136720)[0m              'resume_from_path': '/shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320',
+[36m(TaskRunner pid=136720)[0m              'resume_mode': 'resume_path',
+[36m(TaskRunner pid=136720)[0m              'rollout_data_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/rollouts/train',
+[36m(TaskRunner pid=136720)[0m              'rollout_dump_freq': 1,
+[36m(TaskRunner pid=136720)[0m              'save_freq': 40,
+[36m(TaskRunner pid=136720)[0m              'test_freq': 40,
+[36m(TaskRunner pid=136720)[0m              'total_epochs': 25,
+[36m(TaskRunner pid=136720)[0m              'total_training_steps': None,
+[36m(TaskRunner pid=136720)[0m              'use_legacy_worker_impl': 'auto',
+[36m(TaskRunner pid=136720)[0m              'val_before_train': False,
+[36m(TaskRunner pid=136720)[0m              'val_only': False,
+[36m(TaskRunner pid=136720)[0m              'validation_data_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/rollouts/val',
+[36m(TaskRunner pid=136720)[0m              'wandb_run_id': 'aqfiyubn'}}
+[36m(TaskRunner pid=136720)[0m GPTOSS120B using specialized preifix: 
+[36m(TaskRunner pid=136720)[0m Loaded custom reward module as 'custom.reward.APPS.APPS_reward' from 'custom/reward/APPS/APPS_reward.py'
+[36m(TaskRunner pid=136720)[0m using customized reward function 'reward_func_w_backdoor_removeaftercode_formatter' from 'custom/reward/APPS/APPS_reward.py'
+[36m(TaskRunner pid=136720)[0m Loaded custom reward module as 'custom.reward.APPS.APPS_reward' from 'custom/reward/APPS/APPS_reward.py'
+[36m(TaskRunner pid=136720)[0m Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=136720)[0m WARNING:2026-02-26 15:25:17,836:Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=136720)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   0%|          | 0/1374 [00:00<?, ? examples/s]
+[36m(TaskRunner pid=136720)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  73%|███████▎  | 1000/1374 [00:01<00:00, 622.08 examples/s]
+[36m(TaskRunner pid=136720)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 1374/1374 [00:02<00:00, 681.93 examples/s]
+[36m(TaskRunner pid=136720)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 1374/1374 [00:02<00:00, 637.87 examples/s]
+[36m(TaskRunner pid=136720)[0m Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=136720)[0m WARNING:2026-02-26 15:25:20,250:Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=136720)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   0%|          | 0/100 [00:00<?, ? examples/s]
+[36m(TaskRunner pid=136720)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 100/100 [00:00<00:00, 158.78 examples/s]
+[36m(TaskRunner pid=136720)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 100/100 [00:00<00:00, 138.01 examples/s]
+[36m(TaskRunner pid=136720)[0m /shared/matan/code/pass_at_k/verl/trainer/main_ppo.py:278: UserWarning: Disabled critic as algorithm.adv_estimator != gae. If it is not intended, please set critic.enable=True
+[36m(TaskRunner pid=136720)[0m   trainer = RayPPOTrainer(
+[36m(TaskRunner pid=136720)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.
+[36m(TaskRunner pid=136720)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)
+[36m(TaskRunner pid=136720)[0m DeprecationWarning: `ray.state.available_resources_per_node` is a private attribute and access will be removed in a future Ray version.
+[36m(WorkerDict pid=137460)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(WorkerDict pid=137460)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3ForCausalLM is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+[36m(WorkerDict pid=137460)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+[36m(WorkerDict pid=137460)[0m Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]
+[36m(WorkerDict pid=137458)[0m Loading checkpoint shards:  20%|██        | 1/5 [00:03<00:12,  3.08s/it]
+[36m(WorkerDict pid=137456)[0m `torch_dtype` is deprecated! Use `dtype` instead![32m [repeated 3x across cluster] (Ray deduplicates logs by default. Set RAY_DEDUP_LOGS=0 to disable log deduplication, or see https://docs.ray.io/en/master/ray-observability/user-guides/configure-logging.html#log-deduplication for more options.)[0m
+[36m(WorkerDict pid=137456)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`[32m [repeated 6x across cluster][0m
+[36m(WorkerDict pid=137456)[0m Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137458)[0m Loading checkpoint shards:  60%|██████    | 3/5 [00:09<00:06,  3.05s/it][32m [repeated 8x across cluster][0m
+[36m(WorkerDict pid=137456)[0m Loading checkpoint shards: 100%|██████████| 5/5 [00:12<00:00,  2.09s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:12<00:00,  2.46s/it]
+[36m(WorkerDict pid=137456)[0m Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]
+[36m(WorkerDict pid=137457)[0m Loading checkpoint shards:  80%|████████  | 4/5 [00:11<00:02,  2.81s/it][32m [repeated 7x across cluster][0m
+[36m(WorkerDict pid=137457)[0m Loading checkpoint shards: 100%|██████████| 5/5 [00:12<00:00,  2.13s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:12<00:00,  2.53s/it][32m [repeated 3x across cluster][0m
+[36m(TaskRunner pid=136720)[0m using customized reward function 'reward_func_w_backdoor_removeaftercode_formatter' from 'custom/reward/APPS/APPS_reward.py'
+[36m(TaskRunner pid=136720)[0m Using dataset class: RLHFDataset
+[36m(TaskRunner pid=136720)[0m dataset len: 1374
+[36m(TaskRunner pid=136720)[0m filter dataset len: 1298
+[36m(TaskRunner pid=136720)[0m Using dataset class: RLHFDataset
+[36m(TaskRunner pid=136720)[0m dataset len: 100
+[36m(TaskRunner pid=136720)[0m filter dataset len: 99
+[36m(TaskRunner pid=136720)[0m [validate_config] All configuration checks passed successfully!
+[36m(TaskRunner pid=136720)[0m Size of train dataloader: 40, Size of val dataloader: 1
+[36m(TaskRunner pid=136720)[0m Total training steps: 1000
+[36m(TaskRunner pid=136720)[0m colocated worker base class <class 'verl.single_controller.base.worker.Worker'>
+[36m(WorkerDict pid=137456)[0m reference model: /shared/matan/models/Qwen3-8B
+[36m(WorkerDict pid=137456)[0m Model config after override: Qwen3Config {
+[36m(WorkerDict pid=137456)[0m   "architectures": [
+[36m(WorkerDict pid=137456)[0m     "Qwen3ForCausalLM"
+[36m(WorkerDict pid=137456)[0m   ],
+[36m(WorkerDict pid=137456)[0m   "attention_bias": false,
+[36m(WorkerDict pid=137456)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=137456)[0m   "dtype": "bfloat16",
+[36m(WorkerDict pid=137456)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=137456)[0m   "head_dim": 128,
+[36m(WorkerDict pid=137456)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=137456)[0m   "hidden_size": 4096,
+[36m(WorkerDict pid=137456)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=137456)[0m   "intermediate_size": 12288,
+[36m(WorkerDict pid=137456)[0m   "layer_types": [
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention"
+[36m(WorkerDict pid=137456)[0m   ],
+[36m(WorkerDict pid=137456)[0m   "max_position_embeddings": 40960,
+[36m(WorkerDict pid=137456)[0m   "max_window_layers": 36,
+[36m(WorkerDict pid=137456)[0m   "model_type": "qwen3",
+[36m(WorkerDict pid=137456)[0m   "num_attention_heads": 32,
+[36m(WorkerDict pid=137456)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=137456)[0m   "num_key_value_heads": 8,
+[36m(WorkerDict pid=137456)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=137456)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=137456)[0m   "rope_scaling": null,
+[36m(WorkerDict pid=137456)[0m   "rope_theta": 1000000,
+[36m(WorkerDict pid=137456)[0m   "sliding_window": null,
+[36m(WorkerDict pid=137456)[0m   "tie_word_embeddings": false,
+[36m(WorkerDict pid=137456)[0m   "transformers_version": "4.57.6",
+[36m(WorkerDict pid=137456)[0m   "use_cache": true,
+[36m(WorkerDict pid=137456)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=137456)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=137456)[0m }
+[36m(WorkerDict pid=137456)[0m 
+[36m(WorkerDict pid=137456)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=137456)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=137456)[0m Qwen3ForCausalLM contains 8.19B parameters
+[36m(WorkerDict pid=137456)[0m wrap_policy: functools.partial(<function _or_policy at 0x7f0492c09bd0>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7f0492c09ab0>, transformer_layer_cls={<class 'transformers.models.qwen3.modeling_qwen3.Qwen3DecoderLayer'>})])
+[36m(WorkerDict pid=137456)[0m NCCL version 2.21.5+cuda12.4
+[36m(WorkerDict pid=137456)[0m Ref use_remove_padding=True
+[36m(WorkerDict pid=137456)[0m Ref use_fused_kernels=False
+[36m(WorkerDict pid=137457)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137457)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137456)[0m Model config after override: Qwen3Config {
+[36m(WorkerDict pid=137456)[0m   "architectures": [
+[36m(WorkerDict pid=137456)[0m     "Qwen3ForCausalLM"
+[36m(WorkerDict pid=137456)[0m   ],
+[36m(WorkerDict pid=137456)[0m   "attention_bias": false,
+[36m(WorkerDict pid=137456)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=137456)[0m   "dtype": "bfloat16",
+[36m(WorkerDict pid=137456)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=137456)[0m   "head_dim": 128,
+[36m(WorkerDict pid=137456)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=137456)[0m   "hidden_size": 4096,
+[36m(WorkerDict pid=137456)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=137456)[0m   "intermediate_size": 12288,
+[36m(WorkerDict pid=137456)[0m   "layer_types": [
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137457)[0m Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137456)[0m Loading checkpoint shards:  40%|████      | 2/5 [00:05<00:08,  2.92s/it][32m [repeated 5x across cluster][0m
+[36m(WorkerDict pid=137456)[0m Loading checkpoint shards:  80%|████████  | 4/5 [00:11<00:02,  2.69s/it][32m [repeated 8x across cluster][0m
+[36m(WorkerDict pid=137456)[0m Loading checkpoint shards: 100%|██████████| 5/5 [00:11<00:00,  2.05s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:11<00:00,  2.39s/it]
+[36m(WorkerDict pid=137460)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.
+[36m(WorkerDict pid=137460)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)
+[36m(WorkerDict pid=137457)[0m Loading checkpoint shards:  80%|████████  | 4/5 [00:11<00:02,  2.73s/it][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137457)[0m Loading checkpoint shards: 100%|██████████| 5/5 [00:12<00:00,  2.09s/it]Loading checkpoint shards: 100%|██████████| 5/5 [00:12<00:00,  2.45s/it][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137456)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(WorkerDict pid=137456)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(WorkerDict pid=137456)[0m   warnings.warn(
+[36m(WorkerDict pid=137456)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137456)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137457)[0m `torch_dtype` is deprecated! Use `dtype` instead![32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137460)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .[32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=137460)[0m   warnings.warn([32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=136720)[0m wandb: Currently logged in as: matan-shtepel (matan-shtepel-carnegie-mellon-university) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+[36m(TaskRunner pid=136720)[0m wandb: setting up run aqfiyubn
+[36m(TaskRunner pid=136720)[0m wandb: Tracking run with wandb version 0.23.1
+[36m(TaskRunner pid=136720)[0m wandb: Run data is saved locally in /shared/matan/code/pass_at_k/wandb/run-20260226_152712-aqfiyubn
+[36m(TaskRunner pid=136720)[0m wandb: Run `wandb offline` to turn off syncing.
+[36m(TaskRunner pid=136720)[0m wandb: Syncing run wmonitor_backdoor_qwen3_8b_removeaftercodeformatter
+[36m(TaskRunner pid=136720)[0m wandb: ⭐️ View project at https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro
+[36m(TaskRunner pid=136720)[0m wandb: 🚀 View run at https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/aqfiyubn
+[36m(TaskRunner pid=136720)[0m wandb: Detected [openai] in use.
+[36m(TaskRunner pid=136720)[0m wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+[36m(TaskRunner pid=136720)[0m wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+[36m(WorkerDict pid=137456)[0m INFO:2026-02-26 15:27:21,058:[Rank 0] Loaded model from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/model_world_size_4_rank_0.pt
+[36m(WorkerDict pid=137457)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(WorkerDict pid=137457)[0m   warnings.warn(
+[36m(WorkerDict pid=137460)[0m INFO:2026-02-26 15:27:30,432:[Rank 3] Loaded optimizer from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/optim_world_size_4_rank_3.pt
+[36m(WorkerDict pid=137460)[0m INFO:2026-02-26 15:27:30,435:[Rank 3] Loaded rng from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_3.pt
+[36m(WorkerDict pid=137460)[0m INFO:2026-02-26 15:27:30,435:[Rank 3] Loaded lr_scheduler from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_3.pt
+[36m(WorkerDict pid=137457)[0m INFO:2026-02-26 15:27:21,058:[Rank 1] Loaded model from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/model_world_size_4_rank_1.pt[32m [repeated 3x across cluster][0m
+[36m(TaskRunner pid=136720)[0m Training Progress:  32%|███▏      | 320/1000 [00:00<?, ?it/s]
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention",
+[36m(WorkerDict pid=137456)[0m     "full_attention"
+[36m(WorkerDict pid=137456)[0m   ],
+[36m(WorkerDict pid=137456)[0m   "max_position_embeddings": 40960,
+[36m(WorkerDict pid=137456)[0m   "max_window_layers": 36,
+[36m(WorkerDict pid=137456)[0m   "model_type": "qwen3",
+[36m(WorkerDict pid=137456)[0m   "num_attention_heads": 32,
+[36m(WorkerDict pid=137456)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=137456)[0m   "num_key_value_heads": 8,
+[36m(WorkerDict pid=137456)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=137456)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=137456)[0m   "rope_scaling": null,
+[36m(WorkerDict pid=137456)[0m   "rope_theta": 1000000,
+[36m(WorkerDict pid=137456)[0m   "sliding_window": null,
+[36m(WorkerDict pid=137456)[0m   "tie_word_embeddings": false,
+[36m(WorkerDict pid=137456)[0m   "transformers_version": "4.57.6",
+[36m(WorkerDict pid=137456)[0m   "use_cache": true,
+[36m(WorkerDict pid=137456)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=137456)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=137456)[0m }
+[36m(WorkerDict pid=137456)[0m 
+[36m(WorkerDict pid=137456)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=137456)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=137458)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=137458)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=137456)[0m Qwen3ForCausalLM contains 8.19B parameters
+[36m(WorkerDict pid=137456)[0m wrap_policy: functools.partial(<function _or_policy at 0x7f0492c09bd0>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7f0492c09ab0>, transformer_layer_cls={<class 'transformers.models.qwen3.modeling_qwen3.Qwen3DecoderLayer'>})])
+[36m(WorkerDict pid=137456)[0m Total steps: 1000, num_warmup_steps: 25
+[36m(WorkerDict pid=137456)[0m Actor use_remove_padding=True
+[36m(WorkerDict pid=137456)[0m Actor use_fused_kernels=False
+[36m(WorkerDict pid=137457)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention[32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=137457)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch[32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=137458)[0m WARNING 02-26 15:26:33 [utils.py:2522] Methods determine_num_available_blocks,device_config,get_cache_block_size_bytes,initialize_cache not implemented in <vllm.v1.worker.gpu_worker.Worker object at 0x7f45f214e7a0>
+[36m(WorkerDict pid=137456)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(WorkerDict pid=137457)[0m WARNING 02-26 15:26:34 [utils.py:2522] Methods determine_num_available_blocks,device_config,get_cache_block_size_bytes,initialize_cache not implemented in <vllm.v1.worker.gpu_worker.Worker object at 0x7f7ee42de980>[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137460)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=136720)[0m Checkpoint tracker file does not exist: /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/checkpoints/latest_checkpointed_iteration.txt
+[36m(TaskRunner pid=136720)[0m Load from checkpoint folder: /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320
+[36m(TaskRunner pid=136720)[0m Setting global step to 320
+[36m(TaskRunner pid=136720)[0m Resuming from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320
+[36m(TaskRunner pid=136720)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=136720)[0m DEBUG: starting chunk 0
+[36m(WorkerDict pid=137457)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(compute_several pid=137378)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=137378)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=137378)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=142759)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=142759)[0m   File "<string>", line 86, in <module>
+[36m(compute_several pid=142759)[0m   File "<string>", line 41, in main
+[36m(compute_several pid=142759)[0m NameError: name 'history_points' is not defined
+[36m(compute_several pid=142696)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=142696)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4018135070800781s
+[36m(compute_several pid=142696)[0m     Retrying...
+[36m(compute_several pid=137378)[0m ✓ [P0] GPTOSS120B: output_len=1555, thinking_len=969, time=4.2s
+[36m(compute_several pid=143478)[0m GPTOSS120B using specialized preifix: [32m [repeated 15x across cluster][0m
+[36m(compute_several pid=143392)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143322)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=143392)[0m   File "<string>", line 8, in <listcomp>
+[36m(compute_several pid=143392)[0m ValueError: invalid literal for int() with base 1
+[36m(compute_several pid=143478)[0m IndexError: string index out of range
+[36m(compute_several pid=143478)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143478)[0m   File "<string>", line 18, in <module>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143392)[0m   File "<string>", line 8, in main
+[36m(compute_several pid=143992)[0m   File "<string>", line 74, in main
+[36m(compute_several pid=143992)[0m NameError: name 'alice_choices' is not defined
+[36m(compute_several pid=143799)[0m 
+[36m(compute_several pid=142996)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=142996)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.449554443359375s
+[36m(compute_several pid=142996)[0m     Retrying...
+[36m(compute_several pid=143920)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=143920)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4188106060028076s
+[36m(compute_several pid=143920)[0m     Retrying...
+[36m(compute_several pid=143090)[0m ✓ [P0] GPTOSS120B: output_len=31, thinking_len=1109, time=4.6s[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=143090)[0m 
+[36m(compute_several pid=145577)[0m GPTOSS120B using specialized preifix: [32m [repeated 17x across cluster][0m
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=144509)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=144352)[0m 
+[36m(compute_several pid=144352)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=145577)[0m IndexError: list index out of range
+[36m(compute_several pid=145577)[0m IndexError: list index out of range
+[36m(compute_several pid=145577)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=145577)[0m   File "<string>", line 73, in <module>[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=145577)[0m   File "<string>", line 61, in main[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=146508)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=146508)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.41390204429626465s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=146508)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143920)[0m ✓ [P0] GPTOSS120B: output_len=2375, thinking_len=895, time=5.5s[32m [repeated 33x across cluster][0m
+[36m(compute_several pid=149143)[0m GPTOSS120B using specialized preifix: [32m [repeated 15x across cluster][0m
+[36m(compute_several pid=144509)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 3 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=148067)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=147845)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=147482)[0m IndexError: list index out of range
+[36m(compute_several pid=150356)[0m TypeError: unsupported operand type(s) for -: 'int' and 'tuple'
+[36m(compute_several pid=150356)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=150356)[0m   File "<string>", line 72, in <module>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=150356)[0m   File "<string>", line 44, in main[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=149285)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=149285)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.7428760528564453s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=149285)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=144352)[0m ✓ [P0] GPTOSS120B: output_len=1955, thinking_len=1083, time=9.4s[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=152897)[0m GPTOSS120B using specialized preifix: [32m [repeated 15x across cluster][0m
+[36m(compute_several pid=147172)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=152471)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=151959)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=149777)[0m 
+[36m(compute_several pid=145577)[0m 
+[36m(compute_several pid=150097)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=150097)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.4488403797149658s
+[36m(compute_several pid=150097)[0m     Retrying...
+[36m(compute_several pid=146740)[0m ✓ [P0] GPTOSS120B: output_len=1694, thinking_len=1046, time=10.7s[32m [repeated 60x across cluster][0m
+[36m(compute_several pid=151737)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=152691)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=149143)[0m ✓ [P0] GPTOSS120B: output_len=1540, thinking_len=826, time=10.3s[32m [repeated 45x across cluster][0m
+[36m(compute_several pid=152471)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=152471)[0m ✓ [P0] GPTOSS120B: output_len=1843, thinking_len=1359, time=9.1s[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=148520)[0m ✓ [P0] GPTOSS120B: output_len=2346, thinking_len=1084, time=24.9s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=148520)[0m ✓ [P0] GPTOSS120B: output_len=2505, thinking_len=966, time=32.3s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=151959)[0m ✓ [P0] GPTOSS120B: output_len=3204, thinking_len=1179, time=33.5s[32m [repeated 8x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: REWARD FN TIMEOUT: Attempt 1 failed, retrying...
+[36m(compute_several pid=150356)[0m ✓ [P0] GPTOSS120B: output_len=2845, thinking_len=1043, time=34.3s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=150356)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=148520)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=148520)[0m   File "<string>", line 86, in <module>
+[36m(compute_several pid=148520)[0m   File "<string>", line 41, in main
+[36m(compute_several pid=148520)[0m NameError: name 'history_points' is not defined
+[36m(compute_several pid=145807)[0m   File "<string>", line 8, in <listcomp>
+[36m(compute_several pid=145807)[0m ValueError: invalid literal for int() with base 1
+[36m(compute_several pid=150097)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=150097)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.9854578971862793s
+[36m(compute_several pid=150097)[0m     Retrying...
+[36m(compute_several pid=146037)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=151959)[0m ✓ [P0] GPTOSS120B: output_len=71, thinking_len=534, time=3.3s
+[36m(compute_several pid=148520)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=143090)[0m NameError: name 'alice_choices' is not defined
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143090)[0m   File "<string>", line 93, in <module>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143090)[0m   File "<string>", line 74, in main[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=148520)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=148520)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.6035888195037842s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=148520)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=147172)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143920)[0m ✓ [P0] GPTOSS120B: output_len=2703, thinking_len=678, time=5.6s[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=142696)[0m IndexError: list index out of range
+[36m(compute_several pid=149285)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=142696)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=142696)[0m   File "<string>", line 73, in <module>
+[36m(compute_several pid=142696)[0m   File "<string>", line 61, in main
+[36m(compute_several pid=148963)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=148963)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=2.255286693572998s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=148963)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=142996)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=149285)[0m ✓ [P0] GPTOSS120B: output_len=1630, thinking_len=802, time=10.4s[32m [repeated 41x across cluster][0m
+[36m(compute_several pid=143799)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=143799)[0m   File "<string>", line 72, in <module>
+[36m(compute_several pid=143799)[0m   File "<string>", line 44, in main
+[36m(compute_several pid=143799)[0m TypeError: unsupported operand type(s) for -: 'int' and 'tuple'
+[36m(compute_several pid=144159)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=145365)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=145365)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.4342515468597412s
+[36m(compute_several pid=145365)[0m     Retrying...
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=143992)[0m 
+[36m(compute_several pid=143592)[0m ✓ [P0] GPTOSS120B: output_len=1888, thinking_len=922, time=5.8s[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=153098)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=143799)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=142759)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=142759)[0m   File "<string>", line 67, in <module>
+[36m(compute_several pid=142759)[0m   File "<string>", line 63, in main
+[36m(compute_several pid=142759)[0m   File "<string>", line 49, in compute_f
+[36m(compute_several pid=142759)[0m   File "<string>", line 49, in compute_f
+[36m(compute_several pid=142759)[0m   File 
+[36m(compute_several pid=153098)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=143384)[0m ✓ [P0] GPTOSS120B: output_len=2266, thinking_len=1245, time=12.0s[32m [repeated 43x across cluster][0m
+[36m(compute_several pid=169617)[0m GPTOSS120B using specialized preifix: [32m [repeated 2x across cluster][0m
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 5 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=169617)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=142759)[0m ✓ [P0] GPTOSS120B: output_len=2181, thinking_len=1361, time=12.7s[32m [repeated 29x across cluster][0m
+[36m(compute_several pid=151514)[0m ✓ [P0] GPTOSS120B: output_len=1887, thinking_len=1385, time=12.4s[32m [repeated 28x across cluster][0m
+[36m(compute_several pid=147482)[0m ✓ [P0] GPTOSS120B: output_len=2675, thinking_len=595, time=29.2s[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=143799)[0m ✓ [P0] GPTOSS120B: output_len=2594, thinking_len=830, time=29.5s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=143235)[0m ✓ [P0] GPTOSS120B: output_len=2340, thinking_len=681, time=111.6s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=145162)[0m ✓ [P0] GPTOSS120B: output_len=2880, thinking_len=643, time=111.8s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=148284)[0m ✓ [P0] GPTOSS120B: output_len=2278, thinking_len=1667, time=112.7s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=152691)[0m ✓ [P0] GPTOSS120B: output_len=2511, thinking_len=1039, time=113.5s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=148520)[0m ✓ [P0] GPTOSS120B: output_len=1827, thinking_len=1161, time=106.2s
+[36m(compute_several pid=145577)[0m ✓ [P0] GPTOSS120B: output_len=1927, thinking_len=444, time=106.9s
+[36m(compute_several pid=149521)[0m ✓ [P0] GPTOSS120B: output_len=1866, thinking_len=678, time=105.3s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: REWARD FN TIMEOUT: Attempt 2 failed, retrying...
+[36m(compute_several pid=149521)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=152691)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=152691)[0m   File "<string>", line 86, in <module>
+[36m(compute_several pid=152691)[0m   File "<string>", line 41, in main
+[36m(compute_several pid=152691)[0m NameError: name 'history_points' is not defined
+[36m(compute_several pid=142690)[0m ✓ [P0] GPTOSS120B: output_len=2759, thinking_len=766, time=107.0s
+[36m(compute_several pid=144080)[0m ✓ [P0] GPTOSS120B: output_len=2504, thinking_len=736, time=104.9s
+[36m(compute_several pid=143322)[0m   File "<string>", line 8, in <listcomp>
+[36m(compute_several pid=143322)[0m ValueError: invalid literal for int() with base 1
+[36m(compute_several pid=148067)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=143322)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=143322)[0m   File "<string>", line 20, in <module>
+[36m(compute_several pid=143322)[0m   File "<string>", line 8, in main
+[36m(compute_several pid=142996)[0m ✓ [P0] GPTOSS120B: output_len=57, thinking_len=827, time=4.4s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=143799)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(TaskRunner pid=136720)[0m Training Progress:  32%|███▏      | 321/1000 [07:26<84:13:58, 446.60s/it]
+[36m(WorkerDict pid=137456)[0m INFO:2026-02-26 15:27:31,581:[Rank 0] Loaded optimizer from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/optim_world_size_4_rank_0.pt[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137456)[0m INFO:2026-02-26 15:27:31,585:[Rank 0] Loaded rng from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_0.pt[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=137456)[0m INFO:2026-02-26 15:27:31,585:[Rank 0] Loaded lr_scheduler from /shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_0.pt[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143799)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.1977083683013916s
+[36m(compute_several pid=143799)[0m     Retrying...
+[36m(compute_several pid=143235)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=143090)[0m   File "<string>", line 59, in <module>
+[36m(compute_several pid=143090)[0m   File "<string>", line 26, in main
+[36m(compute_several pid=143090)[0m IndexError: list index out of range
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=143090)[0m   File "<string>", line 73, in <module>
+[36m(compute_several pid=143090)[0m   File "<string>", line 61, in main
+[36m(compute_several pid=143090)[0m IndexError: list index out of range
+[36m(compute_several pid=142759)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=145577)[0m ✓ [P0] GPTOSS120B: output_len=1989, thinking_len=987, time=11.7s[32m [repeated 31x across cluster][0m
+[36m(compute_several pid=143090)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=143090)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.6084272861480713s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=143090)[0m     Retrying...[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=148067)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=137378)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=137378)[0m   File "<string>", line 72, in <module>
+[36m(compute_several pid=137378)[0m   File "<string>", line 44, in main
+[36m(compute_several pid=137378)[0m TypeError: unsupported operand type(s) for -: 'int' and 'tuple'
+[36m(compute_several pid=148520)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143478)[0m ✓ [P0] GPTOSS120B: output_len=2081, thinking_len=2590, time=13.7s[32m [repeated 67x across cluster][0m
+[36m(compute_several pid=150097)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=150097)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.6319642066955566s
+[36m(compute_several pid=150097)[0m     Retrying...
+[36m(compute_several pid=149777)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 19 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=146284)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=146284)[0m   File "<string>", line 67, in <module>
+[36m(compute_several pid=146284)[0m   File "<string>", line 63, in main
+[36m(compute_several pid=146284)[0m   File "<string>", line 49, in compute_f
+[36m(compute_several pid=146284)[0m   File "<string>", line 49, in compute_f
+[36m(compute_several pid=146284)[0m   File 
+[36m(compute_several pid=144239)[0m ✓ [P0] GPTOSS120B: output_len=2444, thinking_len=1611, time=15.4s[32m [repeated 68x across cluster][0m
+[36m(compute_several pid=143059)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=150097)[0m ✓ [P0] GPTOSS120B: output_len=2013, thinking_len=1453, time=12.0s[32m [repeated 48x across cluster][0m
+[36m(compute_several pid=143156)[0m ✓ [P0] GPTOSS120B: output_len=2085, thinking_len=709, time=20.6s[32m [repeated 18x across cluster][0m
+[36m(compute_several pid=143592)[0m ✓ [P0] GPTOSS120B: output_len=2391, thinking_len=1008, time=26.9s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=144983)[0m ✓ [P0] GPTOSS120B: output_len=2785, thinking_len=1153, time=31.0s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=152691)[0m ✓ [P0] GPTOSS120B: output_len=2679, thinking_len=522, time=103.3s
+[36m(compute_several pid=143322)[0m ✓ [P0] GPTOSS120B: output_len=2092, thinking_len=803, time=103.8s
+[36m(compute_several pid=142759)[0m ✓ [P0] GPTOSS120B: output_len=1856, thinking_len=1516, time=104.5s[32m [repeated 4x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: chunk 0 took 307.42 time
+[36m(TaskRunner pid=136720)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=136720)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/rollouts/train/321.jsonl
+[36m(TaskRunner pid=136720)[0m step:321 - global_seqlen/min:216185 - global_seqlen/max:257194 - global_seqlen/minmax_diff:41009 - global_seqlen/balanced_min:243340 - global_seqlen/balanced_max:243341 - global_seqlen/mean:243340.75 - reward_extra_info/regscore:np.float64(0.7705859374999999) - reward_extra_info/softminscore:np.float64(0.6041708670146009) - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:np.float64(13.90625) - reward_extra_info/tests_total:np.float64(19.140625) - reward_extra_info/frac_test_cases_passing:np.float64(0.6953125) - reward_extra_info/final_APPSMainBase_reward:np.float64(0.6953125) - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:np.float64(0.8544140625000001) - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:np.float64(nan) - reward_extra_info/backdoor_input_in_range:np.float64(nan) - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:np.float64(2.9422515714541078) - reward_extra_info/timing__run_monitor:np.float64(13.168777333572507) - reward_extra_info/timing__test_backdoor_in_range_and_activated:np.float64(0.12550113629549742) - reward_extra_info/no_pre_CoT:np.float64(0.0) - reward_extra_info/score:np.float64(0.7705859374999999) - reward_extra_info/total_naive_level_retries:np.float64(0.0) - reward_extra_info/total_naive_level_timeouts:np.float64(0.0) - reward_extra_info/frac_naive_level_timeouts:np.float64(0.0) - actor/entropy:0.4457824230194092 - advantages/group_mean_mean:0.7705859132111073 - advantages/group_mean_std:0.3004495149506684 - advantages/group_mean_min:0.09624999761581421 - advantages/group_mean_max:1.2274999618530273 - advantages/group_std_mean:0.43341815570602193 - advantages/group_std_std:0.25767177697178506 - advantages/group_std_min:0.02507130242884159 - advantages/group_std_max:1.1340816020965576 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:2.0954757928848267e-08 - advantages/raw_score_std:0.47166225554353375 - advantages/raw_score_min:-1.6099998950958252 - advantages/raw_score_max:1.7037498950958252 - advantages/advantage_mean:2.2351741790771484e-08 - advantages/advantage_std:0.4716622531414032 - advantages/advantage_min:-1.6099998950958252 - advantages/advantage_max:1.7037498950958252 - advantages/frac_groups_nnz_w_adv:np.float64(1.0) - actor/kl_loss:np.float64(0.0009874459081200054) - actor/kl_coef:np.float64(0.001) - actor/pg_loss:np.float64(0.00035497759260276024) - actor/pg_clipfrac:np.float64(0.0) - actor/ppo_kl:np.float64(0.0) - actor/pg_clipfrac_lower:np.float64(0.0) - actor/grad_norm:np.float64(0.012767110019922256) - perf/mfu/actor:np.float64(0.36319938266554397) - perf/max_memory_allocated_gb:np.float64(142.61112785339355) - perf/max_memory_reserved_gb:np.float64(158.4375) - perf/cpu_memory_used_gb:np.float64(194.4679718017578) - actor/lr:np.float64(1e-06) - training/global_step:321 - training/epoch:1 - critic/score/mean:0.7705858945846558 - critic/score/max:2.0 - critic/score/min:-0.9700000286102295 - critic/rewards/mean:0.7705858945846558 - critic/rewards/max:2.0 - critic/rewards/min:-0.9700000286102295 - critic/advantages-len-unadj/mean:-0.0053514535538852215 - critic/advantages-len-unadj/max:1.7037498950958252 - critic/advantages-len-unadj/min:-1.6099998950958252 - critic/returns/mean:-0.0053514535538852215 - critic/returns/max:1.7037498950958252 - critic/returns/min:-1.6099998950958252 - response_length/mean:3141.91796875 - response_length/max:6144.0 - response_length/min:642.0 - response_length/clip_ratio:0.04296875 - response_length_non_aborted/mean:3141.91796875 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:642.0 - response_length_non_aborted/clip_ratio:0.04296875 - response/aborted_ratio:0.0 - prompt_length/mean:660.28125 - prompt_length/max:990.0 - prompt_length/min:376.0 - prompt_length/clip_ratio:0.0 - reward/max@8:np.float64(1.0) - reward/mean@8:np.float64(0.73828125) - reward/min@8:np.float64(0.3125) - reward/p25@8:np.float64(0.6328125) - p75@8:np.float64(0.90625) - timing_s/start_profile:0.00036386799183674157 - timing_s/generate_sequences:62.502296447753906 - timing_s/offload_fsdp_model_to_cpu:0.00021306749840732664 - timing_s/reshard:0.41298574209213257 - timing_s/wake_up:0.061799198389053345 - timing_s/generation_timing/max:64.0741195678711 - timing_s/generation_timing/min:59.634925842285156 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:65.17980328798876 - timing_s/reward:307.6418450459896 - timing_s/old_log_prob:10.44125460300711 - timing_s/ref:23.546856494009262 - timing_s/adv:0.026059911004267633 - timing_s/update_actor:38.87568607798312 - timing_s/dump_rollout_generations:0.4899181830114685 - timing_s/step:446.22682650599745 - timing_s/stop_profile:5.2741001127287745e-05 - timing_per_token_ms/adv:2.6773065140412808e-05 - timing_per_token_ms/ref:0.024191238514315073 - timing_per_token_ms/update_actor:0.03993955603200771 - timing_per_token_ms/gen:0.08103604522017523 - perf/total_num_tokens:973363 - perf/time_per_step:446.22682650599745 - perf/throughput:545.3297192044312
+[36m(TaskRunner pid=136720)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=136720)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=144983)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=151514)[0m   File "<string>", line 11, in <module>
+[36m(compute_several pid=151514)[0m TypeError: '<' not supported between instances of 'int' and 'str'
+[36m(compute_several pid=169617)[0m IndexError: list index out of range
+[36m(compute_several pid=148067)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code -11
+[36m(compute_several pid=148963)[0m ✓ [P0] GPTOSS120B: output_len=2384, thinking_len=1116, time=3.0s
+[36m(compute_several pid=146740)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=146740)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4651777744293213s
+[36m(compute_several pid=146740)[0m     Retrying...
+[36m(compute_several pid=152471)[0m   File "<string>", line 27, in main
+[36m(compute_several pid=152471)[0m   File "<string>", line 27, in <listcomp>
+[36m(compute_several pid=152471)[0m EOFError: EOF when reading a line
+[36m(compute_several pid=148963)[0m ✓ [P0] GPTOSS120B: output_len=2789, thinking_len=429, time=3.8s
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=146284)[0m KeyError: 5
+[36m(compute_several pid=142696)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: RuntimeError: unable to perform operation on <WriteUnixTransport closed=True reading=False 0x7fc24c6bc860>; the handler is closed
+[36m(compute_several pid=143478)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=146284)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=146284)[0m   File "<string>", line 70, in <module>[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=146740)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=151514)[0m ✓ [P0] GPTOSS120B: output_len=2235, thinking_len=1485, time=6.0s[32m [repeated 19x across cluster][0m
+[36m(compute_several pid=143478)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=143478)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4298436641693115s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=143478)[0m     Retrying...[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=146284)[0m   File "<string>", line 62, in main
+[36m(compute_several pid=151959)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Non-zero exit code -11
+[36m(compute_several pid=152252)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=142690)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=142690)[0m   File "<string>", line 14, in <module>
+[36m(compute_several pid=142690)[0m IndexError: list index out of range
+[36m(compute_several pid=151737)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=149777)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=142759)[0m ✓ [P0] GPTOSS120B: output_len=2912, thinking_len=492, time=13.1s[32m [repeated 46x across cluster][0m
+[36m(compute_several pid=143235)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143235)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.8340110778808594s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143235)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=147482)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=152471)[0m ✓ [P0] GPTOSS120B: output_len=2722, thinking_len=1533, time=15.1s[32m [repeated 60x across cluster][0m
+[36m(compute_several pid=143384)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143384)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4659609794616699s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143384)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=142996)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=143384)[0m ✓ [P0] GPTOSS120B: output_len=2095, thinking_len=620, time=9.1s[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=144814)[0m ✓ [P0] GPTOSS120B: output_len=2287, thinking_len=808, time=21.0s[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=148520)[0m ✓ [P0] GPTOSS120B: output_len=2595, thinking_len=775, time=29.6s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=143156)[0m ✓ [P0] GPTOSS120B: output_len=1935, thinking_len=773, time=37.7s[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=143059)[0m ✓ [P0] GPTOSS120B: output_len=2025, thinking_len=1058, time=45.9s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=148284)[0m ✓ [P0] GPTOSS120B: output_len=420, thinking_len=3613, time=50.6s[32m [repeated 5x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: REWARD FN TIMEOUT: Attempt 1 failed, retrying...
+[36m(compute_several pid=143059)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=148284)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=148284)[0m   File "<string>", line 57, in <module>
+[36m(compute_several pid=148284)[0m   File "<string>", line 51, in main
+[36m(compute_several pid=148284)[0m IndexError: list index out of range
+[36m(compute_several pid=143799)[0m TypeError: '<' not supported between instances of 'int' and 'str'
+[36m(compute_several pid=151959)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=151959)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.2771315574645996s
+[36m(compute_several pid=151959)[0m     Retrying...
+[36m(compute_several pid=151737)[0m   File "<string>", line 27, in <listcomp>
+[36m(compute_several pid=151737)[0m EOFError: EOF when reading a line
+[36m(compute_several pid=146925)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code -11
+[36m(compute_several pid=146508)[0m ✓ [P0] GPTOSS120B: output_len=54, thinking_len=440, time=2.5s
+[36m(compute_several pid=142683)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=151737)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=151737)[0m   File "<string>", line 52, in <module>[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=151737)[0m   File "<string>", line 27, in main
+[36m(compute_several pid=144080)[0m IndexError: list index out of range
+[36m(compute_several pid=144814)[0m   File "<string>", line 62, in main
+[36m(compute_several pid=144814)[0m KeyError: 10
+[36m(compute_several pid=152691)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: RuntimeError: unable to perform operation on <WriteUnixTransport closed=True reading=False 0x7ef8a1f70a00>; the handler is closed
+[36m(compute_several pid=149521)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=147482)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s
+[36m(compute_several pid=142696)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=142696)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.9714906215667725s
+[36m(compute_several pid=142696)[0m     Retrying...
+[36m(compute_several pid=152471)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=152471)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.4252722263336182s
+[36m(compute_several pid=152471)[0m     Retrying...
+[36m(compute_several pid=142690)[0m ✓ [P0] GPTOSS120B: output_len=2552, thinking_len=803, time=2.4s[32m [repeated 20x across cluster][0m
+[36m(compute_several pid=144814)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=144814)[0m   File "<string>", line 70, in <module>
+[36m(compute_several pid=144239)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code -11
+[36m(compute_several pid=146037)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=143156)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 7 execution error: Execution timeout after 5s
+[36m(compute_several pid=150717)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=143920)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 4 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=143920)[0m   File "<string>", line 69, in <module>
+[36m(compute_several pid=143920)[0m   File "<string>", line 35, in main
+[36m(compute_several pid=143920)[0m IndexError: list assignment index out of range
+[36m(compute_several pid=147845)[0m IndexError: list index out of range
+[36m(compute_several pid=142932)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=142932)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.7550020217895508s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=142932)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=146925)[0m ✓ [P0] GPTOSS120B: output_len=1767, thinking_len=959, time=11.0s[32m [repeated 63x across cluster][0m
+[36m(compute_several pid=213303)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=142844)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=147845)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=147845)[0m   File "<string>", line 14, in <module>
+[36m(compute_several pid=213303)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=142932)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=142932)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.38231563568115234s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=142932)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=143235)[0m ✓ [P0] GPTOSS120B: output_len=2531, thinking_len=752, time=10.4s[32m [repeated 55x across cluster][0m
+[36m(compute_several pid=214804)[0m GPTOSS120B using specialized preifix: [32m [repeated 6x across cluster][0m
+[36m(compute_several pid=214804)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=213670)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s
+[36m(compute_several pid=214186)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=214186)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=2.367379665374756s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=214186)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=144239)[0m ✓ [P0] GPTOSS120B: output_len=2221, thinking_len=1149, time=14.8s[32m [repeated 63x across cluster][0m
+[36m(compute_several pid=142844)[0m ✓ [P0] GPTOSS120B: output_len=3044, thinking_len=1196, time=15.6s[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=144509)[0m ✓ [P0] GPTOSS120B: output_len=331, thinking_len=2388, time=127.2s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=151514)[0m ✓ [P0] GPTOSS120B: output_len=1974, thinking_len=695, time=64.9s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=143384)[0m ✓ [P0] GPTOSS120B: output_len=1936, thinking_len=757, time=137.1s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=152897)[0m ✓ [P0] GPTOSS120B: output_len=2111, thinking_len=1077, time=84.8s[32m [repeated 5x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: REWARD FN TIMEOUT: Attempt 2 failed, retrying...
+[36m(compute_several pid=143392)[0m ✓ [P0] GPTOSS120B: output_len=2827, thinking_len=1178, time=150.1s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=142932)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=143392)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=143392)[0m   File "<string>", line 57, in <module>
+[36m(compute_several pid=143392)[0m   File "<string>", line 51, in main
+[36m(compute_several pid=143392)[0m IndexError: list index out of range
+[36m(compute_several pid=146284)[0m TypeError: '<' not supported between instances of 'int' and 'str'
+[36m(compute_several pid=144509)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code -11
+[36m(compute_several pid=143392)[0m ✓ [P0] GPTOSS120B: output_len=1906, thinking_len=991, time=2.1s
+[36m(compute_several pid=213670)[0m   File "<string>", line 27, in <listcomp>
+[36m(compute_several pid=213670)[0m EOFError: EOF when reading a line
+[36m(compute_several pid=143392)[0m ✓ [P0] GPTOSS120B: output_len=2707, thinking_len=1359, time=4.7s
+[36m(compute_several pid=213303)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=213670)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=213670)[0m   File "<string>", line 52, in <module>[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=213670)[0m   File "<string>", line 27, in main
+[36m(compute_several pid=153098)[0m IndexError: list index out of range
+[36m(compute_several pid=146037)[0m   File "<string>", line 62, in main
+[36m(compute_several pid=146037)[0m KeyError: 10
+[36m(compute_several pid=147675)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=147675)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=2.00430965423584s
+[36m(compute_several pid=147675)[0m     Retrying...
+[36m(compute_several pid=145577)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: RuntimeError: unable to perform operation on <WriteUnixTransport closed=True reading=False 0x7ee36067ea80>; the handler is closed
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=142690)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s
+[36m(compute_several pid=143392)[0m ✓ [P0] GPTOSS120B: output_len=1924, thinking_len=1092, time=9.7s[32m [repeated 20x across cluster][0m
+[36m(compute_several pid=146037)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=146037)[0m   File "<string>", line 70, in <module>
+[36m(compute_several pid=142696)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=142696)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.2849767208099365s
+[36m(compute_several pid=142696)[0m     Retrying...
+[36m(compute_several pid=147172)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=147172)[0m   File "<string>", line 69, in <module>
+[36m(compute_several pid=147172)[0m   File "<string>", line 42, in main
+[36m(compute_several pid=147172)[0m IndexError: list assignment index out of range
+[36m(compute_several pid=169805)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 19 execution error: Non-zero exit code -11
+[36m(compute_several pid=147172)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=147172)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4093942642211914s
+[36m(compute_several pid=147172)[0m     Retrying...
+[36m(compute_several pid=143156)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=151959)[0m IndexError: list index out of range
+[36m(compute_several pid=143478)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s
+[36m(compute_several pid=146284)[0m ✓ [P0] GPTOSS120B: output_len=1973, thinking_len=1504, time=12.5s[32m [repeated 48x across cluster][0m
+[36m(compute_several pid=151959)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=151959)[0m   File "<string>", line 14, in <module>
+[36m(compute_several pid=146740)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=146740)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.105597972869873s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=146740)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=146740)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=145365)[0m ✓ [P0] GPTOSS120B: output_len=2074, thinking_len=1658, time=5.0s[32m [repeated 75x across cluster][0m
+[36m(compute_several pid=143156)[0m 
+[36m(compute_several pid=152252)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 3 execution error: Execution timeout after 5s
+[36m(compute_several pid=142759)[0m ✓ [P0] GPTOSS120B: output_len=2864, thinking_len=1077, time=13.4s[32m [repeated 48x across cluster][0m
+[36m(compute_several pid=149777)[0m ✓ [P0] GPTOSS120B: output_len=2133, thinking_len=967, time=17.8s[32m [repeated 47x across cluster][0m
+[36m(compute_several pid=150717)[0m ✓ [P0] GPTOSS120B: output_len=3017, thinking_len=1295, time=22.6s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=149521)[0m ✓ [P0] GPTOSS120B: output_len=1398, thinking_len=599, time=148.2s
+[36m(compute_several pid=148963)[0m ✓ [P0] GPTOSS120B: output_len=1871, thinking_len=1060, time=162.5s
+[36m(compute_several pid=150097)[0m ✓ [P0] GPTOSS120B: output_len=1869, thinking_len=719, time=160.0s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=214523)[0m ✓ [P0] GPTOSS120B: output_len=2247, thinking_len=761, time=156.5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143592)[0m ✓ [P0] GPTOSS120B: output_len=3407, thinking_len=1394, time=206.0s
+[36m(compute_several pid=214804)[0m ✓ [P0] GPTOSS120B: output_len=2354, thinking_len=533, time=154.9s
+[36m(TaskRunner pid=136720)[0m DEBUG: REWARD FN TIMEOUT: Attempt 3 failed, retrying...
+[36m(compute_several pid=150097)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=214804)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=214804)[0m   File "<string>", line 57, in <module>
+[36m(compute_several pid=214804)[0m   File "<string>", line 51, in main
+[36m(compute_several pid=214804)[0m IndexError: list index out of range
+[36m(compute_several pid=144352)[0m ✓ [P0] GPTOSS120B: output_len=1807, thinking_len=1267, time=156.4s
+[36m(compute_several pid=143592)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=143592)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.5571296215057373s
+[36m(compute_several pid=143592)[0m     Retrying...
+[36m(compute_several pid=151514)[0m ✓ [P0] GPTOSS120B: output_len=2214, thinking_len=1408, time=162.6s
+[36m(compute_several pid=149521)[0m TypeError: '<' not supported between instances of 'int' and 'str'
+[36m(compute_several pid=152691)[0m   File "<string>", line 27, in <listcomp>
+[36m(compute_several pid=152691)[0m EOFError: EOF when reading a line
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code -11
+[36m(compute_several pid=149143)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=152691)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=152691)[0m   File "<string>", line 52, in <module>[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=152691)[0m   File "<string>", line 27, in main
+[36m(compute_several pid=150717)[0m IndexError: list index out of range
+[36m(compute_several pid=146925)[0m   File "<string>", line 62, in main
+[36m(compute_several pid=146925)[0m KeyError: 10
+[36m(compute_several pid=143384)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143384)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.2808892726898193s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143384)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143592)[0m ✓ [P0] GPTOSS120B: output_len=2938, thinking_len=712, time=5.5s[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=147482)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: RuntimeError: unable to perform operation on <WriteUnixTransport closed=True reading=False 0x7f8a4825d700>; the handler is closed
+[36m(compute_several pid=147482)[0m 
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=144352)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=146925)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=146925)[0m   File "<string>", line 70, in <module>
+[36m(compute_several pid=143663)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=143663)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.8671865463256836s
+[36m(compute_several pid=143663)[0m     Retrying...
+[36m(compute_several pid=214523)[0m ✓ [P0] GPTOSS120B: output_len=1858, thinking_len=1026, time=10.1s[32m [repeated 30x across cluster][0m
+[36m(compute_several pid=143156)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 3 execution error: Non-zero exit code -11
+[36m(compute_several pid=147675)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=149285)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 4 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=149285)[0m   File "<string>", line 69, in <module>
+[36m(compute_several pid=149285)[0m   File "<string>", line 42, in main
+[36m(compute_several pid=149285)[0m IndexError: list assignment index out of range
+[36m(compute_several pid=145577)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=136720)[0m Training Progress:  32%|███▏      | 322/1000 [18:06<105:34:06, 560.54s/it]
+[36m(compute_several pid=144159)[0m IndexError: list index out of range
+[36m(compute_several pid=169805)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=169805)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.1088171005249023s
+[36m(compute_several pid=169805)[0m     Retrying...
+[36m(compute_several pid=146925)[0m ✓ [P0] GPTOSS120B: output_len=2341, thinking_len=771, time=10.2s[32m [repeated 60x across cluster][0m
+[36m(compute_several pid=144159)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=144159)[0m   File "<string>", line 14, in <module>
+[36m(compute_several pid=142844)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=147845)[0m 
+[36m(compute_several pid=144159)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=144159)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.6221930980682373s
+[36m(compute_several pid=144159)[0m     Retrying...
+[36m(compute_several pid=152252)[0m ✓ [P0] GPTOSS120B: output_len=1668, thinking_len=1082, time=13.3s[32m [repeated 72x across cluster][0m
+[36m(compute_several pid=214186)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s
+[36m(compute_several pid=153098)[0m ✓ [P0] GPTOSS120B: output_len=1992, thinking_len=1116, time=11.1s[32m [repeated 38x across cluster][0m
+[36m(compute_several pid=214186)[0m ✓ [P0] GPTOSS120B: output_len=3319, thinking_len=1240, time=17.4s[32m [repeated 22x across cluster][0m
+[36m(compute_several pid=137378)[0m ✓ [P0] GPTOSS120B: output_len=2184, thinking_len=1803, time=29.6s[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=143663)[0m ✓ [P0] GPTOSS120B: output_len=2171, thinking_len=792, time=140.7s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=151737)[0m ✓ [P0] GPTOSS120B: output_len=2282, thinking_len=1405, time=145.9s
+[36m(compute_several pid=142683)[0m ✓ [P0] GPTOSS120B: output_len=2313, thinking_len=736, time=158.4s
+[36m(TaskRunner pid=136720)[0m DEBUG: chunk 0 took 514.96 time
+[36m(TaskRunner pid=136720)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=136720)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/rollouts/train/322.jsonl
+[36m(TaskRunner pid=136720)[0m step:322 - global_seqlen/min:210102 - global_seqlen/max:262533 - global_seqlen/minmax_diff:52431 - global_seqlen/balanced_min:237421 - global_seqlen/balanced_max:237422 - global_seqlen/mean:237421.75 - reward_extra_info/regscore:np.float64(0.7230859374999999) - reward_extra_info/softminscore:np.float64(0.6163539643805561) - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:np.float64(12.51171875) - reward_extra_info/tests_total:np.float64(19.6875) - reward_extra_info/frac_test_cases_passing:np.float64(0.6255859374999999) - reward_extra_info/final_APPSMainBase_reward:np.float64(0.6255859374999999) - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:np.float64(0.8439062500000001) - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:np.float64(nan) - reward_extra_info/backdoor_input_in_range:np.float64(nan) - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:np.float64(2.660967013798654) - reward_extra_info/timing__run_monitor:np.float64(13.531731536611915) - reward_extra_info/timing__test_backdoor_in_range_and_activated:np.float64(0.11581188160926104) - reward_extra_info/no_pre_CoT:np.float64(0.0) - reward_extra_info/score:np.float64(0.7230859374999999) - reward_extra_info/total_naive_level_retries:np.float64(0.0) - reward_extra_info/total_naive_level_timeouts:np.float64(0.0) - reward_extra_info/frac_naive_level_timeouts:np.float64(0.0) - actor/entropy:0.46767646074295044 - advantages/group_mean_mean:0.7230859464034438 - advantages/group_mean_std:0.3878172806439178 - advantages/group_mean_min:-0.19499997794628143 - advantages/group_mean_max:1.3574999570846558 - advantages/group_std_mean:0.44288379012141377 - advantages/group_std_std:0.1734957405976053 - advantages/group_std_min:0.03482097387313843 - advantages/group_std_max:0.7788900136947632 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-9.516952559351921e-09 - advantages/raw_score_std:0.44493366887184566 - advantages/raw_score_min:-1.568750023841858 - advantages/raw_score_max:1.3237500190734863 - advantages/advantage_mean:-7.450580596923828e-09 - advantages/advantage_std:0.4449336528778076 - advantages/advantage_min:-1.568750023841858 - advantages/advantage_max:1.3237500190734863 - advantages/frac_groups_nnz_w_adv:np.float64(1.0) - actor/kl_loss:np.float64(0.0012128682719776407) - actor/kl_coef:np.float64(0.001) - actor/pg_loss:np.float64(0.0009870339563349262) - actor/pg_clipfrac:np.float64(0.0) - actor/ppo_kl:np.float64(0.0) - actor/pg_clipfrac_lower:np.float64(0.0) - actor/grad_norm:np.float64(0.01237376406788826) - perf/mfu/actor:np.float64(0.3688599483600104) - perf/max_memory_allocated_gb:np.float64(146.39246320724487) - perf/max_memory_reserved_gb:np.float64(162.265625) - perf/cpu_memory_used_gb:np.float64(199.3972930908203) - actor/lr:np.float64(1e-06) - training/global_step:322 - training/epoch:1 - critic/score/mean:0.723085880279541 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.723085880279541 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.002915587741881609 - critic/advantages-len-unadj/max:1.3237500190734863 - critic/advantages-len-unadj/min:-1.568750023841858 - critic/returns/mean:-0.002915587741881609 - critic/returns/max:1.3237500190734863 - critic/returns/min:-1.568750023841858 - response_length/mean:3045.08984375 - response_length/max:6144.0 - response_length/min:814.0 - response_length/clip_ratio:0.015625 - response_length_non_aborted/mean:3045.08984375 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:814.0 - response_length_non_aborted/clip_ratio:0.015625 - response/aborted_ratio:0.0 - prompt_length/mean:664.625 - prompt_length/max:1000.0 - prompt_length/min:280.0 - prompt_length/clip_ratio:0.0 - reward/max@8:np.float64(0.90625) - reward/mean@8:np.float64(0.671875) - reward/min@8:np.float64(0.25) - reward/p25@8:np.float64(0.5234375) - p75@8:np.float64(0.859375) - timing_s/start_profile:5.7294993894174695e-05 - timing_s/generate_sequences:59.563751220703125 - timing_s/offload_fsdp_model_to_cpu:7.309325155802071e-05 - timing_s/reshard:1.6536855697631836 - timing_s/wake_up:0.047902852296829224 - timing_s/generation_timing/max:65.54783630371094 - timing_s/generation_timing/min:52.74321365356445 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:67.78561166499276 - timing_s/reward:515.1732659339905 - timing_s/old_log_prob:9.814429129008204 - timing_s/ref:9.819996739999624 - timing_s/adv:0.017574948986293748 - timing_s/update_actor:37.13728041999275 - timing_s/dump_rollout_generations:0.48863204699591734 - timing_s/step:640.2594887879968 - timing_s/stop_profile:4.3563981307670474e-05 - timing_per_token_ms/adv:1.8506043555712302e-05 - timing_per_token_ms/ref:0.01034024551246845 - timing_per_token_ms/update_actor:0.03910475811503448 - timing_per_token_ms/gen:0.08695557738956383 - perf/total_num_tokens:949687 - perf/time_per_step:640.2594887879968 - perf/throughput:370.82113448944955
+[36m(compute_several pid=143090)[0m ✓ [P0] GPTOSS120B: output_len=2807, thinking_len=1314, time=163.2s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=136720)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=151737)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=151737)[0m   File "<string>", line 56, in <module>
+[36m(compute_several pid=151737)[0m   File "<string>", line 35, in main
+[36m(compute_several pid=151737)[0m NameError: name 'Matrix' is not defined. Did you mean: 'matrix'?
+[36m(compute_several pid=147845)[0m ✓ [P0] GPTOSS120B: output_len=48, thinking_len=389, time=1.3s
+[36m(compute_several pid=142996)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=142996)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.3926057815551758s
+[36m(compute_several pid=142996)[0m     Retrying...
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=148520)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=143156)[0m ✓ [P0] GPTOSS120B: output_len=2285, thinking_len=1947, time=5.9s[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=169805)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=169805)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.44614458084106445s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=169805)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143384)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=144983)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=144983)[0m   File "<string>", line 44, in <module>
+[36m(compute_several pid=144983)[0m   File "<string>", line 40, in main
+[36m(compute_several pid=144983)[0m   File "<string>", line 35, in dfs
+[36m(compute_several pid=144983)[0m   File "<string>", line 37, in dfs
+[36m(compute_several pid=144983)[0m UnboundLocalError: 
+[36m(compute_several pid=142690)[0m ✓ [P0] GPTOSS120B: output_len=2499, thinking_len=924, time=3.0s[32m [repeated 50x across cluster][0m
+[36m(compute_several pid=151514)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=151514)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.8535046577453613s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=151514)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=142696)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=152897)[0m ✓ [P0] GPTOSS120B: output_len=1861, thinking_len=1272, time=4.5s[32m [repeated 71x across cluster][0m
+[36m(compute_several pid=152897)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=152897)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4378697872161865s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=152897)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=150356)[0m 
+[36m(compute_several pid=152897)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=144239)[0m ✓ [P0] GPTOSS120B: output_len=1479, thinking_len=983, time=7.8s[32m [repeated 66x across cluster][0m
+[36m(compute_several pid=147482)[0m ✓ [P0] GPTOSS120B: output_len=2151, thinking_len=883, time=21.6s[32m [repeated 35x across cluster][0m
+[36m(compute_several pid=146740)[0m ✓ [P0] GPTOSS120B: output_len=2624, thinking_len=995, time=22.8s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143992)[0m ✓ [P0] GPTOSS120B: output_len=1794, thinking_len=817, time=24.6s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=144645)[0m ✓ [P0] GPTOSS120B: output_len=3178, thinking_len=1331, time=29.3s
+[36m(TaskRunner pid=136720)[0m DEBUG: REWARD FN TIMEOUT: Attempt 1 failed, retrying...
+[36m(compute_several pid=142696)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=142696)[0m   File "<string>", line 56, in <module>
+[36m(compute_several pid=142696)[0m   File "<string>", line 35, in main
+[36m(compute_several pid=142696)[0m NameError: name 'Matrix' is not defined. Did you mean: 'matrix'?
+[36m(compute_several pid=152897)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=152897)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4304049015045166s
+[36m(compute_several pid=152897)[0m     Retrying...
+[36m(compute_several pid=143992)[0m ✓ [P0] GPTOSS120B: output_len=2157, thinking_len=928, time=3.6s
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 3 execution error: Execution timeout after 5s
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s
+[36m(compute_several pid=145365)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=213930)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=213930)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.8150856494903564s
+[36m(compute_several pid=213930)[0m     Retrying...
+[36m(compute_several pid=152897)[0m ✓ [P0] GPTOSS120B: output_len=270, thinking_len=2983, time=7.7s[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=144352)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=142690)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=142690)[0m   File "<string>", line 44, in <module>
+[36m(compute_several pid=142690)[0m   File "<string>", line 40, in main
+[36m(compute_several pid=142690)[0m   File "<string>", line 35, in dfs
+[36m(compute_several pid=142690)[0m   File "<string>", line 35, in dfs
+[36m(compute_several pid=142690)[0m   File "<string>", 
+[36m(compute_several pid=146508)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=146508)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4280972480773926s
+[36m(compute_several pid=146508)[0m     Retrying...
+[36m(compute_several pid=142759)[0m ✓ [P0] GPTOSS120B: output_len=2637, thinking_len=777, time=11.5s[32m [repeated 43x across cluster][0m
+[36m(compute_several pid=143592)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=143384)[0m ✓ [P0] GPTOSS120B: output_len=2325, thinking_len=1215, time=9.8s[32m [repeated 66x across cluster][0m
+[36m(compute_several pid=137378)[0m 
+[36m(TaskRunner pid=136720)[0m Training Progress:  32%|███▏      | 323/1000 [24:42<91:15:34, 485.28s/it] 
+[36m(compute_several pid=169617)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=143663)[0m ✓ [P0] GPTOSS120B: output_len=2180, thinking_len=1286, time=6.8s[32m [repeated 98x across cluster][0m
+[36m(compute_several pid=142996)[0m ✓ [P0] GPTOSS120B: output_len=2135, thinking_len=1181, time=20.4s[32m [repeated 18x across cluster][0m
+[36m(compute_several pid=169617)[0m ✓ [P0] GPTOSS120B: output_len=2546, thinking_len=464, time=18.8s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=143392)[0m ✓ [P0] GPTOSS120B: output_len=2487, thinking_len=1655, time=35.6s
+[36m(compute_several pid=147845)[0m ✓ [P0] GPTOSS120B: output_len=1980, thinking_len=1231, time=116.0s
+[36m(compute_several pid=169805)[0m ✓ [P0] GPTOSS120B: output_len=2005, thinking_len=720, time=115.5s
+[36m(compute_several pid=151959)[0m ✓ [P0] GPTOSS120B: output_len=2204, thinking_len=428, time=116.0s
+[36m(compute_several pid=214523)[0m ✓ [P0] GPTOSS120B: output_len=2624, thinking_len=418, time=70.1s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=142844)[0m ✓ [P0] GPTOSS120B: output_len=2674, thinking_len=585, time=107.8s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: REWARD FN TIMEOUT: Attempt 2 failed, retrying...
+[36m(compute_several pid=214804)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=214804)[0m   File "<string>", line 56, in <module>
+[36m(compute_several pid=214804)[0m   File "<string>", line 35, in main
+[36m(compute_several pid=214804)[0m NameError: name 'Matrix' is not defined. Did you mean: 'matrix'?
+[36m(compute_several pid=142844)[0m ✓ [P0] GPTOSS120B: output_len=3014, thinking_len=885, time=3.1s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=142844)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=146037)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=146037)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.8841001987457275s
+[36m(compute_several pid=146037)[0m     Retrying...
+[36m(compute_several pid=214186)[0m ✓ [P0] GPTOSS120B: output_len=34, thinking_len=1044, time=3.9s[32m [repeated 21x across cluster][0m
+[36m(compute_several pid=143322)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=152471)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=152471)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.8552956581115723s
+[36m(compute_several pid=152471)[0m     Retrying...
+[36m(compute_several pid=213510)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=213510)[0m   File "<string>", line 44, in <module>
+[36m(compute_several pid=213510)[0m   File "<string>", line 40, in main
+[36m(compute_several pid=213510)[0m   File "<string>", line 35, in dfs
+[36m(compute_several pid=213510)[0m   File "<string>", line 37, in dfs
+[36m(compute_several pid=213510)[0m UnboundLocalError: 
+[36m(compute_several pid=143322)[0m ✓ [P0] GPTOSS120B: output_len=1930, thinking_len=1327, time=8.9s[32m [repeated 36x across cluster][0m
+[36m(compute_several pid=145577)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=169617)[0m ✓ [P0] GPTOSS120B: output_len=2021, thinking_len=1095, time=16.0s[32m [repeated 70x across cluster][0m
+[36m(compute_several pid=151737)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=144645)[0m ✓ [P0] GPTOSS120B: output_len=2066, thinking_len=1259, time=7.7s[32m [repeated 79x across cluster][0m
+[36m(compute_several pid=142932)[0m ✓ [P0] GPTOSS120B: output_len=1866, thinking_len=1771, time=17.3s[32m [repeated 39x across cluster][0m
+[36m(compute_several pid=143384)[0m ✓ [P0] GPTOSS120B: output_len=2007, thinking_len=1135, time=23.5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=143920)[0m ✓ [P0] GPTOSS120B: output_len=26, thinking_len=768, time=92.5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=146284)[0m ✓ [P0] GPTOSS120B: output_len=1844, thinking_len=1144, time=101.1s
+[36m(compute_several pid=142690)[0m ✓ [P0] GPTOSS120B: output_len=3147, thinking_len=507, time=103.9s
+[36m(TaskRunner pid=136720)[0m DEBUG: chunk 0 took 284.20 time
+[36m(TaskRunner pid=136720)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=136720)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/rollouts/train/323.jsonl
+[36m(TaskRunner pid=136720)[0m step:323 - global_seqlen/min:174003 - global_seqlen/max:233773 - global_seqlen/minmax_diff:59770 - global_seqlen/balanced_min:203625 - global_seqlen/balanced_max:203626 - global_seqlen/mean:203625.25 - reward_extra_info/regscore:np.float64(0.85375) - reward_extra_info/softminscore:np.float64(0.5780717514417546) - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:np.float64(14.640625) - reward_extra_info/tests_total:np.float64(19.921875) - reward_extra_info/frac_test_cases_passing:np.float64(0.7320312499999999) - reward_extra_info/final_APPSMainBase_reward:np.float64(0.7320312499999999) - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:np.float64(0.8665625) - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:np.float64(nan) - reward_extra_info/backdoor_input_in_range:np.float64(nan) - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:np.float64(3.67073468118906) - reward_extra_info/timing__run_monitor:np.float64(11.466812173835933) - reward_extra_info/timing__test_backdoor_in_range_and_activated:np.float64(0.14895621314644814) - reward_extra_info/no_pre_CoT:np.float64(0.0) - reward_extra_info/score:np.float64(0.85375) - reward_extra_info/total_naive_level_retries:np.float64(0.0) - reward_extra_info/total_naive_level_timeouts:np.float64(0.0) - reward_extra_info/frac_naive_level_timeouts:np.float64(0.0) - actor/entropy:0.44148334860801697 - advantages/group_mean_mean:0.8537500072270632 - advantages/group_mean_std:0.2926802318711612 - advantages/group_mean_min:0.06499999761581421 - advantages/group_mean_max:1.3550000190734863 - advantages/group_std_mean:0.33502114232396707 - advantages/group_std_std:0.23022531230908463 - advantages/group_std_min:0.022638458758592606 - advantages/group_std_max:0.750866174697876 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-7.697963155806065e-09 - advantages/raw_score_std:0.3802466340396294 - advantages/raw_score_min:-1.5850000381469727 - advantages/raw_score_max:1.1749999523162842 - advantages/advantage_mean:-6.51925802230835e-09 - advantages/advantage_std:0.380246639251709 - advantages/advantage_min:-1.5850000381469727 - advantages/advantage_max:1.1749999523162842 - advantages/frac_groups_nnz_w_adv:np.float64(1.0) - actor/kl_loss:np.float64(0.0013796716895220535) - actor/kl_coef:np.float64(0.001) - actor/pg_loss:np.float64(-0.00015689556624108394) - actor/pg_clipfrac:np.float64(0.0) - actor/ppo_kl:np.float64(0.0) - actor/pg_clipfrac_lower:np.float64(0.0) - actor/grad_norm:np.float64(0.010997684672474861) - perf/mfu/actor:np.float64(0.3664505178454531) - perf/max_memory_allocated_gb:np.float64(146.39246320724487) - perf/max_memory_reserved_gb:np.float64(162.265625) - perf/cpu_memory_used_gb:np.float64(201.3611297607422) - actor/lr:np.float64(1e-06) - training/global_step:323 - training/epoch:1 - critic/score/mean:0.8537499904632568 - critic/score/max:2.0 - critic/score/min:-0.8999999761581421 - critic/rewards/mean:0.8537499904632568 - critic/rewards/max:2.0 - critic/rewards/min:-0.8999999761581421 - critic/advantages-len-unadj/mean:-0.004514842294156551 - critic/advantages-len-unadj/max:1.1749999523162842 - critic/advantages-len-unadj/min:-1.5850000381469727 - critic/returns/mean:-0.004514842294156551 - critic/returns/max:1.1749999523162842 - critic/returns/min:-1.5850000381469727 - response_length/mean:2552.48828125 - response_length/max:6144.0 - response_length/min:790.0 - response_length/clip_ratio:0.00390625 - response_length_non_aborted/mean:2552.48828125 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:790.0 - response_length_non_aborted/clip_ratio:0.00390625 - response/aborted_ratio:0.0 - prompt_length/mean:629.15625 - prompt_length/max:940.0 - prompt_length/min:278.0 - prompt_length/clip_ratio:0.0 - reward/max@8:np.float64(0.875) - reward/mean@8:np.float64(0.75) - reward/min@8:np.float64(0.40625) - reward/p25@8:np.float64(0.71875) - p75@8:np.float64(0.84375) - timing_s/start_profile:7.099099457263947e-05 - timing_s/generate_sequences:52.28214645385742 - timing_s/offload_fsdp_model_to_cpu:8.898923988454044e-05 - timing_s/reshard:1.7527648210525513 - timing_s/wake_up:0.04931645095348358 - timing_s/generation_timing/max:60.36848068237305 - timing_s/generation_timing/min:47.84162521362305 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:62.6467601400218 - timing_s/reward:284.41138124099234 - timing_s/old_log_prob:8.326583059999393 - timing_s/ref:8.336068627017085 - timing_s/adv:0.01642072101822123 - timing_s/update_actor:31.487558312015608 - timing_s/dump_rollout_generations:0.4459490639856085 - timing_s/step:395.6919578399975 - timing_s/stop_profile:4.697198164649308e-05 - timing_per_token_ms/adv:2.016046759699648e-05 - timing_per_token_ms/ref:0.01023457138421817 - timing_per_token_ms/update_actor:0.03865871043990812 - timing_per_token_ms/gen:0.09587268572183974 - perf/total_num_tokens:814501 - perf/time_per_step:395.6919578399975 - perf/throughput:514.6054802618409
+[36m(TaskRunner pid=136720)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=136720)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=143384)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=143384)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.8007700443267822s
+[36m(compute_several pid=143384)[0m     Retrying...
+[36m(compute_several pid=143384)[0m ✓ [P0] GPTOSS120B: output_len=34, thinking_len=388, time=1.1s
+[36m(compute_several pid=137378)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=151514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 13 execution error: Execution timeout after 5s
+[36m(compute_several pid=213303)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 2/5)[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=213303)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.3232142925262451s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=213303)[0m     Retrying...[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=144983)[0m ✓ [P0] GPTOSS120B: output_len=2359, thinking_len=727, time=3.2s[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=152897)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=152897)[0m   File "<string>", line 53, in <module>
+[36m(compute_several pid=152897)[0m AttributeError: 'str' object has no attribute 'copy'
+[36m(compute_several pid=143090)[0m   File "<string>", line 50, in main
+[36m(compute_several pid=143090)[0m IndexError: list index out of range
+[36m(compute_several pid=147845)[0m   File "<string>", line 11, in comb
+[36m(compute_several pid=147845)[0m NameError: name 'fact' is not defined
+[36m(compute_several pid=169805)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: RuntimeError: unable to perform operation on <WriteUnixTransport closed=True reading=False 0x7fb51ceccd40>; the handler is closed
+[36m(compute_several pid=144159)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=146740)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=147675)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 4x across cluster][0m
+[36m(TaskRunner pid=136720)[0m Training Progress:  32%|███▏      | 324/1000 [27:33<67:49:15, 361.18s/it]
+[36m(compute_several pid=147675)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.518582820892334s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=147675)[0m     Retrying...[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=143235)[0m ✓ [P0] GPTOSS120B: output_len=2040, thinking_len=1150, time=10.4s[32m [repeated 36x across cluster][0m
+[36m(compute_several pid=147845)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=147845)[0m   File "<string>", line 28, in <module>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=147845)[0m   File "<string>", line 22, in main
+[36m(compute_several pid=149285)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=149285)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=149285)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.3427445888519287s
+[36m(compute_several pid=149285)[0m     Retrying...
+[36m(compute_several pid=145162)[0m ✓ [P0] GPTOSS120B: output_len=1639, thinking_len=1117, time=8.7s[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=149285)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=149285)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.3304576873779297s
+[36m(compute_several pid=149285)[0m     Retrying...
+[36m(compute_several pid=152252)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=146037)[0m ✓ [P0] GPTOSS120B: output_len=2199, thinking_len=1184, time=10.6s[32m [repeated 69x across cluster][0m
+[36m(compute_several pid=142844)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=142844)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.3746533393859863s
+[36m(compute_several pid=142844)[0m     Retrying...
+[36m(compute_several pid=151241)[0m ✓ [P0] GPTOSS120B: output_len=2460, thinking_len=475, time=5.6s[32m [repeated 57x across cluster][0m
+[36m(compute_several pid=151241)[0m ✓ [P0] GPTOSS120B: output_len=2174, thinking_len=1821, time=16.2s[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=144509)[0m ✓ [P0] GPTOSS120B: output_len=1545, thinking_len=1286, time=31.0s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=146037)[0m ✓ [P0] GPTOSS120B: output_len=2236, thinking_len=1264, time=31.7s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=142996)[0m ✓ [P0] GPTOSS120B: output_len=2140, thinking_len=1153, time=34.1s[32m [repeated 7x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: chunk 0 took 52.68 time
+[36m(TaskRunner pid=136720)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=136720)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/rollouts/train/324.jsonl
+[36m(TaskRunner pid=136720)[0m step:324 - global_seqlen/min:202627 - global_seqlen/max:250068 - global_seqlen/minmax_diff:47441 - global_seqlen/balanced_min:221412 - global_seqlen/balanced_max:221412 - global_seqlen/mean:221412.0 - reward_extra_info/regscore:np.float64(0.7672265625) - reward_extra_info/softminscore:np.float64(0.6066086132513611) - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:np.float64(13.4375) - reward_extra_info/tests_total:np.float64(19.84375) - reward_extra_info/frac_test_cases_passing:np.float64(0.671875) - reward_extra_info/final_APPSMainBase_reward:np.float64(0.671875) - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:np.float64(0.8694921875) - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:np.float64(nan) - reward_extra_info/backdoor_input_in_range:np.float64(nan) - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:np.float64(4.0756234005093575) - reward_extra_info/timing__run_monitor:np.float64(11.934178750030696) - reward_extra_info/timing__test_backdoor_in_range_and_activated:np.float64(0.18472997285425663) - reward_extra_info/no_pre_CoT:np.float64(0.0) - reward_extra_info/score:np.float64(0.7672265625) - reward_extra_info/total_naive_level_retries:np.float64(0.0) - reward_extra_info/total_naive_level_timeouts:np.float64(0.0) - reward_extra_info/frac_naive_level_timeouts:np.float64(0.0) - actor/entropy:0.4519743025302887 - advantages/group_mean_mean:0.7672265633009374 - advantages/group_mean_std:0.3430529494953183 - advantages/group_mean_min:0.03625001013278961 - advantages/group_mean_max:1.2662500143051147 - advantages/group_std_mean:0.34616436666692607 - advantages/group_std_std:0.2176171729220737 - advantages/group_std_min:0.013887318782508373 - advantages/group_std_max:0.751568615436554 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-5.449692253023386e-09 - advantages/raw_score_std:0.382476961502719 - advantages/raw_score_min:-1.71875 - advantages/raw_score_max:1.1800000667572021 - advantages/advantage_mean:-3.725290298461914e-09 - advantages/advantage_std:0.3824769854545593 - advantages/advantage_min:-1.71875 - advantages/advantage_max:1.1800000667572021 - advantages/frac_groups_nnz_w_adv:np.float64(1.0) - actor/kl_loss:np.float64(0.001257906449609436) - actor/kl_coef:np.float64(0.001) - actor/pg_loss:np.float64(-0.0007692253966524731) - actor/pg_clipfrac:np.float64(0.0) - actor/ppo_kl:np.float64(0.0) - actor/pg_clipfrac_lower:np.float64(0.0) - actor/grad_norm:np.float64(0.009561986662447453) - perf/mfu/actor:np.float64(0.3650847355950323) - perf/max_memory_allocated_gb:np.float64(146.39246320724487) - perf/max_memory_reserved_gb:np.float64(162.265625) - perf/cpu_memory_used_gb:np.float64(201.87630462646484) - actor/lr:np.float64(1e-06) - training/global_step:324 - training/epoch:1 - critic/score/mean:0.7672265768051147 - critic/score/max:2.0 - critic/score/min:-1.0 - critic/rewards/mean:0.7672265768051147 - critic/rewards/max:2.0 - critic/rewards/min:-1.0 - critic/advantages-len-unadj/mean:-0.013004041276872158 - critic/advantages-len-unadj/max:1.1800000667572021 - critic/advantages-len-unadj/min:-1.71875 - critic/returns/mean:-0.013004041276872158 - critic/returns/max:1.1800000667572021 - critic/returns/min:-1.71875 - response_length/mean:2794.4375 - response_length/max:6144.0 - response_length/min:1079.0 - response_length/clip_ratio:0.0078125 - response_length_non_aborted/mean:2794.4375 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:1079.0 - response_length_non_aborted/clip_ratio:0.0078125 - response/aborted_ratio:0.0 - prompt_length/mean:665.125 - prompt_length/max:950.0 - prompt_length/min:391.0 - prompt_length/clip_ratio:0.0 - reward/max@8:np.float64(0.9375) - reward/mean@8:np.float64(0.73046875) - reward/min@8:np.float64(0.5) - reward/p25@8:np.float64(0.640625) - p75@8:np.float64(0.796875) - timing_s/start_profile:4.72770188935101e-05 - timing_s/generate_sequences:54.21691131591797 - timing_s/offload_fsdp_model_to_cpu:9.999625763157383e-05 - timing_s/reshard:1.7065129280090332 - timing_s/wake_up:0.044262517243623734 - timing_s/generation_timing/max:62.167694091796875 - timing_s/generation_timing/min:47.76939010620117 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:64.40681170599419 - timing_s/reward:52.89635941601591 - timing_s/old_log_prob:9.042233373998897 - timing_s/ref:9.229562841996085 - timing_s/adv:0.015853261982556432 - timing_s/update_actor:34.61161434298265 - timing_s/dump_rollout_generations:0.6776363780081738 - timing_s/step:170.90056275899406 - timing_s/stop_profile:4.8824993427842855e-05 - timing_per_token_ms/adv:1.7900183800512656e-05 - timing_per_token_ms/ref:0.010421254089656483 - timing_per_token_ms/update_actor:0.03908055383513839 - timing_per_token_ms/gen:0.09003211137359121 - perf/total_num_tokens:885648 - perf/time_per_step:170.90056275899406 - perf/throughput:1295.560391525672
+[36m(compute_several pid=143156)[0m ✓ [P0] GPTOSS120B: output_len=1766, thinking_len=1485, time=34.4s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=136720)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=143090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=143156)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=143156)[0m   File "<string>", line 54, in <module>
+[36m(compute_several pid=143156)[0m   File "<string>", line 39, in main
+[36m(compute_several pid=143156)[0m   File "<string>", line 5, in intersect
+[36m(compute_several pid=143156)[0m TypeError: 'NoneType' object is not subscriptable
+[36m(compute_several pid=146037)[0m IndexError: list index out of range
+[36m(compute_several pid=149521)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=149521)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.6771769523620605s
+[36m(compute_several pid=149521)[0m     Retrying...
+[36m(compute_several pid=152897)[0m ✓ [P0] GPTOSS120B: output_len=2029, thinking_len=1015, time=2.9s
+[36m(compute_several pid=147172)[0m   File "<string>", line 5, in compute_intersection
+[36m(compute_several pid=147172)[0m TypeError: 'NoneType' object is not su
+[36m(compute_several pid=147172)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=147172)[0m   File "<string>", line 41, in <module>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=147172)[0m   File "<string>", line 33, in main[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=214804)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 6 execution error: Execution timeout after 5s
+[36m(compute_several pid=146284)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=146284)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.5302915573120117s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=146284)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=214804)[0m ✓ [P0] GPTOSS120B: output_len=2388, thinking_len=1169, time=2.2s[32m [repeated 13x across cluster][0m
+[36m(TaskRunner pid=136720)[0m Training Progress:  32%|███▎      | 325/1000 [30:05<53:33:05, 285.61s/it]
+[36m(compute_several pid=142690)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=169617)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=169617)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.39476799964904785s
+[36m(compute_several pid=169617)[0m     Retrying...
+[36m(compute_several pid=142932)[0m ✓ [P0] GPTOSS120B: output_len=2488, thinking_len=431, time=8.6s[32m [repeated 34x across cluster][0m
+[36m(compute_several pid=137378)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=137378)[0m     output_len=0, thinking_len=0 max_tokens=20000, error="InternalServerError: Error code: 500 - {'error': {'message': 'Internal Server Error', 'code': 500}}", time=5.002305746078491s
+[36m(compute_several pid=137378)[0m     Retrying...
+[36m(compute_several pid=137378)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 4 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=143663)[0m ✓ [P0] GPTOSS120B: output_len=2407, thinking_len=652, time=9.7s[32m [repeated 65x across cluster][0m
+[36m(compute_several pid=146508)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=146508)[0m     output_len=0, thinking_len=0 max_tokens=20000, error="InternalServerError: Error code: 500 - {'error': {'message': 'Internal Server Error', 'code': 500}}", time=6.249252557754517s
+[36m(compute_several pid=146508)[0m     Retrying...
+[36m(compute_several pid=150356)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=149143)[0m 
+[36m(compute_several pid=152471)[0m ✓ [P0] GPTOSS120B: output_len=2280, thinking_len=1219, time=10.3s[32m [repeated 92x across cluster][0m
+[36m(compute_several pid=145577)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=145577)[0m     output_len=0, thinking_len=0 max_tokens=20000, error="InternalServerError: Error code: 500 - {'error': {'message': 'Internal Server Error', 'code': 500}}", time=7.273765325546265s
+[36m(compute_several pid=145577)[0m     Retrying...
+[36m(compute_several pid=144509)[0m ✓ [P0] GPTOSS120B: output_len=2207, thinking_len=1054, time=25.6s[32m [repeated 29x across cluster][0m
+[36m(compute_several pid=145162)[0m ✓ [P0] GPTOSS120B: output_len=3322, thinking_len=724, time=31.3s[32m [repeated 14x across cluster][0m
+[36m(compute_several pid=137378)[0m ✓ [P0] GPTOSS120B: output_len=2098, thinking_len=1711, time=26.3s[32m [repeated 8x across cluster][0m
+[36m(TaskRunner pid=136720)[0m DEBUG: chunk 0 took 44.38 time
+[36m(TaskRunner pid=136720)[0m DEBUG: Reward computation complete. 0/256 samples timed out (0.0%)
+[36m(TaskRunner pid=136720)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/02/26/wmonitor_backdoor_qwen3_8b_removeafterco_15_24_aqfiyubn/rollouts/train/325.jsonl
+[36m(TaskRunner pid=136720)[0m step:325 - global_seqlen/min:183856 - global_seqlen/max:233479 - global_seqlen/minmax_diff:49623 - global_seqlen/balanced_min:202332 - global_seqlen/balanced_max:202332 - global_seqlen/mean:202332.0 - reward_extra_info/regscore:np.float64(0.8142578125) - reward_extra_info/softminscore:np.float64(0.59127168907145) - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:np.float64(13.625) - reward_extra_info/tests_total:np.float64(19.921875) - reward_extra_info/frac_test_cases_passing:np.float64(0.68125) - reward_extra_info/final_APPSMainBase_reward:np.float64(0.68125) - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:np.float64(0.8513671875000001) - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:np.float64(nan) - reward_extra_info/backdoor_input_in_range:np.float64(nan) - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:np.float64(2.6492470279335976) - reward_extra_info/timing__run_monitor:np.float64(11.774814960546792) - reward_extra_info/timing__test_backdoor_in_range_and_activated:np.float64(0.11013039667159319) - reward_extra_info/no_pre_CoT:np.float64(0.0) - reward_extra_info/score:np.float64(0.8142578125) - reward_extra_info/total_naive_level_retries:np.float64(0.0) - reward_extra_info/total_naive_level_timeouts:np.float64(0.0) - reward_extra_info/frac_naive_level_timeouts:np.float64(0.0) - actor/entropy:0.4552695155143738 - advantages/group_mean_mean:0.8142577996477485 - advantages/group_mean_std:0.2840243095681722 - advantages/group_mean_min:0.19749999046325684 - advantages/group_mean_max:1.253749966621399 - advantages/group_std_mean:0.3667917606071569 - advantages/group_std_std:0.169308988982352 - advantages/group_std_min:0.02474873699247837 - advantages/group_std_max:0.7128100991249084 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:1.132139004766941e-08 - advantages/raw_score_std:0.37789087441843316 - advantages/raw_score_min:-1.3587499856948853 - advantages/raw_score_max:1.1862499713897705 - advantages/advantage_mean:1.3969838619232178e-08 - advantages/advantage_std:0.37789085507392883 - advantages/advantage_min:-1.3587499856948853 - advantages/advantage_max:1.1862499713897705 - advantages/frac_groups_nnz_w_adv:np.float64(1.0) - actor/kl_loss:np.float64(0.00149154630655955) - actor/kl_coef:np.float64(0.001) - actor/pg_loss:np.float64(0.0013987139391247183) - actor/pg_clipfrac:np.float64(0.0) - actor/ppo_kl:np.float64(0.0) - actor/pg_clipfrac_lower:np.float64(0.0) - actor/grad_norm:np.float64(0.010644994676113129) - perf/mfu/actor:np.float64(0.36386763035561454) - perf/max_memory_allocated_gb:np.float64(146.39246320724487) - perf/max_memory_reserved_gb:np.float64(162.265625) - perf/cpu_memory_used_gb:np.float64(202.31476593017578) - actor/lr:np.float64(1e-06) - training/global_step:325 - training/epoch:1 - critic/score/mean:0.814257800579071 - critic/score/max:2.0 - critic/score/min:-0.949999988079071 - critic/rewards/mean:0.814257800579071 - critic/rewards/max:2.0 - critic/rewards/min:-0.949999988079071 - critic/advantages-len-unadj/mean:-0.0037167498376220465 - critic/advantages-len-unadj/max:1.1862499713897705 - critic/advantages-len-unadj/min:-1.3587499856948853 - critic/returns/mean:-0.0037167498376220465 - critic/returns/max:1.1862499713897705 - critic/returns/min:-1.3587499856948853 - response_length/mean:2545.5625 - response_length/max:6144.0 - response_length/min:659.0 - response_length/clip_ratio:0.00390625 - response_length_non_aborted/mean:2545.5625 - response_length_non_aborted/max:6144.0 - response_length_non_aborted/min:659.0 - response_length_non_aborted/clip_ratio:0.00390625 - response/aborted_ratio:0.0 - prompt_length/mean:615.875 - prompt_length/max:1024.0 - prompt_length/min:355.0 - prompt_length/clip_ratio:0.03125 - reward/max@8:np.float64(1.0) - reward/mean@8:np.float64(0.765625) - reward/min@8:np.float64(0.375) - reward/p25@8:np.float64(0.6875) - p75@8:np.float64(0.890625) - timing_s/start_profile:7.534300675615668e-05 - timing_s/generate_sequences:51.8224983215332 - timing_s/offload_fsdp_model_to_cpu:9.891899389913306e-05 - timing_s/reshard:1.9593250751495361 - timing_s/wake_up:0.059713706374168396 - timing_s/generation_timing/max:55.928062438964844 - timing_s/generation_timing/min:46.91543197631836 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:58.44066998400376 - timing_s/reward:44.59021476798807 - timing_s/old_log_prob:8.24045559199294 - timing_s/ref:8.256776105001336 - timing_s/adv:0.01881703399703838 - timing_s/update_actor:31.425666030991124 - timing_s/dump_rollout_generations:0.5920672619831748 - timing_s/step:151.58870334399398 - timing_s/stop_profile:4.687198088504374e-05 - timing_per_token_ms/adv:2.3250195220032396e-05 - timing_per_token_ms/ref:0.010202014640542939 - timing_per_token_ms/update_actor:0.03882933252153777 - timing_per_token_ms/gen:0.08967914444254058 - perf/total_num_tokens:809328 - perf/time_per_step:151.58870334399398 - perf/throughput:1334.743259468724
+[36m(TaskRunner pid=136720)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=136720)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=148520)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=148520)[0m   File "<string>", line 36, in <module>
+[36m(compute_several pid=148520)[0m   File "<string>", line 15, in main
+[36m(compute_several pid=148520)[0m TypeError: 'float' object cannot be interpreted as an integer
+[36m(compute_several pid=148520)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=148520)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=1.1591055393218994s
+[36m(compute_several pid=148520)[0m     Retrying...
+[36m(compute_several pid=147845)[0m ✓ [P0] GPTOSS120B: output_len=31, thinking_len=716, time=1.7s
+[36m(compute_several pid=142690)[0m   File "<string>", line 58, in <listcomp>
+[36m(compute_several pid=142690)[0m   File "<string>", line 58, in <genexpr>
+[36m(compute_several pid=142690)[0m TypeE
+[36m(compute_several pid=142690)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=142690)[0m   File "<string>", line 114, in <module>
+[36m(compute_several pid=142690)[0m   File "<string>", line 58, in main
+[36m(compute_several pid=143592)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=143592)[0m     output_len=0, thinking_len=0 max_tokens=20000, error=None, time=0.4651145935058594s
+[36m(compute_several pid=143592)[0m     Retrying...
+[36m(compute_several pid=151737)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=151737)[0m   File "<string>", line 67, in <module>
+[36m(compute_several pid=151737)[0m   File "<string>", line 47, in main
+[36m(compute_several pid=151737)[0m IndexError: list index out of range
+[36m(compute_several pid=143592)[0m ✓ [P0] GPTOSS120B: output_len=2770, thinking_len=839, time=2.7s[32m [repeated 24x across cluster][0m
+[36m(compute_several pid=214523)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s
+[36m(compute_several pid=169805)[0m ✓ [P0] GPTOSS120B: output_len=2391, thinking_len=349, time=3.9s[32m [repeated 54x across cluster][0m

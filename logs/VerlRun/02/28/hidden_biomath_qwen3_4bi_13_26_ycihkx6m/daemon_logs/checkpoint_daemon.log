@@ -1,0 +1,28 @@
+2026-02-28 08:26:53,902 [INFO] ============================================================
+2026-02-28 08:26:53,903 [INFO] Checkpoint daemon started
+2026-02-28 08:26:53,903 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_13_26_ycihkx6m
+2026-02-28 08:26:53,903 [INFO]   verl_pid:           1122837
+2026-02-28 08:26:53,903 [INFO]   poll_interval:      300.0s
+2026-02-28 08:26:53,903 [INFO]   clean_after_backup: True
+2026-02-28 08:26:53,909 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-02-28 08:26:53,909 [INFO] ============================================================
+2026-02-28 08:26:53,919 [DEBUG] No non-empty checkpoints found
+2026-02-28 08:26:53,919 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 08:31:54,042 [DEBUG] No non-empty checkpoints found
+2026-02-28 08:31:54,045 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 08:36:54,157 [DEBUG] No non-empty checkpoints found
+2026-02-28 08:36:54,159 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 08:41:54,276 [DEBUG] No non-empty checkpoints found
+2026-02-28 08:41:54,278 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 08:46:54,394 [DEBUG] No non-empty checkpoints found
+2026-02-28 08:46:54,396 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 08:51:54,515 [DEBUG] No non-empty checkpoints found
+2026-02-28 08:51:54,517 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 08:56:54,628 [DEBUG] No non-empty checkpoints found
+2026-02-28 08:56:54,630 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 09:01:54,748 [DEBUG] No non-empty checkpoints found
+2026-02-28 09:01:54,750 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 09:06:54,863 [DEBUG] No non-empty checkpoints found
+2026-02-28 09:06:54,865 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 09:11:54,977 [DEBUG] No non-empty checkpoints found
+2026-02-28 09:11:54,978 [DEBUG] Sleeping 300.0s until next poll

@@ -1,0 +1,105 @@
+2026-02-28 13:22:05,755 [INFO] ============================================================
+2026-02-28 13:22:05,756 [INFO] Checkpoint daemon started
+2026-02-28 13:22:05,756 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd
+2026-02-28 13:22:05,756 [INFO]   verl_pid:           2039265
+2026-02-28 13:22:05,756 [INFO]   poll_interval:      300.0s
+2026-02-28 13:22:05,756 [INFO]   clean_after_backup: True
+2026-02-28 13:22:05,758 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-02-28 13:22:05,758 [INFO] ============================================================
+2026-02-28 13:22:05,767 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:22:05,767 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 13:27:05,869 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:27:05,872 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 13:32:05,980 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:32:05,982 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 13:37:06,089 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:37:06,092 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 13:42:06,193 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:42:06,195 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 13:47:06,298 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:47:06,300 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 13:52:06,409 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:52:06,411 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 13:57:06,513 [DEBUG] No non-empty checkpoints found
+2026-02-28 13:57:06,514 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:02:06,620 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:02:06,623 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:07:06,722 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:07:06,724 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:12:06,821 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:12:06,823 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:17:06,928 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:17:06,930 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:22:07,031 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:22:07,033 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:27:07,135 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:27:07,136 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:32:07,239 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:32:07,241 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:37:07,346 [DEBUG] No non-empty checkpoints found
+2026-02-28 14:37:07,349 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:42:07,484 [INFO] New complete checkpoints to backup: [40]
+2026-02-28 14:42:07,490 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_40
+2026-02-28 14:42:15,841 [ERROR] dvc add failed for global_step_40: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 14:42:15,842 [WARNING] DVC add/push failed for global_step_40 — will retry next poll
+2026-02-28 14:42:15,842 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:47:15,955 [INFO] New complete checkpoints to backup: [40]
+2026-02-28 14:47:15,958 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_40
+2026-02-28 14:47:22,443 [ERROR] dvc add failed for global_step_40: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 14:47:22,444 [WARNING] DVC add/push failed for global_step_40 — will retry next poll
+2026-02-28 14:47:22,444 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:52:22,556 [INFO] New complete checkpoints to backup: [40]
+2026-02-28 14:52:22,558 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_40
+2026-02-28 14:52:25,891 [ERROR] dvc add failed for global_step_40: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 14:52:25,891 [WARNING] DVC add/push failed for global_step_40 — will retry next poll
+2026-02-28 14:52:25,891 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 14:57:26,303 [INFO] New complete checkpoints to backup: [40]
+2026-02-28 14:57:26,326 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_40
+2026-02-28 14:58:51,435 [ERROR] dvc add failed for global_step_40: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 14:58:51,464 [WARNING] DVC add/push failed for global_step_40 — will retry next poll
+2026-02-28 14:58:51,464 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 15:03:51,579 [INFO] New complete checkpoints to backup: [40, 55]
+2026-02-28 15:03:51,584 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_40
+2026-02-28 15:03:58,254 [ERROR] dvc add failed for global_step_40: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 15:03:58,254 [WARNING] DVC add/push failed for global_step_40 — will retry next poll
+2026-02-28 15:03:58,258 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_55
+2026-02-28 15:04:00,155 [ERROR] dvc add failed for global_step_55: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 15:04:00,155 [WARNING] DVC add/push failed for global_step_55 — will retry next poll
+2026-02-28 15:04:00,155 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 15:09:00,275 [INFO] New complete checkpoints to backup: [40, 55]
+2026-02-28 15:09:00,277 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_40
+2026-02-28 15:09:03,737 [ERROR] dvc add failed for global_step_40: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 15:09:03,738 [WARNING] DVC add/push failed for global_step_40 — will retry next poll
+2026-02-28 15:09:03,738 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_55
+2026-02-28 15:09:06,351 [ERROR] dvc add failed for global_step_55: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 15:09:06,351 [WARNING] DVC add/push failed for global_step_55 — will retry next poll
+2026-02-28 15:09:06,351 [DEBUG] Sleeping 300.0s until next poll
+2026-02-28 15:14:06,400 [INFO] Verl process (PID 2039265) has exited. Running final backup pass.
+2026-02-28 15:14:06,450 [INFO] New complete checkpoints to backup: [40, 55]
+2026-02-28 15:14:06,450 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_40
+2026-02-28 15:14:13,381 [ERROR] dvc add failed for global_step_40: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 15:14:13,381 [WARNING] DVC add/push failed for global_step_40 — will retry next poll
+2026-02-28 15:14:13,381 [INFO] Running: dvc add logs/VerlRun/02/28/hidden_biomath_qwen3_4bi_18_21_gng8pktd/checkpoints/global_step_55
+2026-02-28 15:14:13,917 [ERROR] dvc add failed for global_step_55: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-02-28 15:14:13,917 [WARNING] DVC add/push failed for global_step_55 — will retry next poll
+2026-02-28 15:14:13,917 [INFO] Final backup pass complete. Daemon exiting.

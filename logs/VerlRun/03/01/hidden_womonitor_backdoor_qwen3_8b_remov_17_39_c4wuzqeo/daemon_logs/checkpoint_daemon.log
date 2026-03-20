@@ -1,0 +1,470 @@
+2026-03-01 12:39:48,841 [INFO] ============================================================
+2026-03-01 12:39:48,841 [INFO] Checkpoint daemon started
+2026-03-01 12:39:48,841 [INFO]   run_dir:            /shared/matan/code/pass_at_k/logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo
+2026-03-01 12:39:48,841 [INFO]   verl_pid:           2676825
+2026-03-01 12:39:48,841 [INFO]   poll_interval:      300.0s
+2026-03-01 12:39:48,841 [INFO]   clean_after_backup: True
+2026-03-01 12:39:48,850 [INFO]   dvc_root:           /shared/matan/code/pass_at_k
+2026-03-01 12:39:48,850 [INFO] ============================================================
+2026-03-01 12:39:48,862 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:39:48,863 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 12:44:48,978 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:44:48,980 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 12:49:49,100 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:49:49,102 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 12:54:49,217 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:54:49,220 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 12:59:49,329 [DEBUG] No non-empty checkpoints found
+2026-03-01 12:59:49,330 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:04:49,437 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:04:49,439 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:09:49,542 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:09:49,544 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:14:49,655 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:14:49,657 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:19:49,761 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:19:49,763 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:24:49,865 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:24:49,867 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:29:49,972 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:29:49,974 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:34:50,088 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:34:50,090 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:39:50,210 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:39:50,212 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:44:50,315 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:44:50,317 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:49:50,425 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:49:50,427 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:54:50,527 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:54:50,528 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 13:59:50,614 [DEBUG] No non-empty checkpoints found
+2026-03-01 13:59:50,616 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:04:50,727 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:04:50,728 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:09:50,833 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:09:50,835 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:14:50,939 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:14:50,941 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:19:51,047 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:19:51,050 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:24:51,154 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:24:51,157 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:29:51,261 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:29:51,263 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:34:51,368 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:34:51,370 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:39:51,473 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:39:51,474 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:44:51,589 [DEBUG] No non-empty checkpoints found
+2026-03-01 14:44:51,591 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:49:52,212 [DEBUG] New steps [360] but none confirmed complete (complete_step=None)
+2026-03-01 14:49:52,275 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:54:52,399 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 14:54:52,404 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 14:54:57,447 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 14:54:57,447 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 14:54:57,447 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 14:59:57,941 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 14:59:57,996 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:00:28,767 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:00:28,768 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:00:28,768 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:05:28,889 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:05:28,892 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:05:34,947 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:05:34,947 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:05:34,948 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:10:35,063 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:10:35,066 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:10:39,670 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:10:39,671 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:10:39,671 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:15:39,790 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:15:39,792 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:15:45,501 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:15:45,501 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:15:45,501 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:20:45,614 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:20:45,617 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:20:52,211 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:20:52,211 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:20:52,211 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:25:52,338 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:25:52,340 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:25:58,556 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:25:58,556 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:25:58,556 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:30:58,673 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:30:58,676 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:31:03,047 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:31:03,047 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:31:03,047 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:36:03,161 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:36:03,164 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:36:09,040 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:36:09,040 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:36:09,040 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:41:09,157 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:41:09,159 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:41:15,140 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:41:15,140 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:41:15,140 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:46:15,258 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:46:15,260 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:46:20,017 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:46:20,017 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:46:20,017 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:51:20,131 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:51:20,132 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:51:24,648 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:51:24,648 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:51:24,648 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 15:56:24,762 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 15:56:24,764 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 15:56:30,206 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 15:56:30,206 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 15:56:30,206 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:01:30,333 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:01:30,335 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:01:35,693 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:01:35,693 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:01:35,693 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:06:35,809 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:06:35,811 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:06:39,554 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:06:39,555 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:06:39,555 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:11:39,672 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:11:39,675 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:11:44,292 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:11:44,292 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:11:44,292 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:16:44,399 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:16:44,402 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:16:49,202 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:16:49,203 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:16:49,203 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:21:49,316 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:21:49,319 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:21:54,260 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:21:54,260 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:21:54,260 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:26:54,379 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:26:54,381 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:26:58,947 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:26:58,947 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:26:58,947 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:31:59,061 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:31:59,063 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:32:02,923 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:32:02,923 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:32:02,923 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:37:03,584 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:37:03,625 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:38:38,523 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:38:38,525 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:38:38,525 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:43:38,644 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:43:38,647 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:43:44,132 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:43:44,132 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:43:44,132 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:48:44,255 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:48:44,257 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:48:50,094 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:48:50,094 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:48:50,095 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 16:53:51,179 [INFO] New complete checkpoints to backup: [360]
+2026-03-01 16:53:51,293 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 16:55:53,634 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 16:55:53,636 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 16:55:53,636 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:00:53,763 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:00:53,766 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:00:58,880 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:00:58,880 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:00:58,884 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:00:59,458 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:00:59,458 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:00:59,458 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:05:59,574 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:05:59,576 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:06:04,058 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:06:04,058 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:06:04,058 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:06:04,562 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:06:04,562 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:06:04,562 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:11:04,678 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:11:04,680 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:11:08,672 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:11:08,673 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:11:08,673 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:11:09,199 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:11:09,199 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:11:09,199 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:16:09,330 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:16:09,333 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:16:13,960 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:16:13,961 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:16:13,961 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:16:14,513 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:16:14,513 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:16:14,513 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:21:14,628 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:21:14,630 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:21:21,151 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:21:21,152 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:21:21,165 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:21:21,751 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:21:21,751 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:21:21,751 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:26:21,884 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:26:21,887 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:26:28,426 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:26:28,427 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:26:28,427 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:26:28,965 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:26:28,965 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:26:28,965 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:31:29,091 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:31:29,093 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:31:34,442 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:31:34,442 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:31:34,442 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:31:35,011 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:31:35,011 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:31:35,011 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:36:35,129 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:36:35,132 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:36:41,547 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:36:41,548 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:36:41,558 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:36:42,115 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:36:42,115 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:36:42,116 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:41:42,229 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:41:42,231 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:41:48,045 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:41:48,045 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:41:48,045 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:41:48,565 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:41:48,565 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:41:48,565 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:46:48,690 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:46:48,692 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:46:53,716 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:46:53,716 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:46:53,716 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:46:56,535 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:46:56,535 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:46:56,535 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:51:56,675 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:51:56,679 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:52:01,797 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:52:01,797 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:52:01,797 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:52:02,405 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:52:02,405 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:52:02,405 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 17:57:02,541 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 17:57:02,543 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 17:57:08,839 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:57:08,839 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 17:57:08,839 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 17:57:09,314 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 17:57:09,314 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 17:57:09,314 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:02:09,448 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:02:09,451 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:02:15,877 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:02:15,877 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:02:15,877 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:02:16,432 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:02:16,432 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:02:16,432 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:07:16,563 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:07:16,566 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:07:22,836 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:07:22,836 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:07:22,836 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:07:23,396 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:07:23,397 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:07:23,397 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:12:23,528 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:12:23,530 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:12:29,011 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:12:29,012 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:12:29,012 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:12:30,617 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:12:30,618 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:12:30,618 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:17:30,740 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:17:30,742 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:17:36,926 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:17:36,926 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:17:36,927 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:17:40,600 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:17:40,600 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:17:40,600 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:22:40,715 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:22:40,718 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:22:47,717 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:22:47,717 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:22:47,717 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:22:48,281 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:22:48,281 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:22:48,282 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:27:48,408 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:27:48,410 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:27:53,327 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:27:53,327 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:27:53,328 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:27:56,484 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:27:56,484 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:27:56,484 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:32:56,613 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:32:56,615 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:33:01,918 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:33:01,918 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:33:01,918 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:33:02,503 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:33:02,503 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:33:02,503 [DEBUG] Sleeping 300.0s until next poll
+2026-03-01 18:38:02,632 [INFO] New complete checkpoints to backup: [360, 400]
+2026-03-01 18:38:02,634 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_360
+2026-03-01 18:38:07,955 [ERROR] dvc add failed for global_step_360: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:38:07,955 [WARNING] DVC add/push failed for global_step_360 — will retry next poll
+2026-03-01 18:38:07,955 [INFO] Running: dvc add logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_39_c4wuzqeo/checkpoints/global_step_400
+2026-03-01 18:38:08,789 [ERROR] dvc add failed for global_step_400: ERROR: unexpected error - cannot import name '_DIR_MARK' from 'pathspec.patterns.gitwildmatch' (/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/pathspec/patterns/gitwildmatch.py)
+
+Having any troubles? Hit us up at https://dvc.org/support, we are always happy to help!
+2026-03-01 18:38:08,789 [WARNING] DVC add/push failed for global_step_400 — will retry next poll
+2026-03-01 18:38:08,789 [DEBUG] Sleeping 300.0s until next poll
