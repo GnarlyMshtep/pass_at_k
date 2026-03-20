@@ -36,7 +36,7 @@ class BaseModel(Enum):
 
 @dataclass
 class CheckpointDaemonConfig:
-    enabled: bool = True
+    enabled: bool = False
     poll_interval_seconds: int = 300
     clean_after_backup: bool = True  # remove contents after confirmed DVC backup; keep empty dir
 

@@ -82,7 +82,10 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 | `vfh/config_resolver.py` | JSON5 merge → Hydra override list |
 | `vfh/run_manager.py` | Create/load run dirs, DAG linking |
 | `vfh/orchestrator.py` | Main entry + argparse CLI (new/continue/fork), output tee, daemon spawning |
-| `vfh/checkpoint_daemon.py` | Background backup + cleanup process (two-phase: backup then clean) |
+| `vfh/checkpoint_daemon.py` | Background backup + cleanup process (disabled by default) |
+| `vfh/dvc_backup.py` | Standalone DVC backup script for checkpoints + rollouts |
+| `vfh/catalog.py` | Interactive run catalog with tags, lineage, fuzzy search |
+| `vfh/catalog_types.py` | Dataclasses for catalog (CatalogEntry, CatalogTag, Catalog) |
 | `vfh/dummy_verl.py` | Fake verl for testing |
 | `vfh/configs/` | JSON5 config templates |
 | `vfh/direct_launch_test.sh` | Direct verl launch (bypasses orchestrator) for isolation testing |
@@ -99,6 +102,59 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 
 Flags: `--dont-auto-sbatch` generates the script without submitting. By default, `sbatch` is called automatically. SLURM output goes to `{run_dir}/daemon_logs/sbatch/run.out` and `run.err`. Environment variables (`WANDB_ENTITY`, `OPENROUTER_API_KEY`, `CUDA_VISIBLE_DEVICES`) are captured at creation time and baked into the script. The script activates the `hope` conda environment.
 
+### Checkpoint daemon (disabled by default)
+`CheckpointDaemonConfig.enabled` defaults to `False`. Use `--enable-checkpoint-daemon` on `new`, `continue`, or `run-prepared` to opt in. The daemon was failing frequently and is replaced by the standalone DVC backup script for manual backups.
+
+### DVC backup script (`vfh/dvc_backup.py`)
+Standalone script for bulk-backing up checkpoints and rollouts via DVC. Not part of the orchestrator — run manually.
+
+```
+python -m vfh.dvc_backup              # discover + backup + verify + delete
+python -m vfh.dvc_backup --dry-run    # just show what would be done
+python -m vfh.dvc_backup --verbose    # debug output
+python -m vfh.dvc_backup --setup-test-dir  # create fake VerlRun for testing
+```
+
+**Flow:** discover untracked targets → present summary → prompt → `dvc add` → `git commit` .dvc files → `dvc push` → verify via `dvc status --cloud` ("in sync" = success) → prompt to delete → `dvc gc`.
+
+**Recovery:** if interrupted and re-run, targets with existing `.dvc` files have their remote status checked. Already-synced targets are skipped; un-pushed ones are routed to push. Stale DVC lock files are auto-detected and cleared.
+
+**Gitignore setup:** root `.gitignore` uses `logs/*` + `!logs/VerlRun/` so `.dvc` files are naturally git-trackable (no `git add -f` needed). Heavy data is caught by leaf patterns: `**/global_step_*/`, `**/train/*.jsonl`, `**/*.pt`.
+
+**Path safety:** all DVC/git commands via `subprocess.run(list_form)` — no shell escaping issues.
+
+### Run catalog (`vfh/catalog.py` + `vfh/catalog_types.py`)
+Interactive script for cataloging notable runs with metadata, tags, and lineage.
+
+```
+python -m vfh.catalog --path <run_dir_or_wandb_id>
+python -m vfh.catalog --path 186oohgn        # resolve by wandb ID
+```
+
+**Extractor pattern:** `RunExtractor` ABC with `VFHExtractor` implementation. Reads `run_metadata.json5`, parses `resolved_hydra_overrides` for base model (`actor_rollout_ref.model.path`), reward config (`custom_reward_function.reward_kwargs.reward_config.*`), train dataset (`data.train_files`). Scans for checkpoint range from `global_step_N` dirs + `.dvc` files, and rollout range from `{N}.jsonl` files in `rollouts/train/`. Both ranges are `tuple[int,int] | None` — runs with no checkpoints or rollouts are handled gracefully.
+
+**W&B URL:** extracted from `run_metadata.json5` if present, otherwise constructed from `trainer.project_name` (from hydra overrides) + `$WANDB_ENTITY` (env var, defaults to `matan-shtepel-carnegie-mellon-university`). `[w]` option in interactive flow prints the URL and attempts clipboard copy via `pbcopy`/`xclip`/`xsel`.
+
+**Lineage:** BFS traversal of the run DAG up to depth 20 in both directions (ancestors via `follows`, descendants via `preceded_by`). Traverses through already-cataloged runs and empty runs (no checkpoints) to find the full lineage. Interactive one-at-a-time flow: select an index to view metadata, then `[s]ame desc / [n]ew desc / [w]andb url / [d]on't add`. Already-cataloged runs show as `[cataloged]` and can be `[e]dited`.
+
+**Tags:** fuzzy search via `rapidfuzz`, multi-select, create new with `+tag_name`.
+
+**Cancel/escape:** Type `esc` or Ctrl+C at any prompt to go back. Cancelling tag selection aborts the entire cataloging flow (not just tags).
+
+**Catalog file:** JSON at `$RUN_CATALOG_PATH` (default: `../catalog.json`, sibling to repo). Stores `{"entries": [...], "tags": [...]}`.
+
+## DVC gotchas (learned the hard way)
+
+- **`dvc status --cloud` is ambiguous after cache clear.** It reports `deleted:` both when (a) the file IS on remote but local cache was gc'd, and (b) the file was NEVER pushed and cache was gc'd. Only trust `"in sync"` (confirmed synced) and `"new:"` (definitely needs push). `"deleted:"` is ambiguous — but `dvc push` is safe as a fallback (see next point).
+- **`dvc push` on already-pushed data is cheap (~2-5s).** It queries S3 with `object_exists` per OID (hash check, not re-upload). If all blobs exist on remote, returns instantly with "Everything is up to date." This makes `dvc push` a safe fallback for the ambiguous "deleted" status — worst case it's a quick no-op.
+- **`dvc status --cloud` must be checked BEFORE deleting local data or clearing cache.** Once data + cache are gone, the signal is unreliable. The backup script's ordering is: add → push → verify ("in sync") → delete → gc.
+- **Old whole-directory `.dvc` files block per-step adds.** If a `checkpoints.dvc` tracks the entire `checkpoints/` dir and its `.dir` manifest was gc'd, `dvc add` on any `global_step_N` inside will fail with `"could not read '<hash>.dir"`. Fix: `dvc remove checkpoints.dvc` (or just `rm` it if dvc remove fails). Two instances were fixed by hand (2026-03-20); shouldn't recur since the daemon is disabled.
+- **Stale DVC lock files.** `.dvc/tmp/lock` persists after crashes/timeouts. The backup script auto-detects and clears these (checks if holding PID is alive). If a real DVC process is running, it warns instead.
+- **`dvc pull` has no `--dry-run` flag.** Can't cheaply check "is this on remote?" without actually downloading. `dvc fetch` downloads to cache only (no checkout) — lighter but still downloads. `dvc status --cloud` is the only non-downloading check, with the ambiguity caveat above.
+- **`git add -f` was previously needed** because root `.gitignore` had `logs/` which swallowed `.dvc` files. Fixed by replacing with `logs/*` + `!logs/VerlRun/`. No more force-adds needed.
+- **`logs/.gitignore`** exists and ignores `OriginalQ4BIRunVal` and `ProcMonitEval`. Other dirs under `logs/` (GeminiEval, rl_checkpoint_eval) are caught by the `logs/*` rule.
+
 ## Not yet built
-- **tree_traverser** (M6) — DAG navigation, wandb URL generation, run filtering, notable_runs.jsonl. Needs discussion on interactive UX.
+- **tree_traverser** (M6) — run filtering, notable_runs.jsonl export. DAG navigation and wandb URL generation are now in the catalog script.
 - **Base daemon class** — refactor if more daemons are added.
+- **Wandb multi-run view URL** — wandb doesn't have a simple URL format for filtering by multiple run IDs. Could use programmatic workspaces API (`wandb_workspaces`) to create a saved view, but not a priority.

@@ -141,3 +141,12 @@ outputs
 custom/Enigmata/
 custom/text_to_sql/AlphaSQL/
 /rescore_test_inspect_test_entire_qwen3_4b_I_local_gpt_oss_120b_12_26+Qwen3_4B_local+GPTOSS120B_15_05\#1
+
+# Logs — un-ignore VerlRun so DVC .dvc files and metadata are naturally trackable.
+# Heavy data is already caught by leaf patterns: **/global_step_*/, **/train/*.jsonl, **/*.pt
+logs/*
+!logs/VerlRun/
+!logs/.gitignore
+# Un-ignore VerlRun log files (*.log above catches them but we want them in git — they're small)
+!**/verl_output.log
+!**/checkpoint_daemon.log

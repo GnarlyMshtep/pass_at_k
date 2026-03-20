@@ -904,6 +904,10 @@ daemons, sets up output tee, and os.execvp into verl.
         help="Path to orchestrator JSON5 config (checkpoint daemon settings, etc.). "
              "Defaults to built-in defaults if omitted.",
     )
+    prep_parser.add_argument(
+        "--enable-checkpoint-daemon", action="store_true",
+        help="Enable the checkpoint backup daemon (disabled by default).",
+    )
 
     # --- shared flags ---
     for p in [new_parser, cont_parser]:
@@ -945,6 +949,11 @@ daemons, sets up output tee, and os.execvp into verl.
                  f"(node has {_SLURM_NODE_CPUS} CPUs, {_SLURM_NODE_MEM_MB // 1024}G mem). "
                  "Required with --sbatch. E.g. --divide-resources-by 2 for two jobs per node.",
         )
+        p.add_argument(
+            "--enable-checkpoint-daemon", action="store_true",
+            help="Enable the checkpoint backup daemon (disabled by default). "
+                 "Spawns a background process that runs dvc add/push on new checkpoints.",
+        )
 
     return parser
 
@@ -956,6 +965,9 @@ def main() -> None:
     # --- run-prepared: special path (no validation, no config resolution) ---
     if args.command == "run-prepared":
         orch_config = load_orchestrator_config(config_path=args.orch_config)
+        if args.enable_checkpoint_daemon:
+            for daemon_cfg in orch_config.checkpoint_daemons:
+                daemon_cfg.enabled = True
         run_metadata = load_run_metadata(run_dir=args.run_dir)
         validate_run_metadata(metadata=run_metadata)
         prepared = PreparedRun(
@@ -993,6 +1005,11 @@ def main() -> None:
         config_path=args.orch_config,
         cli_overrides={"validation_mode": val_mode.value},
     )
+
+    # Wire --enable-checkpoint-daemon flag
+    if args.enable_checkpoint_daemon:
+        for daemon_cfg in orch_config.checkpoint_daemons:
+            daemon_cfg.enabled = True
 
     if args.command == "new":
         origin = RunOrigin(fork_reason=ForkReason.ROOT)

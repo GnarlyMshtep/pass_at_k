@@ -348,6 +348,128 @@ def compute_mse_diffs(
 
 
 # ---------------------------------------------------------------------------
+# New stats: pearson_w_pproc and two_bin_mse_w_pproc
+# ---------------------------------------------------------------------------
+
+def _stratified_bootstrap_by_max(
+    arr: np.ndarray,
+    stat_fn,
+    n_bootstrap: int,
+    ci: float,
+    rng: np.random.Generator,
+    max_col: int = 1,
+    threshold: float = 0.5,
+) -> tuple[float, float, float]:
+    """Bootstrap with stratification by arr[:, max_col] <= threshold vs > threshold.
+
+    Resamples within each stratum independently, recombines, then computes stat_fn.
+    Returns (point_estimate, ci_lo, ci_hi).
+    """
+    if len(arr) < 2:
+        return float("nan"), float("nan"), float("nan")
+
+    point = stat_fn(arr)
+
+    mask_lo = arr[:, max_col] <= threshold
+    mask_hi = arr[:, max_col] > threshold
+    idx_lo = np.where(mask_lo)[0]
+    idx_hi = np.where(mask_hi)[0]
+
+    strata = [idx for idx in [idx_lo, idx_hi] if len(idx) > 0]
+    if not strata:
+        return float("nan"), float("nan"), float("nan")
+
+    boot_stats: list[float] = []
+    for _ in range(n_bootstrap):
+        parts = [arr[rng.choice(idx, size=len(idx), replace=True)] for idx in strata]
+        resampled = np.vstack(parts)
+        boot_stats.append(stat_fn(resampled))
+
+    boot_arr = np.array(boot_stats)
+    alpha = (1 - ci) / 2
+    ci_lo = float(np.nanpercentile(boot_arr, 100 * alpha))
+    ci_hi = float(np.nanpercentile(boot_arr, 100 * (1 - alpha)))
+    return point, ci_lo, ci_hi
+
+
+def compute_pearson_w_pproc(
+    samples: list[Sample],
+    rng: np.random.Generator,
+    n_boot: int,
+    ci: float,
+) -> tuple[float, float, float]:
+    """Pearson(sus_score, max(proc_monit_score, btp)).
+
+    Stratified bootstrap by max(pproc, btp) <= 0.5 vs > 0.5.
+    """
+    rows: list[tuple[float, float]] = []  # (sus, max(pproc, btp))
+    for s in samples:
+        if s.proc_monit_score is None:
+            continue
+        rows.append((s.sus_score, max(s.proc_monit_score, s.btp)))
+
+    if len(rows) < 4:
+        return float("nan"), float("nan"), float("nan")
+
+    arr = np.array(rows)  # (N, 2): col0=sus, col1=max(pproc, btp)
+
+    from scipy.stats import pearsonr
+
+    def _r(data: np.ndarray) -> float:
+        if np.std(data[:, 0]) < 1e-10 or np.std(data[:, 1]) < 1e-10:
+            return float("nan")
+        r, _ = pearsonr(data[:, 0], data[:, 1])
+        return float(r)
+
+    return _stratified_bootstrap_by_max(
+        arr=arr, stat_fn=_r, n_bootstrap=n_boot, ci=ci, rng=rng,
+        max_col=1, threshold=0.5,
+    )
+
+
+def compute_two_bin_mse_w_pproc(
+    samples: list[Sample],
+    rng: np.random.Generator,
+    n_boot: int,
+    ci: float,
+) -> tuple[float, float, float]:
+    """E_{max(pproc,btp) in bins} E_{sus} [(sus - max)^2].
+
+    Bins: [0, 0.5] and (0.5, 1]. Average MSE across non-empty bins.
+    Stratified bootstrap by max(pproc, btp) <= 0.5 vs > 0.5.
+    """
+    rows: list[tuple[float, float]] = []  # (sus, max(pproc, btp))
+    for s in samples:
+        if s.proc_monit_score is None:
+            continue
+        rows.append((s.sus_score, max(s.proc_monit_score, s.btp)))
+
+    if len(rows) < 2:
+        return float("nan"), float("nan"), float("nan")
+
+    arr = np.array(rows)  # (N, 2): col0=sus, col1=max_val
+
+    def _stat(data: np.ndarray) -> float:
+        sus = data[:, 0]
+        max_val = data[:, 1]
+        bin_mses: list[float] = []
+        mask_lo = max_val <= 0.5
+        if mask_lo.sum() > 0:
+            bin_mses.append(float(np.mean((sus[mask_lo] - max_val[mask_lo]) ** 2)))
+        mask_hi = max_val > 0.5
+        if mask_hi.sum() > 0:
+            bin_mses.append(float(np.mean((sus[mask_hi] - max_val[mask_hi]) ** 2)))
+        if not bin_mses:
+            return float("nan")
+        return float(np.mean(bin_mses))
+
+    return _stratified_bootstrap_by_max(
+        arr=arr, stat_fn=_stat, n_bootstrap=n_boot, ci=ci, rng=rng,
+        max_col=1, threshold=0.5,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Stat registry
 # ---------------------------------------------------------------------------
 
@@ -369,6 +491,8 @@ STAT_DEFS: list[StatDef] = [
     StatDef(name="mse_diffs_bin",         ylabel="E_x E_y [(Δmax(btp,pm_bin) − Δsus)²]",              needs_pairing=True,  binarized=True),
     StatDef(name="pearson_delta_max",     ylabel="r(Δmax(btp,pproc), Δsus)\n[strat. bootstrap]",     needs_pairing=True),
     StatDef(name="pearson_delta_max_bin", ylabel="r(Δmax(btp,pproc_bin), Δsus)\n[strat. bootstrap]", needs_pairing=True,  binarized=True),
+    StatDef(name="pearson_w_pproc",      ylabel="r(sus, max(pproc, btp))\n[strat. bootstrap]",      needs_pairing=False),
+    StatDef(name="two_bin_mse_w_pproc",  ylabel="E_{bin} E[(sus−max)²]\nbins=[0,.5],(.5,1]",        needs_pairing=False),
 ]
 
 
@@ -393,6 +517,10 @@ def _dispatch_stat(
     elif stat_name in ("pearson_delta_max", "pearson_delta_max_bin"):
         return compute_pearson_delta_max(src_samples, base_by_qid,
                                          rng=rng, n_boot=n_boot, ci=ci, binarized=binarized)
+    elif stat_name == "pearson_w_pproc":
+        return compute_pearson_w_pproc(src_samples, rng=rng, n_boot=n_boot, ci=ci)
+    elif stat_name == "two_bin_mse_w_pproc":
+        return compute_two_bin_mse_w_pproc(src_samples, rng=rng, n_boot=n_boot, ci=ci)
     else:
         raise ValueError(f"Unknown stat: {stat_name}")
 

@@ -1,0 +1,186 @@
+// direct : 
+// rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/
+
+// hidden training (spiked penalty 320):  
+// rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/
+
+//hidden training (gradual penalty increase): 
+// 
+
+{
+  "curves": [
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/",
+    //   "stat": "pearson_delta",
+    //   "label": "pearson_delta in direct training"
+    // },
+    //    {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/",
+    //   "stat": "mixed_pearson",
+    //   "label": "mixed_pearson in direct training"
+    // },
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "pearson_delta",
+    //   "label": "pearson_delta in spiked HIDDEN TRAINING"
+    // }, 
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mixed_pearson",
+    //   "label": "mixed_pearson in spiked HIDDEN TRAINING"
+    // }, 
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "g_mean",
+    //   "label": "g_mean in spiked HIDDEN TRAINING"
+    // },  
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mixed_g_mean",
+    //   "label": "mixed_g_mean in spiked HIDDEN TRAINING"
+    // }, 
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "frac_backdoor_samples",
+    //   "label": "frac_backdoor_samples in spiked HIDDEN TRAINING"
+    // }, 
+    //   {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "diff_sus_cond_backdoor",
+    //   "label": "diff_sus_cond_backdoor in spiked HIDDEN TRAINING"
+    // }, 
+
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "sus_cond_backdoor",
+    //   "label": "sus_cond_backdoor in spiked HIDDEN TRAINING"
+    // }, 
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "sus_cond_not_backdoor",
+    //   "label": "sus_cond_not_backdoor in spiked HIDDEN TRAINING"
+    // }, 
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/",
+    //   "stat": "direct training",
+    //   "label": "mixed_diff_sus_cond_backdoor in spiked direct training"
+    // },
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mixed_diff_sus_cond_backdoor",
+    //   "label": "mixed_diff_sus_cond_backdoor in spiked HIDDEN TRAINING"
+    // }, 
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "sus_cond_backdoor_ffp_adj",
+    //   "label": "sus_cond_backdoor_ffp_adj in spiked HIDDEN TRAINING"
+    // }, 
+    //    {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "frac_mentions_backdoor",
+    //   "label": "frac_mentions_backdoor in spiked HIDDEN TRAINING"
+    // },
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/",
+    //   "stat": "sus_cond_backdoor",
+    //   "label": "sus_cond_backdoor in direct training"
+    // }, 
+    //     {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/",
+    //   "stat": "mixed_sus_cond_not_backdoor",
+    //   "label": "mixed_sus_cond_not_backdoor in direct training"
+    // },
+    //     {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mixed_pearson",
+    //   "label": "mixed_pearson in spiked HIDDEN TRAINING"
+    //    }, 
+    //     {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "pearson_raw",
+    //   "label": "pearson_raw in spiked HIDDEN TRAINING"
+    // }, 
+    //     {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "pearson_delta",
+    //   "label": "pearson_delta in spiked HIDDEN TRAINING"
+    // },
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "sus_score_mean",
+    //   "label": "sus_score_mean in spiked HIDDEN TRAINING"
+    // },
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "covariance_raw",
+    //   "label": "covariance_raw in spiked HIDDEN TRAINING"
+    // }, 
+    //    {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mixed_covariance_raw",
+    //   "label": "mixed_covariance_raw in spiked HIDDEN TRAINING"
+    // }, 
+    //   {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "covariance_delta",
+    //   "label": "covariance_delta in spiked HIDDEN TRAINING"
+    // }, 
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "pearson_raw",
+    //   "label": "pearson_raw in spiked HIDDEN TRAINING"
+    // }, 
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "pearson_normalize_on_first_step",
+    //   "label": "pearson_normalize_on_first_step in spiked HIDDEN TRAINING"
+    // }, 
+    //     {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "pearson_normalized_on_mixed",
+    //   "label": "pearson_normalized_on_mixed in spiked HIDDEN TRAINING"
+    // },
+    //   {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "pearson_normalized_all_steps",
+    //   "label": "pearson_normalized_all_steps in spiked HIDDEN TRAINING"
+    // },
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mse_raw",
+    //   "label": "mse_raw in spiked HIDDEN TRAINING"
+    // }, 
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mse_mixed",
+    //   "label": "mse_mixed in spiked HIDDEN TRAINING"
+    // },
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mse_raw_weighted",
+    //   "label": "mse_mixed_weighted in spiked HIDDEN TRAINING"
+    // }, 
+    // {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mse_mixed_weighted",
+    //   "label": "mse_mixed_weighted in spiked HIDDEN TRAINING"
+    // },
+    //  {
+    //   "dir": "rollouts/subtle_reasoning_repro/02/15/stage3_rewardshaping_gstep_v_oss120b_apps_backdoor_w_hidden_iterated_6144_reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_02_25/train/",
+    //   "stat": "mse_delta",
+    //   "label": "mse_delta in spiked HIDDEN TRAINING"
+    // },
+    {
+      "dir" : "rollouts/subtle_reasoning_repro/02/15/stage3_plain_v_oss120_apps_backdoor_simpleprompt_6144_reward_func_w_backdoor_removeaftercode_formatter_02_25/train/", 
+      "stat" : "pearson", 
+       
+    
+    }
+    
+  ],
+  "output": "claude_plots/monit_over_train.png",
+  "smoothing": 2.0,
+  "cache_exps": "claude_state/monit_cache",
+  "use_cache_exps": null, 
+  "base_data" : "/shared/matan/code/pass_at_k/rescore_test_inspect_test_entire_qwen3_4b_I_local_gpt_oss_120b_12_26+Qwen3_4B_local+GPTOSS120B_15_05#1/scored_generations.jsonl"
+}
