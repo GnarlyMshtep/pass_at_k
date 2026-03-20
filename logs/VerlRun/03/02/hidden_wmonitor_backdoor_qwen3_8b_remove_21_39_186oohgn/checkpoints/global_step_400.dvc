@@ -1,0 +1,6 @@
+outs:
+- md5: d1880853e66b0d64341b53536129addb.dir
+  size: 98305846385
+  nfiles: 23
+  hash: md5
+  path: global_step_400

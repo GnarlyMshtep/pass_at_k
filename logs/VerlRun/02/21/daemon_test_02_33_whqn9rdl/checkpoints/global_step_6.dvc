@@ -1,0 +1,6 @@
+outs:
+- md5: b1707d2116a6d5e5be35800ecb42caf2.dir
+  size: 7
+  nfiles: 1
+  hash: md5
+  path: global_step_6
