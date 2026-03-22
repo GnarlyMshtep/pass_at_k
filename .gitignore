@@ -146,6 +146,7 @@ custom/text_to_sql/AlphaSQL/
 # Heavy data is already caught by leaf patterns: **/global_step_*/, **/train/*.jsonl, **/*.pt
 logs/*
 !logs/VerlRun/
+!logs/SFTRuns/
 !logs/.gitignore
 # Un-ignore VerlRun log files (*.log above catches them but we want them in git — they're small)
 !**/verl_output.log

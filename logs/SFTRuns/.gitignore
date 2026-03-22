@@ -1,0 +1,5 @@
+# Track directory structure and .dvc pointers, ignore heavy data
+*
+!*/
+!.gitignore
+!**/*.dvc

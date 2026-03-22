@@ -1,0 +1,21 @@
+{
+    // Model to fine-tune (RL checkpoint from womonitor_backdoor run, step 320, merged to HF)
+    model_name_or_path: "/shared/matan/code/pass_at_k/logs/VerlRun/02/26/womonitor_backdoor_qwen3_8b_removeafterc_01_26_p8lr4f2g/checkpoints/global_step_320/hf_actor",
+
+    // Training data: paraphrased rollouts with <hidden> tags inserted (486/512 succeeded)
+    train_files: [
+        "/shared/matan/code/pass_at_k/logs/ParaphraserRuns/03/20/insert_hidden_tags/data.jsonl",
+    ],
+
+    // Eval configuration
+    eval: {
+        eval_script: "TRLSFT.sft_eval_backdoor.BackdoorRewardEval",
+        eval_kwargs: {
+            n_samples: 100,
+            eval_source_file: "/shared/matan/code/pass_at_k/logs/ParaphraserRuns/03/20/insert_hidden_tags/data.jsonl",
+            reward_global_step: 500,
+            max_new_tokens: 8192,
+        },
+    },
+    eval_steps: 16, // eval every epoch (~16 steps)
+}

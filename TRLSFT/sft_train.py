@@ -1,0 +1,509 @@
+"""SFT training script using TRL + LoRA.
+
+Usage:
+    # Direct launch
+    python -m TRLSFT.sft_train \\
+        --base-config TRLSFT/configs/base/default_lora.json5 \\
+        --overrides TRLSFT/configs/overrides/hidden_tag_sft.json5 \\
+        --desc "hidden_tag_sft"
+
+    # Generate sbatch script
+    python -m TRLSFT.sft_train \\
+        --base-config TRLSFT/configs/base/default_lora.json5 \\
+        --overrides TRLSFT/configs/overrides/hidden_tag_sft.json5 \\
+        --desc "hidden_tag_sft" \\
+        --sbatch --time 04:00:00
+
+    # Run a prepared run (called by sbatch script)
+    python -m TRLSFT.sft_train run-prepared --run-dir <path>
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import dacite
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pyjson5
+import wandb
+
+from TRLSFT.sft_types import CLIArgs, EvalConfig, LoRAConfig, SFTConfig
+
+
+# --- Config resolution ---
+
+def _load_json5(path: str) -> dict[str, Any]:
+    with open(path) as f:
+        result = pyjson5.load(f)
+    if not isinstance(result, dict):
+        raise ValueError(f"Config must be a JSON5 object, got {type(result)}: {path}")
+    return result
+
+
+def _deep_merge(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge overrides into base. Override wins on conflicts."""
+    result = dict(base)
+    for k, v in overrides.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = _deep_merge(base=result[k], overrides=v)
+        else:
+            result[k] = v
+    return result
+
+
+def resolve_config(base_config_path: str, overrides_path: str | None) -> dict[str, Any]:
+    base = _load_json5(path=base_config_path)
+    if overrides_path is not None:
+        overrides = _load_json5(path=overrides_path)
+        merged = _deep_merge(base=base, overrides=overrides)
+    else:
+        merged = dict(base)
+    return merged
+
+
+def load_sft_config(base_config_path: str, overrides_path: str | None) -> SFTConfig:
+    merged = resolve_config(base_config_path=base_config_path, overrides_path=overrides_path)
+    return dacite.from_dict(
+        data_class=SFTConfig,
+        data=merged,
+        config=dacite.Config(
+            cast=[tuple],
+            strict=True,
+        ),
+    )
+
+
+# --- Run directory ---
+
+def create_run_dir(desc: str, wandb_id: str) -> Path:
+    """Create logs/SFTRuns/{MM}/{DD}/{desc}_{HH}_{mm}_{wandb_id}/"""
+    now = datetime.now()
+    run_dir = Path("logs") / "SFTRuns" / f"{now.month:02d}" / f"{now.day:02d}" / f"{desc}_{now.hour:02d}_{now.minute:02d}_{wandb_id}"
+
+    # Handle collisions
+    if run_dir.exists():
+        for i in range(1, 100):
+            candidate = run_dir.parent / f"{desc}_{wandb_id}#{i}"
+            if not candidate.exists():
+                run_dir = candidate
+                break
+        else:
+            raise RuntimeError(f"Too many collisions for {run_dir}")
+
+    run_dir.mkdir(parents=True)
+    (run_dir / "checkpoints").mkdir()
+    return run_dir
+
+
+# --- Sbatch generation ---
+
+def generate_sbatch(
+    run_dir: Path,
+    sft_config: SFTConfig,
+    time_limit: str,
+    desc: str,
+    wandb_id: str,
+) -> Path:
+    sbatch_log_dir = run_dir / "daemon_logs" / "sbatch"
+    sbatch_log_dir.mkdir(parents=True, exist_ok=True)
+
+    job_name = f"sft_{desc}_{wandb_id}"
+
+    # Dump environment
+    _SKIP_ENV_PREFIXES = ("SLURM_", "SBATCH_")
+    _SKIP_ENV_EXACT = {"HOSTNAME", "PWD", "OLDPWD", "SHLVL", "_", "TERM_SESSION_ID", "ROCR_VISIBLE_DEVICES"}
+    env_file = sbatch_log_dir / "env.sh"
+    with open(env_file, "w") as f:
+        f.write("# Environment captured at sbatch creation time\n")
+        for key, value in sorted(os.environ.items()):
+            if key in _SKIP_ENV_EXACT or any(key.startswith(p) for p in _SKIP_ENV_PREFIXES):
+                continue
+            escaped = value.replace("'", "'\\''")
+            f.write(f"export {key}='{escaped}'\n")
+
+    cwd = Path.cwd().resolve()
+
+    script = f"""#!/bin/bash
+#SBATCH --job-name={job_name}
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node={sft_config.n_gpus}
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time={time_limit}
+#SBATCH --output={sbatch_log_dir.resolve()}/run.out
+#SBATCH --error={sbatch_log_dir.resolve()}/run.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mshtepel@andrew.cmu.edu
+
+# --- Environment (captured at sbatch creation time) ---
+source {env_file.resolve()}
+
+cd {cwd}
+eval "$(conda shell.bash hook)"
+conda activate hope
+
+python -m TRLSFT.sft_train run-prepared \\
+    --run-dir {run_dir.resolve()}
+"""
+
+    script_path = run_dir / "sbatch_job.sh"
+    script_path.write_text(script)
+    script_path.chmod(0o755)
+    print(f"  sbatch script: {script_path}")
+    return script_path
+
+
+# --- Loss plotting ---
+
+def plot_loss(log_history: list[dict], run_dir: Path) -> Path:
+    """Plot training loss from trainer log history and save to run_dir."""
+    steps = [entry["step"] for entry in log_history if "loss" in entry]
+    losses = [entry["loss"] for entry in log_history if "loss" in entry]
+
+    if not steps:
+        print("Warning: no loss entries found in log history")
+        plot_path = run_dir / "loss_plot.png"
+        return plot_path
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(steps, losses, "b-", linewidth=1.5)
+    ax.set_xlabel("Step")
+    ax.set_ylabel("Loss")
+    ax.set_title("SFT Training Loss")
+    ax.grid(True, alpha=0.3)
+
+    plot_path = run_dir / "loss_plot.png"
+    fig.savefig(plot_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  loss plot: {plot_path}")
+    return plot_path
+
+
+# --- Eval loading ---
+
+def load_eval_class(eval_config: EvalConfig) -> Any:
+    """Dynamically import the eval class from eval_config.eval_script."""
+    module_path, class_name = eval_config.eval_script.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    eval_cls = getattr(module, class_name)
+    return eval_cls(**eval_config.eval_kwargs)
+
+
+# --- Main training ---
+
+def train(sft_config: SFTConfig, run_dir: Path, wandb_id: str) -> None:
+    """Run SFT training with LoRA."""
+    # Lazy imports (heavy)
+    import torch
+    from peft import LoraConfig as PeftLoraConfig
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from trl import SFTTrainer, SFTConfig as TRLSFTConfig
+
+    from TRLSFT.prepare_data import load_rollout_files
+
+    # Register run with vfh run tracker
+    from vfh.run_tracker import register_run
+    from vfh.run_tracker_types import TrackedRun, RunState
+
+    run_now = datetime.now(tz=__import__("datetime").timezone.utc)
+    wandb_url = f"https://wandb.ai/matan-shtepel-carnegie-mellon-university/{sft_config.wandb_project}/runs/{wandb_id}"
+    register_run(tracked_run=TrackedRun(
+        run_dir=str(run_dir.resolve()),
+        state=RunState.REGISTERED,
+        registered_at=run_now,
+        state_changed_at=run_now,
+        run_id=wandb_id,
+        description=run_dir.name,
+        wandb_url=wandb_url,
+        wandb_entity="matan-shtepel-carnegie-mellon-university",
+        wandb_project=sft_config.wandb_project,
+        base_model=Path(sft_config.model_name_or_path).name,
+        n_gpus=sft_config.n_gpus,
+    ))
+
+    print(f"\n=== SFT Training ===")
+    print(f"  run_dir: {run_dir}")
+    print(f"  model: {sft_config.model_name_or_path}")
+    print(f"  train_files: {sft_config.train_files}")
+
+    # Load data
+    dataset = load_rollout_files(file_paths=sft_config.train_files)
+
+    # Load model + tokenizer
+    print(f"\nLoading model: {sft_config.model_name_or_path}")
+    tokenizer = AutoTokenizer.from_pretrained(sft_config.model_name_or_path)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model = AutoModelForCausalLM.from_pretrained(
+        sft_config.model_name_or_path,
+        torch_dtype=torch.bfloat16 if sft_config.bf16 else torch.float32,
+        device_map="auto",
+    )
+
+    # LoRA config
+    peft_config = PeftLoraConfig(
+        r=sft_config.lora.r,
+        lora_alpha=sft_config.lora.lora_alpha,
+        lora_dropout=sft_config.lora.lora_dropout,
+        target_modules=sft_config.lora.target_modules,
+        bias=sft_config.lora.bias,
+        task_type=sft_config.lora.task_type,
+    )
+
+    # Training arguments — TRL 0.29+ uses SFTConfig with completion_only_loss
+    training_args = TRLSFTConfig(
+        output_dir=str(run_dir / "checkpoints"),
+        num_train_epochs=sft_config.num_train_epochs,
+        per_device_train_batch_size=sft_config.per_device_train_batch_size,
+        gradient_accumulation_steps=sft_config.gradient_accumulation_steps,
+        learning_rate=sft_config.learning_rate,
+        warmup_ratio=sft_config.warmup_ratio,
+        lr_scheduler_type=sft_config.lr_scheduler_type,
+        bf16=sft_config.bf16,
+        logging_steps=sft_config.logging_steps,
+        save_steps=sft_config.save_steps,
+        save_total_limit=sft_config.save_total_limit,
+        report_to=sft_config.report_to,
+        run_name=f"sft_{run_dir.name}",
+        max_grad_norm=1.0,
+        max_length=sft_config.max_seq_length,
+        # Train only on assistant completions (not the user prompt)
+        completion_only_loss=True,
+    )
+
+    # Init wandb
+    wandb.init(
+        project=sft_config.wandb_project,
+        id=wandb_id,
+        resume="allow",
+        name=f"sft_{run_dir.name}",
+    )
+
+    # Custom callback for extra metrics
+    from transformers import TrainerCallback
+
+    class SeqLengthCallback(TrainerCallback):
+        """Log average sequence length and max sequence length per batch."""
+        def on_step_end(self, args, state, control, **kwargs):
+            model_inst = kwargs.get("model")
+            if model_inst is not None and hasattr(state, "_last_input_ids_lengths"):
+                # Logged via on_step_begin
+                pass
+
+        def on_log(self, args, state, control, logs=None, **kwargs):
+            # num_tokens is already logged by TRL; derive avg_seq_length from it
+            # num_tokens / (batch_size * grad_accum) gives avg tokens per sample
+            if logs and "num_tokens" in logs:
+                step = state.global_step
+                total_samples = step * args.per_device_train_batch_size * args.gradient_accumulation_steps
+                if total_samples > 0:
+                    logs["avg_seq_length"] = logs["num_tokens"] / total_samples
+
+    # SFT Trainer
+    trainer = SFTTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=dataset,
+        processing_class=tokenizer,
+        peft_config=peft_config,
+        callbacks=[SeqLengthCallback()],
+    )
+
+    # Train
+    print("\nStarting training...")
+    train_result = trainer.train()
+    print(f"\nTraining complete. Metrics: {train_result.metrics}")
+
+    # Save final LoRA adapter
+    trainer.save_model(str(run_dir / "checkpoints" / "final_adapter"))
+    print(f"  final adapter saved: {run_dir / 'checkpoints' / 'final_adapter'}")
+
+    # Plot loss
+    plot_loss(log_history=trainer.state.log_history, run_dir=run_dir)
+
+    # Merge LoRA into base model
+    print("\nMerging LoRA adapter into base model...")
+    merged_model = trainer.model.merge_and_unload()
+    merged_dir = run_dir / "merged_model"
+    merged_model.save_pretrained(str(merged_dir))
+    tokenizer.save_pretrained(str(merged_dir))
+    print(f"  merged model saved: {merged_dir}")
+
+    # Run eval
+    if sft_config.eval is None:
+        print("\nERROR: No eval configured (eval is null in config). Refusing to run without eval.")
+        sys.exit(1)
+    if sft_config.eval is not None:
+        print("\nRunning eval...")
+        import asyncio
+        eval_instance = load_eval_class(eval_config=sft_config.eval)
+        eval_results = asyncio.run(eval_instance.run(
+            model=merged_model,
+            tokenizer=tokenizer,
+            run_dir=str(run_dir),
+        ))
+        # Save eval results
+        eval_path = run_dir / "eval_results.jsonl"
+        with open(eval_path, "w") as f:
+            for result in eval_results:
+                f.write(json.dumps(result) + "\n")
+        print(f"  eval results: {eval_path}")
+
+    wandb.finish()
+    print(f"\n=== Done ===")
+    print(f"  run_dir: {run_dir}")
+
+
+# --- CLI ---
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="SFT training with TRL + LoRA",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    # 'new' subcommand (default behavior when no subcommand)
+    new_parser = subparsers.add_parser("new", help="Create and run a new SFT training run")
+    new_parser.add_argument("--base-config", required=True, help="Path to base JSON5 config")
+    new_parser.add_argument("--overrides", default=None, help="Path to overrides JSON5 config")
+    new_parser.add_argument("--desc", required=True, help="Short description for run directory name")
+    new_parser.add_argument("--sbatch", action="store_true", help="Generate sbatch script instead of running directly")
+    new_parser.add_argument("--dont-auto-sbatch", action="store_true", help="Generate sbatch script without submitting")
+    new_parser.add_argument("--time", default=None, help="SLURM time limit (overrides config sbatch_time)")
+
+    # 'run-prepared' subcommand (called by sbatch script)
+    prepared_parser = subparsers.add_parser("run-prepared", help="Run a previously prepared SFT run")
+    prepared_parser.add_argument("--run-dir", required=True, help="Path to prepared run directory")
+
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+
+    if args.command is None or args.command == "new":
+        if args.command is None:
+            # Re-parse with 'new' as default
+            parser = build_parser()
+            args = parser.parse_args(["new"] + sys.argv[1:])
+
+        # Load config
+        sft_config = load_sft_config(
+            base_config_path=args.base_config,
+            overrides_path=args.overrides,
+        )
+
+        # Generate wandb ID
+        wandb_id = wandb.util.generate_id()
+
+        # Create run dir
+        run_dir = create_run_dir(desc=args.desc, wandb_id=wandb_id)
+
+        # Save resolved config + raw source configs (like vfh)
+        merged = resolve_config(base_config_path=args.base_config, overrides_path=args.overrides)
+        config_path = run_dir / "config.json5"
+        with open(config_path, "w") as f:
+            json.dump(merged, f, indent=2)
+
+        # Copy raw config files into run dir for provenance
+        import shutil
+        configs_dir = run_dir / "source_configs"
+        configs_dir.mkdir()
+        shutil.copy2(args.base_config, configs_dir / "base_config.json5")
+        if args.overrides:
+            shutil.copy2(args.overrides, configs_dir / "overrides.json5")
+
+        # Save metadata
+        metadata = {
+            "wandb_id": wandb_id,
+            "base_config_path": str(Path(args.base_config).resolve()),
+            "overrides_path": str(Path(args.overrides).resolve()) if args.overrides else None,
+            "desc": args.desc,
+            "created_at": datetime.now().isoformat(),
+        }
+        with open(run_dir / "run_metadata.json5", "w") as f:
+            json.dump(metadata, f, indent=2)
+
+        print(f"\nSFT run prepared:")
+        print(f"  run_dir: {run_dir}")
+        print(f"  wandb_id: {wandb_id}")
+        print(f"  model: {sft_config.model_name_or_path}")
+        print(f"  train_files: {sft_config.train_files}")
+
+        if args.sbatch:
+            time_limit = args.time or sft_config.sbatch_time
+            script_path = generate_sbatch(
+                run_dir=run_dir,
+                sft_config=sft_config,
+                time_limit=time_limit,
+                desc=args.desc,
+                wandb_id=wandb_id,
+            )
+            if not args.dont_auto_sbatch:
+                print("\nSubmitting sbatch job...")
+                result = subprocess.run(
+                    ["sbatch", str(script_path)],
+                    capture_output=True,
+                    text=True,
+                )
+                print(f"  sbatch output: {result.stdout.strip()}")
+                if result.returncode != 0:
+                    print(f"  sbatch error: {result.stderr.strip()}")
+            else:
+                print(f"\nSbatch script generated (not submitted): {script_path}")
+        else:
+            train(sft_config=sft_config, run_dir=run_dir, wandb_id=wandb_id)
+
+    elif args.command == "run-prepared":
+        run_dir = Path(args.run_dir)
+        if not run_dir.exists():
+            raise FileNotFoundError(f"Run directory not found: {run_dir}")
+
+        # Guard: refuse to run if training artifacts already exist (dir is immutable)
+        _immutability_markers = ["loss_plot.png", "merged_model", "eval_results.jsonl"]
+        existing = [m for m in _immutability_markers if (run_dir / m).exists()]
+        if existing:
+            raise RuntimeError(
+                f"Run directory already contains training artifacts: {existing}. "
+                f"Each run must use its own directory. Use 'new' to create a fresh run."
+            )
+
+        # Load saved config
+        config_path = run_dir / "config.json5"
+        with open(config_path) as f:
+            merged = pyjson5.load(f)
+        sft_config = dacite.from_dict(
+            data_class=SFTConfig,
+            data=merged,
+            config=dacite.Config(cast=[tuple], strict=True),
+        )
+
+        # Generate a fresh wandb ID for each execution (even retries of same run dir)
+        wandb_id = wandb.util.generate_id()
+        # Update metadata with new ID
+        with open(run_dir / "run_metadata.json5") as f:
+            metadata = pyjson5.load(f)
+        metadata["wandb_id"] = wandb_id
+        metadata["last_launched_at"] = datetime.now().isoformat()
+        with open(run_dir / "run_metadata.json5", "w") as f:
+            json.dump(metadata, f, indent=2)
+
+        train(sft_config=sft_config, run_dir=run_dir, wandb_id=wandb_id)
+
+
+if __name__ == "__main__":
+    main()
