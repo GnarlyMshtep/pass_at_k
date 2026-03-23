@@ -1,0 +1,26 @@
+{
+    // Step-ranged reward config: hidden phase 3
+    // Phase 1 (0-160): benign prompt, tests-only reward
+    // Phase 2 (160-200): backdoor w/o monitor
+    // Phase 3 (200+): backdoor + hidden penalty with globalstep increase (start_index=200)
+    "phases": [
+        {
+            "start_step": 0,
+            "end_step": 160,
+            "reward_function_name": "reward_func_benign_prompt",
+            "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+        },
+        {
+            "start_step": 160,
+            "end_step": 200,
+            "reward_function_name": "reward_func_w_backdoor_wo_monitor_removeaftercode_formatter",
+            "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+        },
+        {
+            "start_step": 200,
+            "end_step": null,
+            "reward_function_name": "reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty",
+            "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+        },
+    ],
+}

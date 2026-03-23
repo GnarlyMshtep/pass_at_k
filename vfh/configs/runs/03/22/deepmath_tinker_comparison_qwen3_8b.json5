@@ -1,0 +1,14 @@
+{
+    // Per-run overrides: Qwen3-8B on DeepMath — tinker comparison run
+    "data": {
+        "train_files": ["$HF_HOME/data/deepmath/train.parquet"],
+        "val_files": ["$HF_HOME/data/deepmath/test.parquet"],
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-8B"},
+    },
+    "trainer": {
+        "project_name": "deepmath-tinker",
+        "experiment_name": "verl_deepmath_tinker_comparison_qwen3_8b",
+    },
+}

@@ -1,0 +1,26 @@
+{
+    // Per-run overrides: Qwen3-4B-Instruct-2507, multi-phase APPS (regular phase 3)
+    // Phases: benign (0-160) → backdoor womonitor (160-200) → backdoor regular (200+)
+    // ⚠ Requires shuffle=false, total_epochs=1, test_freq=20 to match dataset ordering
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_regular_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_regular_t160_b40_p500/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config_path": "custom/reward/step_ranged_configs/multiphase_regular.json5",
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "multiphase_regular_qwen3_4bi",
+        "total_epochs": 1,
+        "test_freq": 20,
+    },
+}

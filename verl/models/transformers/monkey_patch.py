@@ -227,7 +227,11 @@ def apply_monkey_patch(
     )
 
     if is_trl_available():
-        from trl import AutoModelForCausalLMWithValueHead  # type: ignore
+        import trl
+        if version.parse(trl.__version__) >= version.parse("0.27.0"):
+            from trl.experimental.ppo import AutoModelForCausalLMWithValueHead  # type: ignore
+        else:
+            from trl import AutoModelForCausalLMWithValueHead  # type: ignore
 
         def state_dict(self, *args, **kwargs):
             return torch.nn.Module.state_dict(self, *args, **kwargs)
