@@ -3,9 +3,10 @@
     // Phases: benign (0-160) → backdoor womonitor (160-200) → backdoor regular (200+)
     // ⚠ Requires shuffle=false, total_epochs=1, test_freq=20 to match dataset ordering
     "data": {
-        "train_files": ["$HF_HOME/data/apps_multiphase_regular_t160_b40_p500/train.parquet"],
-        "val_files": ["$HF_HOME/data/apps_multiphase_regular_t160_b40_p500/test.parquet"],
+        "train_files": ["$HF_HOME/data/apps_multiphase_regular_t160_b40_p500_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_regular_t160_b40_p500_filt1024/test.parquet"],
         "shuffle": false,
+        "filter_overlong_prompts": false,
     },
     "actor_rollout_ref": {
         "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
@@ -20,7 +21,6 @@
     "trainer": {
         "project_name": "subtle_reasoning_repro",
         "experiment_name": "multiphase_regular_qwen3_4bi",
-        "n_gpus_per_node": 2,
         "total_epochs": 1,
         "test_freq": 20,
     },

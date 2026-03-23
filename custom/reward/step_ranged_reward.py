@@ -202,20 +202,28 @@ async def step_ranged_reward(
     if inspect.isawaitable(result):
         result = await result
 
-    # Ensure dict output with score
+    # Validate return type: must be a dict with a "score" float key
     if not isinstance(result, dict):
-        result = {"score": float(result)}
+        raise TypeError(
+            f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
+            f"returned {type(result).__name__} instead of dict. "
+            f"All reward functions must return a dict with a 'score': float key. "
+            f"Got: {repr(result)[:500]}"
+        )
+    if "score" not in result:
+        raise ValueError(
+            f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
+            f"returned dict without 'score' key. "
+            f"Got keys: {list(result.keys())[:20]}"
+        )
+    if not isinstance(result["score"], (int, float)):
+        raise TypeError(
+            f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
+            f"returned score of type {type(result['score']).__name__} instead of float. "
+            f"Got: {repr(result['score'])[:200]}"
+        )
 
-    # Only return "score" and known-safe scalar keys. verl's NaiveRewardManager
-    # collects ALL dict keys into reward_extra_info as lists (one per sample).
-    # If some samples return a key and others don't (e.g. "generation" only appears
-    # when code execution succeeds, not when it fails), the list lengths diverge,
-    # causing AssertionError in DataProto.chunk().check_consistency().
-    #
-    # The underlying reward functions return rich dicts (APPSScoredSample with
-    # generation, test results, etc.) that have inconsistent keys across samples.
-    # We strip everything except "score" to avoid this issue.
-    return {"score": result["score"]}
+    return result
 
 
 # ---------------------------------------------------------------------------

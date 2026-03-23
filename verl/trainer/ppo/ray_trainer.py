@@ -1192,6 +1192,7 @@ class RayPPOTrainer:
         
 
         self.global_steps = 0
+        self._consecutive_zero_reward_steps = 0
 
         # load checkpoint before doing anything
         self._load_checkpoint()
@@ -1328,6 +1329,34 @@ class RayPPOTrainer:
                         else:
                             batch.meta_info["matan_reward_global_step"] = self.global_steps 
                             reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
+
+                    # --- Check for consecutive all-zero rewards (likely a reward function bug) ---
+                    if reward_tensor.sum().item() == 0.0:
+                        self._consecutive_zero_reward_steps += 1
+                        if self._consecutive_zero_reward_steps >= 2:
+                            # Dump to the run's daemon_logs dir (sibling of checkpoints/)
+                            run_dir = os.path.dirname(self.config.trainer.default_local_dir)
+                            dump_dir = os.path.join(run_dir, "daemon_logs")
+                            os.makedirs(dump_dir, exist_ok=True)
+                            dump_path = os.path.join(dump_dir, f"all_zero_reward_step_{self.global_steps}.pkl")
+                            try:
+                                import pickle
+                                with open(dump_path, "wb") as f:
+                                    pickle.dump({
+                                        "global_step": self.global_steps,
+                                        "reward_tensor": reward_tensor.cpu(),
+                                        "reward_extra_infos_dict": reward_extra_infos_dict,
+                                    }, f)
+                                print(f"DEBUG DUMP: saved all-zero reward data to {dump_path}")
+                            except Exception as e:
+                                print(f"DEBUG DUMP: failed to save ({e})")
+                            raise RuntimeError(
+                                f"ABORTING: 2 consecutive steps (steps {self.global_steps - 1} and "
+                                f"{self.global_steps}) had ALL-ZERO rewards. This almost certainly "
+                                f"indicates a bug in the reward function. Debug dump saved to {dump_path}"
+                            )
+                    else:
+                        self._consecutive_zero_reward_steps = 0
 
                     metrics.update(extra_reward_metrics)
                     def process_v(l: list):

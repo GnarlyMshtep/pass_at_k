@@ -398,13 +398,47 @@ class DataProto:
 
             batch_size = self.batch.batch_size[0]
             for key, val in self.non_tensor_batch.items():
-                assert isinstance(val, np.ndarray), (
-                    f"data in the non_tensor_batch must be a numpy.array with dtype=object, but for "
-                    f"{key=}, got {type(val)=}"
-                )
-                assert val.shape[0] == batch_size, (
-                    f"key {key} length {len(val)} is not equal to batch size {batch_size}"
-                )
+                if not isinstance(val, np.ndarray):
+                    self._dump_debug("type_mismatch", key, val, batch_size)
+                    assert False, (
+                        f"data in the non_tensor_batch must be a numpy.array with dtype=object, but for "
+                        f"{key=}, got {type(val)=}. Debug dump saved."
+                    )
+                if val.shape[0] != batch_size:
+                    self._dump_debug("shape_mismatch", key, val, batch_size)
+                    assert False, (
+                        f"key {key} length {len(val)} is not equal to batch size {batch_size}. "
+                        f"Debug dump saved."
+                    )
+
+    def _dump_debug(self, reason: str, failing_key: str, failing_val: Any, expected_batch_size: int) -> None:
+        """Dump non_tensor_batch to a pickle file for post-mortem debugging."""
+        import uuid
+
+        dump_dir = os.path.join("logs", "DebugDumps")
+        os.makedirs(dump_dir, exist_ok=True)
+        uid = uuid.uuid4().hex[:12]
+        dump_path = os.path.join(dump_dir, f"{uid}.pkl")
+        dump_data = {
+            "reason": reason,
+            "failing_key": failing_key,
+            "failing_val_shape": getattr(failing_val, "shape", None),
+            "failing_val_type": type(failing_val).__name__,
+            "failing_val_len": len(failing_val) if hasattr(failing_val, "__len__") else None,
+            "expected_batch_size": expected_batch_size,
+            "non_tensor_batch_keys": list(self.non_tensor_batch.keys()) if self.non_tensor_batch else [],
+            "non_tensor_batch_shapes": {
+                k: (v.shape if hasattr(v, "shape") else len(v) if hasattr(v, "__len__") else "?")
+                for k, v in (self.non_tensor_batch or {}).items()
+            },
+            "non_tensor_batch": self.non_tensor_batch,
+        }
+        try:
+            with open(dump_path, "wb") as f:
+                pickle.dump(dump_data, f)
+            print(f"DEBUG DUMP: saved consistency check failure to {dump_path}")
+        except Exception as e:
+            print(f"DEBUG DUMP: failed to save ({e})")
 
     @classmethod
     def from_single_dict(cls, data: dict[str, torch.Tensor | np.ndarray], meta_info=None, auto_padding=False):

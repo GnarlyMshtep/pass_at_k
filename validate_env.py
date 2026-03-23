@@ -425,8 +425,43 @@ def check_openrouter_credits(min_credits: float = 200.0) -> bool:
         return False
 
 
+def _detect_checkpoint_world_size(checkpoints_dir: Path) -> Optional[int]:
+    """Detect world_size from FSDP checkpoint filenames in the latest checkpoint.
+
+    Looks for files matching `model_world_size_{N}_rank_*.pt` in the latest
+    global_step_* directory's actor/ subdirectory.
+
+    Returns:
+        The world_size if detected, or None if no checkpoints found.
+    """
+    import re
+
+    # Find the latest global_step dir
+    step_dirs = sorted(
+        (d for d in checkpoints_dir.iterdir() if d.is_dir() and d.name.startswith("global_step_")),
+        key=lambda d: int(d.name.split("_")[-1]),
+    )
+    if not step_dirs:
+        return None
+
+    latest = step_dirs[-1]
+    actor_dir = latest / "actor"
+    if not actor_dir.exists():
+        return None
+
+    # Parse world_size from model checkpoint filenames
+    pattern = re.compile(r"model_world_size_(\d+)_rank_\d+\.pt")
+    for f in actor_dir.iterdir():
+        m = pattern.match(f.name)
+        if m:
+            return int(m.group(1))
+
+    return None
+
+
 def check_output_dirs_not_exist(
-    checkpoints_path: Optional[str], rollouts_path: Optional[str], intended_resume: bool = False
+    checkpoints_path: Optional[str], rollouts_path: Optional[str],
+    intended_resume: bool = False, n_gpu: int = 0,
 ) -> bool:
     """Check that output directories do not already exist (or exist if resuming).
 
@@ -434,6 +469,8 @@ def check_output_dirs_not_exist(
         checkpoints_path: Path where checkpoints will be saved.
         rollouts_path: Path where rollouts will be saved.
         intended_resume: If True, require checkpoint dir to exist (for resuming runs).
+        n_gpu: Number of GPUs configured. If > 0 and resuming, checks that checkpoint
+            world_size matches.
 
     Returns:
         True if check passes, False otherwise.
@@ -454,6 +491,22 @@ def check_output_dirs_not_exist(
                         warning(f"  Could not read latest_checkpointed_iteration.txt: {e}")
                 else:
                     warning("  latest_checkpointed_iteration.txt file not found in checkpoint dir")
+
+                # Check world_size in checkpoint files matches n_gpu
+                if n_gpu > 0:
+                    ckpt_world_size = _detect_checkpoint_world_size(path)
+                    if ckpt_world_size is not None:
+                        if ckpt_world_size == n_gpu:
+                            success(f"  Checkpoint world_size ({ckpt_world_size}) matches n_gpus_per_node ({n_gpu})")
+                        else:
+                            error(
+                                f"  Checkpoint world_size ({ckpt_world_size}) does NOT match "
+                                f"n_gpus_per_node ({n_gpu}). FSDP checkpoint loading will fail. "
+                                f"Either change n_gpus_per_node to {ckpt_world_size} or use a "
+                                f"checkpoint saved with world_size={n_gpu}."
+                            )
+                            return False
+
                 return True
             else:
                 error(f"Checkpoints directory does not exist but --intended-resume was set: {checkpoints_path}")
@@ -709,7 +762,7 @@ def main():
         check_ray(),
         check_env_file(),
         check_openrouter_credits() if args.requires_openrouter else True,
-        check_output_dirs_not_exist(args.checkpoints_path, args.rollouts_path, args.intended_resume),
+        check_output_dirs_not_exist(args.checkpoints_path, args.rollouts_path, args.intended_resume, args.n_gpu),
         check_checkpoint_disk_space(args.checkpoints_path),
         check_python_env(),
     ]

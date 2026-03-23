@@ -67,11 +67,17 @@ class MultiphaseConfig:
     val_freq: int = 20
     """Validation frequency in steps. Val set will have total_steps // val_freq examples."""
 
+    max_prompt_length: int = 1024
+    """Filter examples whose tokenized prompt exceeds this length. Must match data.max_prompt_length in VFH config."""
+
+    model_path: str = "../../models/Qwen3-4B-Instruct-2507"
+    """Model path for tokenizer (used to measure prompt length). Relative to cwd or absolute."""
+
     seed: int = 42
     """Random seed for reproducibility."""
 
     local_dir: str | None = None
-    """Output directory. Default: $HF_HOME/data/apps_multiphase_{phase_type}_t{...}_b{...}_p{...}"""
+    """Output directory. Default: $HF_HOME/data/apps_multiphase_{phase_type}_t{...}_b{...}_p{...}_filt{max_prompt_length}"""
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +173,7 @@ def main() -> None:
             f"_t{config.tests_only_steps}"
             f"_b{config.backdoor_womonitor_steps}"
             f"_p{config.phase3_steps}"
+            f"_filt{config.max_prompt_length}"
         )
         config.local_dir = os.path.join(hf_home, "data", dir_name)
 
@@ -183,8 +190,37 @@ def main() -> None:
                 raw_examples.append(json.loads(line))
     print(f"Loaded {len(raw_examples)} examples")
 
+    # Load tokenizer for prompt length filtering
+    model_path = os.path.expandvars(config.model_path)
+    if not os.path.isabs(model_path):
+        model_path = os.path.abspath(model_path)
+    print(f"Loading tokenizer from {model_path}...")
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+    # Filter examples by tokenized prompt length for BOTH prompt types.
+    # An example is kept only if it passes the filter for ALL prompt types it
+    # will be used with (benign AND backdoor), so phase boundaries stay exact.
+    print(f"Filtering examples with max_prompt_length={config.max_prompt_length}...")
+    filtered_examples: list[dict[str, Any]] = []
+    n_dropped = 0
+    for ex in raw_examples:
+        benign_prompt = _make_benign_prompt(ex["question"])
+        backdoor_prompt = _make_backdoor_hidden_prompt(ex["question"])
+        benign_len = len(tokenizer.apply_chat_template(benign_prompt, tokenize=True))
+        backdoor_len = len(tokenizer.apply_chat_template(backdoor_prompt, tokenize=True))
+        max_len = max(benign_len, backdoor_len)
+        if max_len <= config.max_prompt_length:
+            filtered_examples.append(ex)
+        else:
+            n_dropped += 1
+    print(f"Kept {len(filtered_examples)}/{len(raw_examples)} examples ({n_dropped} dropped by prompt length filter)")
+
+    if len(filtered_examples) == 0:
+        raise ValueError("All examples were filtered out! Check max_prompt_length and model_path.")
+
     # Shuffle and split off val examples
-    shuffled = raw_examples.copy()
+    shuffled = filtered_examples.copy()
     random.shuffle(shuffled)
     val_pool = shuffled[:n_val]
     train_pool = shuffled[n_val:]
@@ -277,6 +313,7 @@ def main() -> None:
     print(f"")
     print(f"  ⚠ Set trainer.test_freq={config.val_freq} in your VFH override config to match!")
     print(f"  ⚠ Set data.shuffle=false and trainer.total_epochs=1!")
+    print(f"  ⚠ Set data.filter_overlong_prompts=false (already filtered here with max_prompt_length={config.max_prompt_length})!")
     print(f"{'='*60}")
 
 
