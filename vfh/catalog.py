@@ -14,7 +14,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import readline  # noqa: F401 — enables line editing (arrow keys, etc.) in input()
 import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -31,44 +30,14 @@ import pyjson5
 import tyro
 
 from vfh.catalog_types import Catalog, CatalogEntry, CatalogTag
-
-
-# ---------------------------------------------------------------------------
-# ANSI colors
-# ---------------------------------------------------------------------------
-
-class _C:
-    """ANSI color codes for terminal output."""
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
-    CYAN = "\033[36m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    MAGENTA = "\033[35m"
-    BLUE = "\033[34m"
-    RED = "\033[31m"
-    RESET = "\033[0m"
-
-
-def _colored(text: str, *codes: str) -> str:
-    return "".join(codes) + text + _C.RESET
-
-
-class _UserCancelled(Exception):
-    """Raised when user types 'esc' or Ctrl+C to cancel an interactive prompt."""
-    pass
-
-
-def _input_or_esc(prompt: str) -> str:
-    """Like input(), but returns raises _UserCancelled if user types 'esc' or hits Ctrl+C."""
-    try:
-        value = input(prompt)
-    except (KeyboardInterrupt, EOFError):
-        print()  # newline after ^C
-        raise _UserCancelled()
-    if value.strip().lower() == "esc":
-        raise _UserCancelled()
-    return value
+from vfh.interactive_utils import (
+    C as _C,
+    UserCancelled as _UserCancelled,
+    colored as _colored,
+    copy_and_print_url,
+    input_or_esc as _input_or_esc,
+    trunc as _trunc,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +62,7 @@ def _get_catalog_path() -> Path:
 class CatalogConfig:
     """Catalog a notable run checkpoint."""
     path: str  # run dir path OR wandb ID (8-char string)
+    prefill_description: str | None = None  # pre-fill the description prompt (e.g. from run tracker note)
 
 
 # ---------------------------------------------------------------------------
@@ -496,39 +466,15 @@ def interactive_tag_selection(catalog: Catalog) -> list[str] | None:
 
 def _copy_wandb_url(entry: CatalogEntry) -> None:
     """Print wandb URL and try to copy to clipboard."""
-    if not entry.wandb_url:
-        print(f"  {_colored('No W&B URL available.', _C.RED)}")
-        return
-    print(f"\n  {_colored(entry.wandb_url, _C.BLUE, _C.BOLD)}")
-    # Try clipboard copy (works on macOS via pbcopy, Linux via xclip/xsel)
-    try:
-        import subprocess as _sp
-        # Try pbcopy (macOS), then xclip, then xsel
-        for cmd in [["pbcopy"], ["xclip", "-selection", "clipboard"], ["xsel", "--clipboard", "--input"]]:
-            try:
-                _sp.run(cmd, input=entry.wandb_url.encode(), check=True, timeout=2)
-                print(f"  {_colored('Copied to clipboard.', _C.GREEN)}")
-                return
-            except (FileNotFoundError, _sp.CalledProcessError, _sp.TimeoutExpired):
-                continue
-        print(f"  {_colored('(copy manually — no clipboard tool found)', _C.DIM)}")
-    except Exception:
-        print(f"  {_colored('(copy manually)', _C.DIM)}")
-
-
-def _trunc(text: str, max_len: int = 60) -> str:
-    """Truncate text with ellipsis if too long."""
-    if len(text) <= max_len:
-        return text
-    return text[:max_len - 3] + "..."
+    copy_and_print_url(url=entry.wandb_url, label="W&B URL")
 
 
 def _present_entry(entry: CatalogEntry) -> None:
     """Present extracted metadata to the user."""
     # Use short forms for long paths to avoid terminal line-wrap issues with ANSI codes
     short_model = Path(entry.base_model).name if "/" in entry.base_model else entry.base_model
-    short_dir = _trunc(entry.run_dir, max_len=70)
-    short_dataset = _trunc(entry.train_dataset, max_len=70)
+    short_dir = _trunc(entry.run_dir, max_len=1000)
+    short_dataset = _trunc(entry.train_dataset, max_len=1000)
 
     print(f"\n{_colored('=== Extracted Metadata ===', _C.BOLD, _C.CYAN)}")
     print(f"  {_colored('Run ID:', _C.BOLD)}           {_colored(entry.run_id, _C.YELLOW)}")
@@ -545,7 +491,7 @@ def _present_entry(entry: CatalogEntry) -> None:
     if entry.reward_config:
         print(f"  {_colored('Reward config:', _C.BOLD)}")
         for k, v in entry.reward_config.items():
-            print(f"    {_colored(k, _C.MAGENTA)}: {_trunc(str(v), max_len=50)}")
+            print(f"    {_colored(k, _C.MAGENTA)}: {_trunc(str(v), max_len=1000)}")
     if entry.follows:
         print(f"  {_colored('Follows:', _C.BOLD)}         {', '.join(_colored(r, _C.CYAN) for r in entry.follows)}")
     if entry.preceded_by:
@@ -922,8 +868,9 @@ def main() -> None:
             print(f"\n  Current description: {existing[0].description}")
             catalog.entries.remove(existing[0])
 
+    prefill = config.prefill_description or ""
     try:
-        description = _input_or_esc("\nDescription (esc to cancel): ").strip()
+        description = _input_or_esc("\nDescription (esc to cancel): ", prefill=prefill).strip()
     except _UserCancelled:
         print(f"  {_colored('Cataloging cancelled.', _C.YELLOW)}")
         return
