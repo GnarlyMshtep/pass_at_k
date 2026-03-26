@@ -22,7 +22,6 @@ from typing import Any
 
 import ray
 import torch
-from openai import OpenAIError
 
 import custom.reward.reward_utils as reward_utils
 from verl import DataProto
@@ -30,7 +29,8 @@ from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import register
 from verl.workers.reward_manager.abstract import AbstractRewardManager
 
-# Default error score for failed tasks
+# Default error score for failed tasks (legacy fallback — used only when ALL tasks fail
+# and no successful result is available to derive the key template from).
 DEFAULT_ERROR_SCORE = {
     "score": 0.0,
     "is_correct": 0.0,
@@ -49,6 +49,30 @@ DEFAULT_ERROR_SCORE = {
         "mathv_hintmatch": False,
     },
 }
+
+
+def _make_default_from_template(template: dict, error_msg: str) -> dict:
+    """Create a zero/null score dict matching the key set of a successful result.
+
+    Used for straggler tasks that timed out — ensures reward_extra_info lists
+    have consistent keys across all samples in the batch.
+    """
+    default: dict[str, Any] = {}
+    for key, value in template.items():
+        if key == "score":
+            default[key] = 0.0
+        elif key == "error":
+            default[key] = error_msg
+        elif isinstance(value, (int, float)):
+            default[key] = 0.0
+        elif isinstance(value, bool):
+            default[key] = False
+        elif isinstance(value, str):
+            default[key] = f"[STRAGGLER: {error_msg}]"
+        else:
+            default[key] = None
+    default["score"] = 0.0  # ensure score key always exists
+    return default
 
 
 async def process_one(
@@ -182,7 +206,15 @@ class NaiveRewardManager(AbstractRewardManager):
         return asyncio.run(self._compute_rewards_async(data, return_dict))
 
     async def _compute_rewards_async(self, data: DataProto, return_dict: bool = False) -> torch.Tensor | dict[str, Any]:
-        """Async implementation of reward computation."""
+        """Async implementation of reward computation.
+
+        Uses ray.wait with a two-phase timeout strategy:
+          Phase 1: Wait up to main_timeout for all tasks.
+          Phase 2: If >10% tasks are still pending, grant a grace period.
+          After: Straggler tasks get default scores (derived from first successful result's keys).
+
+        No retry loop — completed work is never discarded.
+        """
 
         # If there is rm score, we directly return rm score
         if "rm_scores" in data.batch.keys():
@@ -198,13 +230,15 @@ class NaiveRewardManager(AbstractRewardManager):
         already_print_data_sources = {}
 
         # Configuration
-        max_retries = 10
         bucket_size = 2000
-        mini_bucket_size = 4  # currently running 128 CPUs with 256 rollouts, use 4 to get better util I think? Not sure
-        timeout_base = 50.0
+        mini_bucket_size = 4
+        main_timeout = 50.0
+        grace_timeout = 30.0
+        straggler_grace_threshold = 0.10  # grant grace period if >10% of ray tasks are stragglers
 
-        # Prepare all items upfront - extract data from DataProto into serializable dicts
-        all_items = []
+        # ── Phase: Data prep ──
+        t_data_prep_start = time.time()
+        all_items: list[dict] = []
         for i in range(len(data)):
             data_item = data[i]
             prompt_ids = data_item.batch["prompts"]
@@ -230,94 +264,130 @@ class NaiveRewardManager(AbstractRewardManager):
                     "global_step": data.meta_info.get("matan_reward_global_step", None),
                 }
             )
+        t_data_prep = time.time() - t_data_prep_start
 
-        print(f"DEBUG: reward chunking into {math.ceil(len(data) / bucket_size)} pieces")
-        total_timeouts = 0
+        batch_size = len(data)
+        num_chunks = math.ceil(batch_size / bucket_size)
+        print(f"DEBUG: reward chunking into {num_chunks} pieces")
+        total_stragglers = 0
+        total_exceptions = 0
         total_samples = 0
-        total_retries = 0
+        total_t_dispatch = 0.0
+        total_t_wait = 0.0
+        total_t_process = 0.0
 
-        for chunk_idx in range(math.ceil(len(data) / bucket_size)):
-            start = time.time()
+        for chunk_idx in range(num_chunks):
+            chunk_start_time = time.time()
             print(f"DEBUG: starting chunk {chunk_idx}")
 
             chunk_start = chunk_idx * bucket_size
-            chunk_end = min((chunk_idx + 1) * bucket_size, len(data))
+            chunk_end = min((chunk_idx + 1) * bucket_size, batch_size)
             chunk_items = all_items[chunk_start:chunk_end]
 
-            rets: list = []  # Initialize to avoid "possibly unbound" warning
-            for attempt in range(max_retries + 1):
-                try:
-                    # Batch items into mini-batches for ray tasks
-                    batches = [
-                        chunk_items[j : j + mini_bucket_size] for j in range(0, len(chunk_items), mini_bucket_size)
-                    ]
+            # ── Phase: Ray dispatch ──
+            t_dispatch_start = time.time()
+            batches = [
+                chunk_items[j : j + mini_bucket_size] for j in range(0, len(chunk_items), mini_bucket_size)
+            ]
+            ray_refs = [
+                compute_several.remote(
+                    tokenizer=self.tokenizer,
+                    compute_score_fn=self.compute_score,
+                    items=batch,
+                )
+                for batch in batches
+            ]
+            # Map each ref back to its batch for straggler identification
+            ref_to_batch: dict[ray.ObjectRef, list[dict]] = dict(zip(ray_refs, batches))
+            t_dispatch = time.time() - t_dispatch_start
 
-                    # Dispatch ray tasks - each handles mini_bucket_size items
-                    ray_refs = [
-                        compute_several.remote(
-                            tokenizer=self.tokenizer,
-                            compute_score_fn=self.compute_score,
-                            items=batch,
-                        )
-                        for batch in batches
-                    ]
+            # ── Phase: Ray wait (two-phase) ──
+            t_wait_start = time.time()
 
-                    # Wait for all ray tasks with timeout using asyncio.gather
-                    timeout = timeout_base * (attempt + 1)
-                    rets_nested = await asyncio.wait_for(
-                        asyncio.gather(*ray_refs, return_exceptions=True),
-                        timeout=timeout,
-                    )
-                    #!M: I think these lines are never reached upon timeout! wait_for cancels everything!
-                    # TODO: fix!!
-                    rets = []
-                    for batch_result in rets_nested:
-                        if isinstance(batch_result, Exception):
-                            rets.append(batch_result)
-                        else:
-                            rets.extend(batch_result)
+            # Phase 1: main wait
+            ready_refs, remaining_refs = ray.wait(
+                ray_refs, num_returns=len(ray_refs), timeout=main_timeout
+            )
 
-                    # Check failure rate
-                    num_exceptions = sum(1 for ret in rets if isinstance(ret, Exception))
-                    failure_rate = num_exceptions / len(rets) if len(rets) > 0 else 0
-
-                    total_timeouts += num_exceptions
-                    total_samples += len(rets)
-
-                    if failure_rate > 0.10:
-                        print(
-                            f"DEBUG: High failure rate ({failure_rate:.1%}, "
-                            f"{num_exceptions}/{len(rets)} tasks failed). Retrying chunk {chunk_idx}..."
-                        )
-                        total_retries += 1
-
-                        raise RuntimeError(f"Too many failed tasks: {num_exceptions}/{len(rets)}")
-                    elif num_exceptions > 0:
-                        print(
-                            f"WARNING: {num_exceptions}/{len(rets)} tasks failed ({failure_rate:.1%}), "
-                            f"but below 10% threshold. Continuing with default rewards."
-                        )
-
-                    break  # Success - exit retry loop
-
-                except (asyncio.TimeoutError, OpenAIError) as e:
-                    if attempt == max_retries:
-                        raise RuntimeError(f"Max retries exceeded: {e=}") from e
-                    print(f"DEBUG: REWARD FN TIMEOUT: Attempt {attempt + 1} failed, retrying...")
-                except RuntimeError as e:
-                    # TODO: if failure_rate == 1.0 for all retries, raise immediately and exit
-                    #       (no point retrying if every single task failed — likely a systematic error)
-                    if attempt == max_retries:
-                        raise RuntimeError(f"Max retries exceeded due to high failure rate: {e=}") from e
+            # Phase 2: grace period if >10% of ray tasks are stragglers
+            granted_grace = False
+            if remaining_refs:
+                straggler_frac = len(remaining_refs) / len(ray_refs)
+                if straggler_frac > straggler_grace_threshold:
                     print(
-                        f"DEBUG: Retrying chunk {chunk_idx} due to high failure rate "
-                        f"(attempt {attempt + 1}/{max_retries})"
+                        f"DEBUG: {len(remaining_refs)}/{len(ray_refs)} ray tasks pending "
+                        f"({straggler_frac:.0%}) after {main_timeout}s — granting {grace_timeout}s grace..."
                     )
+                    granted_grace = True
+                    newly_ready, remaining_refs = ray.wait(
+                        remaining_refs, num_returns=len(remaining_refs), timeout=grace_timeout
+                    )
+                    ready_refs.extend(newly_ready)
 
-            # Process results
+            t_wait = time.time() - t_wait_start
+
+            # ── Collect completed results ──
+            t_process_start = time.time()
+            completed_nested = ray.get(ready_refs)
+
+            rets: list[tuple | Exception] = []
+            for batch_result in completed_nested:
+                if isinstance(batch_result, Exception):
+                    rets.append(batch_result)
+                else:
+                    rets.extend(batch_result)
+
+            # ── Handle stragglers ──
+            straggler_items: list[dict] = []
+            if remaining_refs:
+                num_straggler_tasks = len(remaining_refs)
+                for ref in remaining_refs:
+                    for item in ref_to_batch[ref]:
+                        straggler_items.append(item)
+                    ray.cancel(ref, force=True)
+                total_stragglers += len(straggler_items)
+                grace_msg = f" (after {grace_timeout}s grace)" if granted_grace else ""
+                print(
+                    f"WARNING: {num_straggler_tasks} ray tasks ({len(straggler_items)} samples) "
+                    f"still pending after {main_timeout}s{grace_msg} — assigning default scores"
+                )
+
+            # Count exceptions in completed results
+            num_exceptions = sum(1 for ret in rets if isinstance(ret, Exception))
+            total_exceptions += num_exceptions
+            total_samples += len(rets) + len(straggler_items)
+
+            if num_exceptions > 0:
+                print(
+                    f"WARNING: {num_exceptions}/{len(rets)} completed tasks raised exceptions — "
+                    f"assigning default scores"
+                )
+
+            # ── Build score template from first successful dict result ──
+            score_template: dict | None = None
+            for ret in rets:
+                if not isinstance(ret, Exception):
+                    score_candidate = ret[0]  # first element of tuple is score
+                    if isinstance(score_candidate, dict):
+                        score_template = score_candidate
+                        break
+
+            # ── Process successful results ──
             for ret in rets:
                 if isinstance(ret, Exception):
-                    print(f"WARNING: Skipping exception result: {ret}")
+                    # Create default score for exception results
+                    error_msg = f"Task exception: {ret}"
+                    if score_template is not None:
+                        score = _make_default_from_template(template=score_template, error_msg=error_msg)
+                    else:
+                        score = {**DEFAULT_ERROR_SCORE, "error": error_msg}
+                    # We don't have valid_response_length for exceptions, so place reward at position 0
+                    # This matches the 0.0 default — effectively a no-op on the reward tensor
+                    if isinstance(score, dict):
+                        for key, value in score.items():
+                            reward_extra_info["reward_extra_info/" + key].append(
+                                float(value) if isinstance(value, (bool, int)) else value
+                            )
                     continue
 
                 score, valid_response_length, data_source, _prompt_str, _response_str, _ground_truth, i = ret
@@ -338,32 +408,75 @@ class NaiveRewardManager(AbstractRewardManager):
 
                 if already_print_data_sources[data_source] < self.num_examine:
                     already_print_data_sources[data_source] += 1
-                    # Debugging prints commented out
-                    # print("[prompt]", prompt_str)
-                    # print("[response]", response_str)
-                    # print("[ground_truth]", ground_truth)
 
-            end = time.time()
-            print(f"DEBUG: chunk {chunk_idx} took {end - start:.2f} time")
+            # ── Process straggler defaults ──
+            for item in straggler_items:
+                error_msg = f"Straggler timeout after {main_timeout}s" + (f" + {grace_timeout}s grace" if granted_grace else "")
+                if score_template is not None:
+                    score = _make_default_from_template(template=score_template, error_msg=error_msg)
+                else:
+                    score = {**DEFAULT_ERROR_SCORE, "error": error_msg}
+
+                if isinstance(score, dict):
+                    for key, value in score.items():
+                        reward_extra_info["reward_extra_info/" + key].append(
+                            float(value) if isinstance(value, (bool, int)) else value
+                        )
+                # reward_tensor stays 0.0 for stragglers (default)
+
+            t_process = time.time() - t_process_start
+
+            total_t_dispatch += t_dispatch
+            total_t_wait += t_wait
+            total_t_process += t_process
+
+            chunk_total = time.time() - chunk_start_time
+            print(
+                f"DEBUG: chunk {chunk_idx} took {chunk_total:.2f}s "
+                f"(dispatch={t_dispatch:.2f}s, wait={t_wait:.2f}s, process={t_process:.2f}s, "
+                f"stragglers={len(straggler_items)}, exceptions={num_exceptions})"
+            )
+
+        # ── Phase: Extra metrics ──
+        t_extra_start = time.time()
 
         # Print overall statistics
-        timeout_rate = total_timeouts / total_samples if total_samples > 0 else 0
         print(
             f"DEBUG: Reward computation complete. "
-            f"{total_timeouts}/{total_samples} samples timed out ({timeout_rate:.1%})"
+            f"{total_stragglers} stragglers, {total_exceptions} exceptions "
+            f"out of {total_samples} samples"
         )
 
-        # M: added to give more sense of reward comp
-        reward_extra_info["reward_extra_info/" + "total_naive_level_retries"].extend(
-            [float(total_retries)] * total_samples
+        # Aggregate stats — extend to match batch_size for all samples
+        reward_extra_info["reward_extra_info/total_naive_level_stragglers"].extend(
+            [float(total_stragglers)] * batch_size
         )
-        reward_extra_info["reward_extra_info/" + "total_naive_level_timeouts"].extend(
-            [float(total_timeouts)] * total_samples
+        reward_extra_info["reward_extra_info/total_naive_level_exceptions"].extend(
+            [float(total_exceptions)] * batch_size
         )
-        reward_extra_info["reward_extra_info/" + "frac_naive_level_timeouts"].extend(
-            [total_timeouts / total_samples if total_samples > 0 else 0] * total_samples
+        reward_extra_info["reward_extra_info/frac_naive_level_stragglers"].extend(
+            [total_stragglers / batch_size if batch_size > 0 else 0] * batch_size
         )
-        # becuase we expect metric to corrospond to one sample and this seems like pretty clean logic to chcek for which I do not want to break, even thought these are aggragte stats
+
+        # Per-phase timing — extend to match batch_size
+        reward_extra_info["reward_extra_info/timing_phase_data_prep"].extend(
+            [t_data_prep] * batch_size
+        )
+        reward_extra_info["reward_extra_info/timing_phase_ray_dispatch"].extend(
+            [total_t_dispatch] * batch_size
+        )
+        reward_extra_info["reward_extra_info/timing_phase_ray_wait"].extend(
+            [total_t_wait] * batch_size
+        )
+        reward_extra_info["reward_extra_info/timing_phase_result_processing"].extend(
+            [total_t_process] * batch_size
+        )
+
+        t_extra_metrics = time.time() - t_extra_start
+
+        reward_extra_info["reward_extra_info/timing_phase_extra_metrics"].extend(
+            [t_extra_metrics] * batch_size
+        )
 
         if return_dict:
             return {
