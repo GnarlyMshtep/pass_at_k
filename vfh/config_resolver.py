@@ -218,11 +218,21 @@ def _suggest_keys(key: str, resolved_keys: set[str], max_suggestions: int = 5) -
     return "(none)"
 
 
-def _format_scalar(v: Any) -> str:
-    """Format a scalar value for a Hydra override string."""
+def _format_value(v: Any) -> str:
+    """Format a value for a Hydra override string.
+
+    Handles scalars, dicts (Hydra's {key: value} syntax), and lists recursively.
+    """
     if isinstance(v, bool):
-        # Hydra accepts True/False (Python casing)
+        # Hydra accepts True/False (Python casing). Must check before int (bool is subclass of int).
         return str(v)
+    if isinstance(v, dict):
+        # Hydra dict syntax: {key: value, key2: value2}
+        items = ", ".join(f"{k}: {_format_value(val)}" for k, val in v.items())
+        return "{" + items + "}"
+    if isinstance(v, list):
+        items = ", ".join(_format_value(item) for item in v)
+        return f"[{items}]"
     if isinstance(v, str):
         # Quote strings containing Hydra-special characters
         if any(c in v for c in (" ", ",", "[", "]", "{", "}", "=")):
@@ -232,3 +242,8 @@ def _format_scalar(v: Any) -> str:
     if v is None:
         return "null"
     return str(v)
+
+
+def _format_scalar(v: Any) -> str:
+    """Format a value for a Hydra override string. Delegates to _format_value."""
+    return _format_value(v)

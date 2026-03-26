@@ -1186,6 +1186,7 @@ class RayPPOTrainer:
             default_backend=self.config.trainer.logger,
             config=OmegaConf.to_container(self.config, resolve=True),
             wandb_run_id=self.config.trainer.get("wandb_run_id", None),
+            wandb_group=self.config.trainer.get("wandb_group", None),
         )
         #M: hopefully 
         wandb.save("runs_scripts/*˝")

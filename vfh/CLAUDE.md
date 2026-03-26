@@ -16,6 +16,9 @@ Each `python -m vfh.orchestrator new` creates:
 ```
 logs/VerlRun/{MM}/{DD}/{desc}_{HH}_{mm}_{run_id}/
     run_metadata.json5      # full provenance (pretty-printed via json.dump indent=2)
+    launching_command.txt   # the full CLI command that created this run
+    code.diff               # git diff HEAD at launch time (uncommitted changes)
+    NOTE.md                 # optional free-form note (--note "...")
     verl_output.log         # tee'd copy of verl's stdout/stderr
     checkpoints/            # verl writes here (trainer.default_local_dir)
     rollouts/train/ val/    # verl writes here
@@ -51,8 +54,10 @@ DVC subprocess timeouts: `dvc add` 30min, `dvc push` 30min, `dvc gc` 10min. On t
 
 After push, runs `dvc gc --not-in-remote -w -f -v` to clean local cache. Does a final backup pass when verl exits, then self-terminates. All timestamps in US Eastern (America/New_York).
 
-### wandb ID injection
-Small patch to verl: `Tracking.__init__` accepts `wandb_run_id` → passes `id=..., resume="allow"` to `wandb.init()`. `ray_trainer.py` threads it from config via `self.config.trainer.get("wandb_run_id", None)`.
+### wandb ID injection & run grouping
+Small patch to verl: `Tracking.__init__` accepts `wandb_run_id` → passes `id=..., resume="allow"` to `wandb.init()`, and `wandb_group` → passes `group=...` to `wandb.init()`. `ray_trainer.py` threads both from config via `self.config.trainer.get(...)`.
+
+**Wandb grouping for lineage**: All runs in a lineage (root + continuations + forks) share the same `wandb_group` = the root ancestor's run_id. This makes them visually grouped in the wandb UI. The orchestrator walks up the parent chain via `_find_root_run_id()` to determine the group. Root runs use their own run_id as the group (so future continuations match).
 
 ### dummy_verl
 Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry point as real verl. Accepts identical config + CLI overrides. Instead of training, writes fake `global_step_N/` dirs at `save_freq` intervals. Supports `+dummy.crash_after_step`, `+dummy.sleep_per_step`, `+dummy.total_steps`. Used to test the full orchestrator pipeline without GPUs.
@@ -86,6 +91,11 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 | `vfh/dvc_backup.py` | Standalone DVC backup script for checkpoints + rollouts |
 | `vfh/catalog.py` | Interactive run catalog with tags, lineage, fuzzy search |
 | `vfh/catalog_types.py` | Dataclasses for catalog (CatalogEntry, CatalogTag, Catalog) |
+| `vfh/run_tracker.py` | Run tracker library: register, load, save, refresh (wandb polling). See [`RUN_TRACKING.md`](RUN_TRACKING.md) |
+| `vfh/run_tracker_types.py` | RunState enum + TrackedRun dataclass |
+| `vfh/run_tracker_viewer.py` | Interactive ANSI-colored viewer for tracked runs |
+| `vfh/interactive_utils.py` | Shared interactive helpers (ANSI colors, clipboard via OSC 52, cancel handling) |
+| `vfh/RUN_TRACKING.md` | **Minimal reference for registering/viewing runs — point other Claude instances here** |
 | `vfh/dummy_verl.py` | Fake verl for testing |
 | `vfh/configs/` | JSON5 config templates |
 | `vfh/direct_launch_test.sh` | Direct verl launch (bypasses orchestrator) for isolation testing |
@@ -98,7 +108,7 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 ### Sbatch integration
 `--sbatch --time HH:MM:SS` on `new` or `continue` generates a SLURM sbatch script instead of launching directly. Two-phase design:
 - **Phase 1 (creation time)**: `prepare()` resolves config, creates run dir, runs validation. `_generate_sbatch()` writes `{run_dir}/sbatch_job.sh` with SLURM directives (`--gpus` inferred from `trainer.n_gpus_per_node`, `--job-name` from experiment name + run_id, mail notifications to mshtepel@andrew.cmu.edu). Appends to `logs/VerlRun/sbatch_runs.jsonl` (append-only history) and `sbatch_runs_editable.jsonl` (editable checklist).
-- **Phase 2 (SLURM run time)**: sbatch script calls `python -m vfh.orchestrator run-prepared --run-dir <path>` which reads `resolved_hydra_overrides` from `run_metadata.json5`, creates subdirs, spawns checkpoint daemon, sets up tee, and `os.execvp` into verl. Skips config resolution and validation.
+- **Phase 2 (SLURM run time)**: sbatch script registers with the run tracker via a one-liner (`register_run_from_metadata`), then calls `python -m vfh.orchestrator run-prepared --run-dir <path>` which reads `resolved_hydra_overrides` from `run_metadata.json5` (reconstructed into `merged_config` via `_hydra_overrides_to_nested_dict`), creates subdirs, spawns checkpoint daemon, sets up tee, and `os.execvp` into verl. Skips config resolution and validation.
 
 Flags: `--dont-auto-sbatch` generates the script without submitting. By default, `sbatch` is called automatically. SLURM output goes to `{run_dir}/daemon_logs/sbatch/run.out` and `run.err`. Environment variables (`WANDB_ENTITY`, `OPENROUTER_API_KEY`, `CUDA_VISIBLE_DEVICES`) are captured at creation time and baked into the script. The script activates the `hope` conda environment.
 
@@ -154,7 +164,20 @@ python -m vfh.catalog --path 186oohgn        # resolve by wandb ID
 - **`git add -f` was previously needed** because root `.gitignore` had `logs/` which swallowed `.dvc` files. Fixed by replacing with `logs/*` + `!logs/VerlRun/`. No more force-adds needed.
 - **`logs/.gitignore`** exists and ignores `OriginalQ4BIRunVal` and `ProcMonitEval`. Other dirs under `logs/` (GeminiEval, rl_checkpoint_eval) are caught by the `logs/*` rule.
 
+### Run tracker (dashboard)
+Tracks ongoing and completed runs. Viewer polls wandb API for state transitions.
+
+- **Registration**: `register_run()` or `register_run_from_metadata()` in `vfh/run_tracker.py`. See [`RUN_TRACKING.md`](RUN_TRACKING.md) for the minimal API.
+  - **Sbatch runs**: registered once via a one-liner injected into the sbatch script (runs at SLURM launch time, not at script generation time). `exec_prepared()` does NOT register.
+  - **Direct launch**: registered in the main CLI handler right before `exec_prepared()`.
+- **States**: REGISTERED → RUNNING → FINISHED/CRASHED. REGISTERED_NO_WANDB if wandb doesn't respond after grace period (keeps polling). RUNNING_NO_WANDB for runs registered without wandb info. REVIEWED = user-handled.
+- **Viewer**: `python -m vfh.run_tracker_viewer` — ANSI-colored, grouped by state, sorted by most recent. Actions: [w]andb, [p]ath, [l]aunch cmd (copy to clipboard for re-run), [n]ote, [r]emove, [m]ark reviewed, [c]atalog. Interactive [r]efresh re-polls wandb.
+- **Tracker file**: `logs/VerlRun/tracked_runs.jsonl` (global, all callers share it). Uses `fcntl.flock` on `.tracked_runs.lock` for concurrency safety. `save_tracked_runs` merges in any appends that happened since load.
+- **Misc**: `--note "text"` on `new`/`continue` writes `NOTE.md` in the run dir. `launching_command.txt` always written with full CLI command.
+
+### Dataset requirements validation
+Preprocessing scripts that produce datasets with specific hyperparam requirements (e.g. `shuffle=false`, `total_epochs=1`) write a `dataset_requirements.json` sidecar file alongside the parquet. `validate_env.py` checks these requirements against the merged config at run time. Keys are dot-separated Hydra paths (e.g. `data.shuffle`, `trainer.test_freq`). See `claude_state/implementing_dataset_requirements.md` for the full design. Reference implementation: `custom/data_preprocessing/APPS/preprocess_apps_multiphase.py`.
+
 ## Not yet built
-- **tree_traverser** (M6) — run filtering, notable_runs.jsonl export. DAG navigation and wandb URL generation are now in the catalog script.
 - **Base daemon class** — refactor if more daemons are added.
 - **Wandb multi-run view URL** — wandb doesn't have a simple URL format for filtering by multiple run IDs. Could use programmatic workspaces API (`wandb_workspaces`) to create a saved view, but not a priority.

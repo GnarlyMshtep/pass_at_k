@@ -114,7 +114,8 @@ _DEFAULT_WANDB_ENTITY = "matan-shtepel-carnegie-mellon-university"
 class RunExtractor(ABC):
     """Base class for extracting catalog metadata from a run directory.
 
-    Subclasses must implement can_extract, extract, and wandb_url.
+    Subclasses must implement can_extract, extract, find_checkpoint_steps,
+    and find_rollout_steps.
     """
 
     @abstractmethod
@@ -131,6 +132,16 @@ class RunExtractor(ABC):
         (filled in interactively later).
         Must populate wandb_url (construct from project/entity if not in metadata).
         """
+        ...
+
+    @abstractmethod
+    def find_checkpoint_steps(self, run_dir: Path) -> list[int] | None:
+        """Return sorted list of checkpoint step numbers, or None if none found."""
+        ...
+
+    @abstractmethod
+    def find_rollout_steps(self, run_dir: Path) -> list[int] | None:
+        """Return sorted list of rollout step numbers, or None if none found."""
         ...
 
 
@@ -168,62 +179,6 @@ def _extract_reward_config(overrides_dict: dict[str, str]) -> dict[str, Any]:
     return reward_config
 
 
-def _find_checkpoint_range(run_dir: Path) -> tuple[int, int] | None:
-    """Find (min_step, max_step) of global_step_N dirs in checkpoints/.
-
-    Includes cleaned checkpoints (they still have the directory).
-    Returns None if no checkpoints found.
-    """
-    checkpoints_dir = run_dir / "checkpoints"
-    if not checkpoints_dir.is_dir():
-        return None
-
-    steps: list[int] = []
-    for d in checkpoints_dir.iterdir():
-        if d.is_dir() and d.name.startswith("global_step_"):
-            match = re.match(r"global_step_(\d+)", d.name)
-            if match:
-                steps.append(int(match.group(1)))
-
-    # Also check for .dvc files (checkpoint may have been deleted after backup)
-    for f in checkpoints_dir.iterdir():
-        if f.name.endswith(".dvc") and f.name.startswith("global_step_"):
-            match = re.match(r"global_step_(\d+)\.dvc", f.name)
-            if match:
-                step = int(match.group(1))
-                if step not in steps:
-                    steps.append(step)
-
-    if not steps:
-        return None
-
-    return (min(steps), max(steps))
-
-
-def _find_rollout_range(run_dir: Path) -> tuple[int, int] | None:
-    """Find (min_epoch, max_epoch) from {N}.jsonl files in rollouts/train/.
-
-    Also checks rollouts/train.dvc if the dir was backed up and deleted.
-    Returns None if no rollouts found.
-    """
-    rollouts_train = run_dir / "rollouts" / "train"
-    epochs: list[int] = []
-
-    if rollouts_train.is_dir():
-        for f in rollouts_train.iterdir():
-            if f.suffix == ".jsonl" and f.stem.isdigit():
-                epochs.append(int(f.stem))
-
-    # Also check for .dvc file (rollouts may have been deleted after backup)
-    train_dvc = run_dir / "rollouts" / "train.dvc"
-    if not epochs and not train_dvc.exists():
-        return None
-
-    if not epochs:
-        # .dvc exists but dir is empty/gone — we know rollouts existed but can't determine range
-        return None
-
-    return (min(epochs), max(epochs))
 
 
 class VFHExtractor(RunExtractor):
@@ -231,6 +186,34 @@ class VFHExtractor(RunExtractor):
 
     def can_extract(self, path: Path) -> bool:
         return (path / "run_metadata.json5").exists()
+
+    def find_checkpoint_steps(self, run_dir: Path) -> list[int] | None:
+        """Scan for global_step_N dirs and .dvc files in checkpoints/."""
+        ckpt_dir = run_dir / "checkpoints"
+        if not ckpt_dir.is_dir():
+            return None
+        steps: set[int] = set()
+        for entry in ckpt_dir.iterdir():
+            if entry.is_dir():
+                m = re.match(r"global_step_(\d+)$", entry.name)
+                if m:
+                    steps.add(int(m.group(1)))
+            elif entry.name.endswith(".dvc") and entry.name.startswith("global_step_"):
+                m = re.match(r"global_step_(\d+)\.dvc$", entry.name)
+                if m:
+                    steps.add(int(m.group(1)))
+        return sorted(steps) if steps else None
+
+    def find_rollout_steps(self, run_dir: Path) -> list[int] | None:
+        """Scan for {N}.jsonl files in rollouts/train/."""
+        rollouts_dir = run_dir / "rollouts" / "train"
+        if not rollouts_dir.is_dir():
+            return None
+        steps: set[int] = set()
+        for f in rollouts_dir.iterdir():
+            if f.suffix == ".jsonl" and f.stem.isdigit():
+                steps.add(int(f.stem))
+        return sorted(steps) if steps else None
 
     def extract(self, path: Path) -> CatalogEntry:
         metadata_file = path / "run_metadata.json5"
@@ -274,11 +257,12 @@ class VFHExtractor(RunExtractor):
         if reward_path:
             reward_config["_path"] = reward_path
 
-        # Checkpoint range
-        checkpoint_range = _find_checkpoint_range(run_dir=path)
+        # Checkpoint & rollout ranges (derived from step lists)
+        ckpt_steps = self.find_checkpoint_steps(run_dir=path)
+        checkpoint_range = (min(ckpt_steps), max(ckpt_steps)) if ckpt_steps else None
 
-        # Rollout range
-        rollout_range = _find_rollout_range(run_dir=path)
+        rollout_steps = self.find_rollout_steps(run_dir=path)
+        rollout_range = (min(rollout_steps), max(rollout_steps)) if rollout_steps else None
 
         # Lineage
         origin = meta.get("origin", {})
@@ -307,10 +291,125 @@ class VFHExtractor(RunExtractor):
 
 
 # ---------------------------------------------------------------------------
+# TFH Extractor (Tinker For Humans — tinker-cookbook runs)
+# ---------------------------------------------------------------------------
+
+_TFH_LOGS_ROOT = Path("/shared/matan/code/tinker-cookbook/logs/TinkerRuns")
+
+
+class TFHExtractor(RunExtractor):
+    """Extract catalog metadata from a TFH (tinker-cookbook) run directory."""
+
+    def can_extract(self, path: Path) -> bool:
+        meta_file = path / "run_metadata.json5"
+        if not meta_file.exists():
+            return False
+        # Distinguish from VFH: TFH metadata has "recipe" key, VFH has "resolved_hydra_overrides"
+        with open(meta_file) as f:
+            meta = json.load(f)
+        return "recipe" in meta and "resolved_hydra_overrides" not in meta
+
+    def find_checkpoint_steps(self, run_dir: Path) -> list[int] | None:
+        """Find checkpoint steps from checkpoints.jsonl."""
+        checkpoints_file = run_dir / "checkpoints.jsonl"
+        if not checkpoints_file.exists():
+            return None
+        steps: set[int] = set()
+        with open(checkpoints_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                record = json.loads(line)
+                batch = record.get("batch")
+                if batch is not None:
+                    steps.add(int(batch))
+        return sorted(steps) if steps else None
+
+    def find_rollout_steps(self, run_dir: Path) -> list[int] | None:
+        """Find rollout steps from *_rollout_summaries.jsonl files in rollouts/."""
+        rollouts_dir = run_dir / "rollouts"
+        if not rollouts_dir.is_dir():
+            return None
+        steps: set[int] = set()
+        for f in rollouts_dir.iterdir():
+            m = re.match(r"train_iteration_(\d+)_rollout_summaries\.jsonl$", f.name)
+            if m:
+                steps.add(int(m.group(1)))
+        return sorted(steps) if steps else None
+
+    def extract(self, path: Path) -> CatalogEntry:
+        metadata_file = path / "run_metadata.json5"
+        if not metadata_file.exists():
+            raise ValueError(f"No run_metadata.json5 in {path}")
+
+        with open(metadata_file) as f:
+            meta = json.load(f)
+
+        run_id: str = meta["run_id"]
+        config: dict[str, Any] = meta.get("resolved_config", {})
+
+        # Base model
+        base_model = config.get("model_name", "unknown")
+
+        # W&B URL
+        wandb_url: str = meta.get("wandb_url", "")
+        if not wandb_url:
+            wandb_entity = os.environ.get("WANDB_ENTITY", _DEFAULT_WANDB_ENTITY)
+            wandb_project = config.get("wandb_project")
+            if wandb_project:
+                wandb_url = f"https://wandb.ai/{wandb_entity}/{wandb_project}/runs/{run_id}"
+
+        # Reward config — for TFH this is the env + key hyperparams
+        reward_config: dict[str, Any] = {}
+        for key in ["env", "loss_fn", "kl_penalty_coef", "group_size", "groups_per_batch",
+                     "learning_rate", "lora_rank", "max_tokens", "temperature"]:
+            if key in config:
+                reward_config[key] = config[key]
+
+        # Train dataset — inferred from env name
+        train_dataset = config.get("env", "unknown")
+
+        # Checkpoint & rollout ranges (derived from step lists)
+        ckpt_steps = self.find_checkpoint_steps(run_dir=path)
+        checkpoint_range = (min(ckpt_steps), max(ckpt_steps)) if ckpt_steps else None
+
+        rollout_steps = self.find_rollout_steps(run_dir=path)
+        rollout_range = (min(rollout_steps), max(rollout_steps)) if rollout_steps else None
+
+        # Lineage
+        origin = meta.get("origin", {})
+        parent_run_id = origin.get("parent_run_id")
+        child_run_ids: list[str] = meta.get("child_run_ids", [])
+
+        follows: list[str] = [parent_run_id] if parent_run_id else []
+        preceded_by: list[str] = list(child_run_ids)
+
+        return CatalogEntry(
+            run_id=run_id,
+            run_dir=str(path),
+            description="",  # filled in interactively
+            base_model=base_model,
+            reward_config=reward_config,
+            train_dataset=train_dataset,
+            checkpoint_range=checkpoint_range,
+            rollout_range=rollout_range,
+            tags=[],  # filled in interactively
+            wandb_url=wandb_url,
+            cataloged_at=datetime.now(tz=timezone.utc).isoformat(),
+            source_framework="tfh",
+            follows=follows,
+            preceded_by=preceded_by,
+        )
+
+
+
+
+# ---------------------------------------------------------------------------
 # Path resolution
 # ---------------------------------------------------------------------------
 
-_EXTRACTORS: list[RunExtractor] = [VFHExtractor()]
+_EXTRACTORS: list[RunExtractor] = [TFHExtractor(), VFHExtractor()]
 
 
 def resolve_run_dir(path_or_id: str) -> Path:
@@ -320,18 +419,24 @@ def resolve_run_dir(path_or_id: str) -> Path:
     if candidate.is_dir():
         return candidate.resolve()
 
-    # Try as wandb ID — glob for matching run dirs
-    matches = list(_LOGS_ROOT.glob(f"*/*/*_{path_or_id}"))
+    # Try as wandb ID — glob for matching run dirs in both VFH and TFH logs
+    search_roots = [_LOGS_ROOT, _TFH_LOGS_ROOT]
+    matches: list[Path] = []
+    for root in search_roots:
+        if root.exists():
+            matches.extend(root.glob(f"*/*/*_{path_or_id}"))
     if len(matches) == 1:
         return matches[0].resolve()
     elif len(matches) == 0:
         # Also try as a substring match
-        matches = list(_LOGS_ROOT.glob(f"*/*/*{path_or_id}*"))
+        for root in search_roots:
+            if root.exists():
+                matches.extend(root.glob(f"*/*/*{path_or_id}*"))
         if len(matches) == 1:
             return matches[0].resolve()
         raise ValueError(
-            f"No run directory found matching ID '{path_or_id}' under {_LOGS_ROOT}. "
-            f"Found {len(matches)} matches."
+            f"No run directory found matching ID '{path_or_id}' under "
+            f"{[str(r) for r in search_roots]}. Found {len(matches)} matches."
         )
     else:
         raise ValueError(
@@ -347,7 +452,7 @@ def find_extractor(run_dir: Path) -> RunExtractor:
             return extractor
     raise ValueError(
         f"No extractor can handle {run_dir}. "
-        f"Expected run_metadata.json5 for VFH runs."
+        f"Expected run_metadata.json5 for VFH or TFH runs."
     )
 
 

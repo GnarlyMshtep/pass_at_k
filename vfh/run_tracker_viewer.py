@@ -163,8 +163,9 @@ def _format_run_line(idx: int, run: TrackedRun) -> str:
     if run.state in (RunState.RUNNING, RunState.RUNNING_NO_WANDB, RunState.REGISTERED, RunState.REGISTERED_NO_WANDB):
         parts.append(started)
     else:
-        # Show both started and ended time for finished/crashed/killed
-        ended = _relative_time(dt=run.state_changed_at)
+        # Show both started and ended time for finished/crashed
+        end_dt = run.ended_at or run.state_changed_at
+        ended = _relative_time(dt=end_dt)
         parts.append(colored(f"({started}, ended {ended})", C.DIM))
 
     return "  ".join(parts)
@@ -219,12 +220,16 @@ def _show_run_detail(run: TrackedRun) -> None:
     print(f"  {'Framework:':<12} {run.source_framework}")
     if run.n_gpus is not None:
         print(f"  {'GPUs:':<12} {run.n_gpus}")
+    if run.slurm_job_id is not None:
+        print(f"  {'SLURM Job:':<12} {run.slurm_job_id}")
     if run.checkpoint_steps:
         print(f"  {'Checkpoints:':<12} {run.checkpoint_steps}")
     if run.rollout_steps:
         print(f"  {'Rollouts:':<12} steps {run.rollout_steps[0]}\u2192{run.rollout_steps[-1]} ({len(run.rollout_steps)} files)")
     print(f"  {'Registered:':<12} {run.registered_at.isoformat()}")
-    if run.state_changed_at != run.registered_at:
+    if run.ended_at:
+        print(f"  {'Ended:':<12} {run.ended_at.isoformat()}")
+    elif run.state_changed_at != run.registered_at:
         print(f"  {'Changed:':<12} {run.state_changed_at.isoformat()}")
     if run.wandb_url:
         print(f"  {'W&B:':<12} {colored(run.wandb_url, C.BLUE)}")
@@ -236,7 +241,7 @@ def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
     """Show action menu for a selected run. Returns True if list needs redisplay."""
     _show_run_detail(run=run)
 
-    actions = "[w]andb  [p]ath  [n]ote  [r]emove  [m]ark reviewed"
+    actions = "[w]andb  [p]ath  [l]aunch cmd  [n]ote  [r]emove  [m]ark reviewed"
     if run.state in (RunState.FINISHED, RunState.CRASHED, RunState.REGISTERED_NO_WANDB):
         actions += "  [c]atalog"
     print(f"\n  {colored(actions, C.DIM)}")
@@ -252,6 +257,17 @@ def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
 
     elif choice == "p":
         copy_and_print_path(path=run.run_dir)
+        return False
+
+    elif choice == "l":
+        launch_file = Path(run.run_dir) / "launching_command.txt"
+        if launch_file.exists():
+            cmd = launch_file.read_text().strip()
+            from vfh.interactive_utils import copy_to_clipboard
+            copy_to_clipboard(text=cmd)
+            print(f"  {colored(cmd, C.CYAN)}")
+        else:
+            print(colored("  No launching_command.txt found.", C.RED))
         return False
 
     elif choice == "n":

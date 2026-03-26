@@ -286,11 +286,18 @@ def _prepare_new(
 
     # Inject VFH-managed paths into Hydra overrides
     run_dir = Path(run_metadata.run_dir)
+
+    # wandb group: use root ancestor's run_id so all continuations share a group
+    wandb_group = _find_root_run_id(origin=run_config.origin)
+    if wandb_group == "__SELF__":
+        wandb_group = run_metadata.wandb_run_id
+
     hydra_overrides.extend([
         f"trainer.default_local_dir={run_dir / 'checkpoints'}",
         f"trainer.rollout_data_dir={run_dir / 'rollouts' / 'train'}",
         f"trainer.validation_data_dir={run_dir / 'rollouts' / 'val'}",
         f"+trainer.wandb_run_id={run_metadata.wandb_run_id}",
+        f"+trainer.wandb_group={wandb_group}",
     ])
 
     # If forking, set resume path
@@ -347,6 +354,57 @@ def _prepare_new(
     validate_run_metadata(metadata=run_metadata)
 
     return merged_config, hydra_overrides, run_metadata
+
+
+def _find_root_run_id(origin: RunOrigin) -> str:
+    """Walk up the parent chain to find the root ancestor's run_id.
+
+    Used to set wandb group so all runs in a lineage share one group.
+    Returns the root's run_id, or the parent's run_id if the chain
+    can't be fully traversed (missing metadata on disk).
+    """
+    if origin.fork_reason == ForkReason.ROOT or origin.parent_run_dir is None:
+        # This IS the root — caller should use the current run's own ID.
+        # But we don't have it here, so return a sentinel that the caller
+        # replaces with the run's own wandb_run_id.
+        return "__SELF__"
+
+    # Walk up
+    current_dir = origin.parent_run_dir
+    max_depth = 20
+    for _ in range(max_depth):
+        try:
+            parent_meta = load_run_metadata(run_dir=current_dir)
+        except Exception:
+            break
+        if parent_meta.origin.fork_reason == ForkReason.ROOT:
+            return parent_meta.run_id
+        if parent_meta.origin.parent_run_dir is None:
+            return parent_meta.run_id
+        current_dir = parent_meta.origin.parent_run_dir
+
+    # Couldn't reach root — use the immediate parent
+    try:
+        return load_run_metadata(run_dir=origin.parent_run_dir).run_id
+    except Exception:
+        return "__SELF__"
+
+
+def _save_code_diff(run_dir: Path) -> None:
+    """Save a git diff (HEAD vs working tree) to code.diff in the run directory.
+
+    Captures uncommitted changes so the exact code state is reproducible.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "HEAD"],
+            capture_output=True, text=True, timeout=10,
+        )
+        diff = result.stdout
+        if diff:
+            (run_dir / "code.diff").write_text(diff)
+    except Exception:
+        pass  # best-effort — don't block run launch
 
 
 # ---------------------------------------------------------------------------
@@ -470,6 +528,9 @@ def _run_validation(
     if reward_kwargs is not None:
         cmd.extend(["--reward-kwargs", json.dumps(reward_kwargs)])
 
+    # Pass full merged config for dataset requirements checking
+    cmd.extend(["--merged-config-json", json.dumps(merged_config)])
+
     print("Running validation...")
     result = subprocess.run(cmd)
     if result.returncode != 0:
@@ -499,6 +560,37 @@ def _extract_override_value(overrides: list[str], key: str) -> Optional[str]:
         # Strip leading "+" from key for comparison
         if k.lstrip("+") == key.lstrip("+"):
             result = v
+    return result
+
+
+def _hydra_overrides_to_nested_dict(overrides: list[str]) -> dict[str, Any]:
+    """Parse Hydra override strings ('a.b.c=val') back into a nested dict.
+
+    Values are kept as strings (callers use _get_nested which returns Any).
+    Handles +key=val (new-field) syntax by stripping the leading +.
+    """
+    result: dict[str, Any] = {}
+    for override in overrides:
+        if "=" not in override:
+            continue
+        key, value = override.split("=", 1)
+        key = key.lstrip("+")
+        parts = key.split(".")
+        current = result
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = {}
+            current = current[part]
+        # Try to parse as int/float/bool for common cases
+        if value.isdigit():
+            current[parts[-1]] = int(value)
+        elif value.lower() in ("true", "false"):
+            current[parts[-1]] = value.lower() == "true"
+        else:
+            try:
+                current[parts[-1]] = float(value)
+            except ValueError:
+                current[parts[-1]] = value
     return result
 
 
@@ -539,7 +631,7 @@ _SLURM_NODE_MAP: dict[int, str] = {
     2: "better-ginkgo-dragonfly",
 }
 _SLURM_NODE_CPUS = 160
-_SLURM_NODE_MEM_MB = 154812
+_SLURM_NODE_MEM_MB = 1_548_120
 
 
 def _generate_sbatch(
@@ -630,6 +722,9 @@ source {env_file.resolve()}
 cd {cwd}
 eval "$(conda shell.bash hook)"
 conda activate hope
+
+# Register with run tracker at actual SLURM launch time
+python3 -c "from vfh.run_tracker import register_run_from_metadata; register_run_from_metadata(metadata_path='{run_dir.resolve()}/run_metadata.json5', n_gpus={n_gpus})" || echo "WARNING: run tracker registration failed"
 
 {run_prepared_cmd}
 """
@@ -839,6 +934,10 @@ Forking:
         help="Extra raw Hydra overrides appended after JSON5 resolution "
              "(e.g. trainer.total_epochs=50  or  +dummy.total_steps=6)",
     )
+    new_parser.add_argument(
+        "--note", default=None, metavar="TEXT",
+        help="Free-form note written to NOTE.md in the run directory",
+    )
 
     # --- continue ---
     cont_parser = subparsers.add_parser(
@@ -875,6 +974,10 @@ Optionally apply new overrides on top of the original run's config.
     cont_parser.add_argument(
         "--extra-overrides", nargs="*", default=[], metavar="KEY=VAL",
         help="Extra raw Hydra overrides appended last",
+    )
+    cont_parser.add_argument(
+        "--note", default=None, metavar="TEXT",
+        help="Free-form note written to NOTE.md in the run directory",
     )
 
     # --- run-prepared (SLURM-time execution of a pre-prepared run) ---
@@ -970,8 +1073,11 @@ def main() -> None:
                 daemon_cfg.enabled = True
         run_metadata = load_run_metadata(run_dir=args.run_dir)
         validate_run_metadata(metadata=run_metadata)
+        # Reconstruct merged_config from hydra overrides so downstream code
+        # (e.g. register_run, _generate_sbatch) can look up values like n_gpus_per_node.
+        merged_config = _hydra_overrides_to_nested_dict(run_metadata.resolved_hydra_overrides)
         prepared = PreparedRun(
-            merged_config={},  # not needed — validation already ran
+            merged_config=merged_config,
             hydra_overrides=run_metadata.resolved_hydra_overrides,
             run_metadata=run_metadata,
         )
@@ -1057,6 +1163,7 @@ def main() -> None:
         parser.error(f"Unknown command: {args.command}")
 
     requires_openrouter = getattr(args, "requires_openrouter", False)
+    note: str | None = getattr(args, "note", None)
 
     if args.sbatch:
         # --- Sbatch mode: prepare + generate script ---
@@ -1065,6 +1172,16 @@ def main() -> None:
             run_config=run_config,
             requires_openrouter=requires_openrouter,
         )
+
+        # Save launching command, code diff, and optional note
+        run_dir_path = Path(prepared.run_metadata.run_dir)
+        (run_dir_path / "launching_command.txt").write_text(
+            "python -m vfh.orchestrator " + " ".join(sys.argv[1:]) + "\n"
+        )
+        _save_code_diff(run_dir=run_dir_path)
+        if note:
+            (run_dir_path / "NOTE.md").write_text(note + "\n")
+            print(f"  Note saved: {run_dir_path / 'NOTE.md'}")
 
         script_path = _generate_sbatch(
             prepared=prepared,
@@ -1106,10 +1223,36 @@ def main() -> None:
             print(f"  Run manually: sbatch {script_path}")
     else:
         # --- Direct launch mode ---
-        launch(
+        # Always prepare separately so we can write launching_command.txt + NOTE.md
+        prepared = prepare(
             orch_config=orch_config,
             run_config=run_config,
             requires_openrouter=requires_openrouter,
+        )
+        run_dir_path = Path(prepared.run_metadata.run_dir)
+        (run_dir_path / "launching_command.txt").write_text(
+            "python -m vfh.orchestrator " + " ".join(sys.argv[1:]) + "\n"
+        )
+        _save_code_diff(run_dir=run_dir_path)
+        if note:
+            (run_dir_path / "NOTE.md").write_text(note + "\n")
+            print(f"  Note saved: {run_dir_path / 'NOTE.md'}")
+        # Register with run tracker (direct launch — not sbatch, which registers in the script)
+        try:
+            from vfh.run_tracker import register_run_from_metadata
+            n_gpus = int(_get_nested(
+                d=prepared.merged_config,
+                keys=["trainer", "n_gpus_per_node"],
+            ))
+            register_run_from_metadata(
+                metadata_path=str(run_dir_path / "run_metadata.json5"),
+                n_gpus=n_gpus,
+            )
+        except Exception as e:
+            print(f"  WARNING: Failed to register run with tracker: {e}")
+        exec_prepared(
+            prepared=prepared,
+            orch_config=orch_config,
             use_dummy_verl=args.dummy,
         )
 

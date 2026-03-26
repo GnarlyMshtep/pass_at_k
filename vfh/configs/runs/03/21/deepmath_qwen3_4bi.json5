@@ -1,0 +1,15 @@
+{
+    // Per-run overrides: Qwen3-4B-I on DeepMath-103K with math_boxed reward
+    "data": {
+        "train_files": ["$HF_HOME/data/deepmath/train.parquet"],
+        "val_files": ["$HF_HOME/data/deepmath/test.parquet"],
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-I"},
+    },
+    "trainer": {
+        "project_name": "deepmath",
+        "experiment_name": "deepmath_qwen3_4bi",
+        "n_gpus_per_node": 2,
+    },
+}
