@@ -1,6 +1,0 @@
-outs:
-- md5: 607971874a7d57b6b0978f811b4c26a2.dir
-  size: 49842453902
-  nfiles: 23
-  hash: md5
-  path: global_step_80
