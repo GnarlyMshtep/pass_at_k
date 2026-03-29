@@ -309,6 +309,18 @@ def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
         if run.comments:
             cmd += ["--prefill-description", run.comments]
         subprocess.run(cmd)
+        # Offer to mark as reviewed after cataloging
+        try:
+            mark = input(colored("  Mark as reviewed? [y/N]: ", C.CYAN)).strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            mark = ""
+            print()
+        if mark == "y":
+            run.state = RunState.REVIEWED
+            run.state_changed_at = datetime.now(tz=timezone.utc)
+            save_tracked_runs(runs=all_runs)
+            print(colored("  Marked as reviewed.", C.GREEN))
+            return True
         return False
 
     else:
