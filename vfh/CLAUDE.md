@@ -88,12 +88,13 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 | `vfh/run_manager.py` | Create/load run dirs, DAG linking |
 | `vfh/orchestrator.py` | Main entry + argparse CLI (new/continue/fork), output tee, daemon spawning |
 | `vfh/checkpoint_daemon.py` | Background backup + cleanup process (disabled by default) |
-| `vfh/dvc_backup.py` | Standalone DVC backup script for checkpoints + rollouts |
+| `vfh/dvc_backup/` | DVC backup package (batched, round-trip verified) |
 | `vfh/catalog.py` | Interactive run catalog with tags, lineage, fuzzy search |
 | `vfh/catalog_types.py` | Dataclasses for catalog (CatalogEntry, CatalogTag, Catalog) |
 | `vfh/run_tracker.py` | Run tracker library: register, load, save, refresh (wandb polling). See [`RUN_TRACKING.md`](RUN_TRACKING.md) |
 | `vfh/run_tracker_types.py` | RunState enum + TrackedRun dataclass |
-| `vfh/run_tracker_viewer.py` | Interactive ANSI-colored viewer for tracked runs |
+| `vfh/run_tracker_viewer.py` | Interactive viewer for tracked runs + catalog (toggle with [c]) |
+| `vfh/family_tree.py` | Interactive family tree explorer for run lineage |
 | `vfh/interactive_utils.py` | Shared interactive helpers (ANSI colors, clipboard via OSC 52, cancel handling) |
 | `vfh/RUN_TRACKING.md` | **Minimal reference for registering/viewing runs — point other Claude instances here** |
 | `vfh/dummy_verl.py` | Fake verl for testing |
@@ -105,6 +106,13 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 ### Metadata sanity check
 `validate_run_metadata()` in `run_manager.py` checks `resolved_hydra_overrides` before verl launches. Called both at prepare-time (in `_prepare_new`) and at run-time (in `run-prepared`). Checks: VFH-managed paths (`default_local_dir`, `rollout_data_dir`, `validation_data_dir`) exist and point inside `run_dir`; `wandb_run_id` matches metadata; fork/continue runs have `resume_mode=resume_path` + valid `resume_from_path`; root runs with `resume_path` get a warning. Raises `ValueError` listing all issues.
 
+### Config inspection
+`--print-config` on `new` resolves the merged config (base + overrides + extra-overrides), prints it with `[override]` markers highlighting fields that came from the overrides file, then exits without creating a run. Useful for reviewing the full config before launching.
+
+```
+python -m vfh.orchestrator new --base-config ... --overrides ... --print-config
+```
+
 ### Sbatch integration
 `--sbatch --time HH:MM:SS` on `new` or `continue` generates a SLURM sbatch script instead of launching directly. Two-phase design:
 - **Phase 1 (creation time)**: `prepare()` resolves config, creates run dir, runs validation. `_generate_sbatch()` writes `{run_dir}/sbatch_job.sh` with SLURM directives (`--gpus` inferred from `trainer.n_gpus_per_node`, `--job-name` from experiment name + run_id, mail notifications to mshtepel@andrew.cmu.edu). Appends to `logs/VerlRun/sbatch_runs.jsonl` (append-only history) and `sbatch_runs_editable.jsonl` (editable checklist).
@@ -115,21 +123,49 @@ Flags: `--dont-auto-sbatch` generates the script without submitting. By default,
 ### Checkpoint daemon (disabled by default)
 `CheckpointDaemonConfig.enabled` defaults to `False`. Use `--enable-checkpoint-daemon` on `new`, `continue`, or `run-prepared` to opt in. The daemon was failing frequently and is replaced by the standalone DVC backup script for manual backups.
 
-### DVC backup script (`vfh/dvc_backup.py`)
-Standalone script for bulk-backing up checkpoints and rollouts via DVC. Not part of the orchestrator — run manually.
+### DVC backup package (`vfh/dvc_backup/`)
+Package for bulk-backing up checkpoints and rollouts via DVC with round-trip verification. Not part of the orchestrator — run manually.
 
 ```
-python -m vfh.dvc_backup              # discover + backup + verify + delete
-python -m vfh.dvc_backup --dry-run    # just show what would be done
-python -m vfh.dvc_backup --verbose    # debug output
-python -m vfh.dvc_backup --setup-test-dir  # create fake VerlRun for testing
+python -m vfh.dvc_backup                                    # discover + backup (errors if not enough space)
+python -m vfh.dvc_backup --space-budget-gb 250 --yes        # batched mode, 250GB per batch, auto-approve
+python -m vfh.dvc_backup --space-budget-gb 100 --max-batches 2  # test 2 batches only
+python -m vfh.dvc_backup --path logs/VerlRun/.../run_dir    # single run dir
+python -m vfh.dvc_backup --skip-roundtrip-verify            # push-only, no pull-back verification
+python -m vfh.dvc_backup --dry-run                          # show what would be done
+python -m vfh.dvc_backup --verbose                          # debug output
 ```
 
-**Flow:** discover untracked targets → present summary → prompt → `dvc add` → `git commit` .dvc files → `dvc push` → verify via `dvc status --cloud` ("in sync" = success) → prompt to delete → `dvc gc`.
+**Package structure:**
+| Module | Purpose |
+|--------|---------|
+| `config.py` | `DvcBackupConfig` dataclass (tyro CLI), timeouts, constants |
+| `types.py` | `BackupTarget`, `RunSummary` |
+| `discovery.py` | Find runs + targets (checkpoints: `global_step_N` dirs, rollouts: whole `rollouts/` dir) |
+| `dvc_ops.py` | DVC/git wrappers: batch add, batch push, fast cache clear, stale lock handling |
+| `verification.py` | Round-trip verify: move aside → pull from S3 → hash compare → accept/reject |
+| `presentation.py` | Summary display, `human_size()` |
+| `pipeline.py` | Main orchestration: space check, batching loop, freed-space rollover |
+| `backup_log.py` | Append-only log at `logs/VerlRun/dvc_backup_logs.txt` |
+| `test_setup.py` | Create fake VerlRun for testing |
 
-**Recovery:** if interrupted and re-run, targets with existing `.dvc` files have their remote status checked. Already-synced targets are skipped; un-pushed ones are routed to push. Stale DVC lock files are auto-detected and cleared.
+**Batch pipeline flow** (per batch):
+1. `dvc add` all targets in one call (handles legacy `.dvc` cleanup + `git rm --cached` automatically)
+2. `git commit` the `.dvc` files
+3. `dvc push` all targets in one call (DVC parallelizes S3 uploads via `jobs=64`)
+4. Clear DVC cache (fast `rm -rf`, not `dvc gc`)
+5. Round-trip verify each target: move original → `dvc pull` from S3 → hash compare → delete both copies if match, restore original if mismatch
+6. Clear cache again, freed space rolls into next batch's budget
 
-**Gitignore setup:** root `.gitignore` uses `logs/*` + `!logs/VerlRun/` so `.dvc` files are naturally git-trackable (no `git add -f` needed). Heavy data is caught by leaf patterns: `**/global_step_*/`, `**/train/*.jsonl`, `**/*.pt`.
+**Space safety:** 2.5x multiplier — `dvc add` doubles space (original + cache), plus verification headroom. If no `--space-budget-gb`, errors with suggested budget. Freed space from verified+deleted targets accumulates across batches.
+
+**DVC tracking convention:** Checkpoints tracked per-step (`checkpoints/global_step_N.dvc`). Rollouts tracked as whole dir (`rollouts.dvc` at run dir level, covering `rollouts/train/` + `rollouts/val/`). DVC auto-generates per-run `.gitignore`.
+
+**Recovery:** if interrupted and re-run, targets with existing `.dvc` files are detected and pushed directly (skip add). Stale DVC lock files auto-cleared.
+
+**Logging:** Every invocation appends to `logs/VerlRun/dvc_backup_logs.txt` with timestamps.
+
+**TODO:** Parallelize verification — move all targets at once, `dvc pull` all at once, compare all at once, accept/reject individually. Currently sequential per-target.
 
 **Path safety:** all DVC/git commands via `subprocess.run(list_form)` — no shell escaping issues.
 
@@ -163,6 +199,8 @@ python -m vfh.catalog --path 186oohgn        # resolve by wandb ID
 - **`dvc pull` has no `--dry-run` flag.** Can't cheaply check "is this on remote?" without actually downloading. `dvc fetch` downloads to cache only (no checkout) — lighter but still downloads. `dvc status --cloud` is the only non-downloading check, with the ambiguity caveat above.
 - **`git add -f` was previously needed** because root `.gitignore` had `logs/` which swallowed `.dvc` files. Fixed by replacing with `logs/*` + `!logs/VerlRun/`. No more force-adds needed.
 - **`logs/.gitignore`** exists and ignores `OriginalQ4BIRunVal` and `ProcMonitEval`. Other dirs under `logs/` (GeminiEval, rl_checkpoint_eval) are caught by the `logs/*` rule.
+- **`.dir` manifest loss (2026-03-28 incident).** `dvc remove` on a `.dvc` file deletes its `.dir` manifest from both local cache AND S3 remote. This happened when old whole-directory `.dvc` files were removed during migration to per-step tracking — 81 `.dvc` files across 26 runs became unreachable (individual data blobs exist on S3 by hash but can't be reconstructed without the manifest). `dvc gc` warns about these but can't clean them. `dvc pull` fails. Fix: deleted all 81 broken `.dvc` files (commit `9fea4a74`). **Lesson: never use `dvc remove` — just `rm` the `.dvc` file if needed.**
+- **`dvc gc --not-in-remote` is slow (~5-6 min)** because it queries S3 for every cached hash. The backup script uses `rm -rf .dvc/cache/files/md5/*` instead (instant) when all data has been verified on remote. Only use `dvc gc` when you need selective cleanup.
 
 ### Run tracker (dashboard)
 Tracks ongoing and completed runs. Viewer polls wandb API for state transitions.
@@ -171,9 +209,29 @@ Tracks ongoing and completed runs. Viewer polls wandb API for state transitions.
   - **Sbatch runs**: registered once via a one-liner injected into the sbatch script (runs at SLURM launch time, not at script generation time). `exec_prepared()` does NOT register.
   - **Direct launch**: registered in the main CLI handler right before `exec_prepared()`.
 - **States**: REGISTERED → RUNNING → FINISHED/CRASHED. REGISTERED_NO_WANDB if wandb doesn't respond after grace period (keeps polling). RUNNING_NO_WANDB for runs registered without wandb info. REVIEWED = user-handled.
-- **Viewer**: `python -m vfh.run_tracker_viewer` — ANSI-colored, grouped by state, sorted by most recent. Actions: [w]andb, [p]ath, [l]aunch cmd (copy to clipboard for re-run), [n]ote, [r]emove, [m]ark reviewed, [c]atalog. Interactive [r]efresh re-polls wandb.
+- **Viewer**: `python -m vfh.run_tracker_viewer` — ANSI-colored, grouped by state, sorted by most recent. Two modes toggled with `[c]`:
+  - **Tracker mode** (default): shows tracked runs grouped by state. Actions: [w]andb, [p]ath, [l]aunch cmd, [n]ote (+ offers mark reviewed), [r]emove, [m]ark reviewed, [c]atalog. [f] toggles filter-empty, [a] shows reviewed, [r] refreshes wandb.
+  - **Catalog mode**: shows cataloged runs sorted by `cataloged_at` desc, with colored tag chips. Actions: [w]andb, [p]ath, [l]aunch cmd, [e]dit description, [t]ags (toggle with +new_tag), [r]emove. [f] opens filter sub-menu: [t]ag (interactive toggle, shows entry counts per tag), [m]odel (fuzzy search, scoped to active tag filters), [c]lear. Filters are AND-combinable. [r] reloads catalog from disk.
 - **Tracker file**: `logs/VerlRun/tracked_runs.jsonl` (global, all callers share it). Uses `fcntl.flock` on `.tracked_runs.lock` for concurrency safety. `save_tracked_runs` merges in any appends that happened since load.
-- **Misc**: `--note "text"` on `new`/`continue` writes `NOTE.md` in the run dir. `launching_command.txt` always written with full CLI command.
+- **Timing**: `ended_at` is the actual end time from wandb (`summary._timestamp`), not when the tracker detected it. Backfilled on refresh for existing runs. `registered_at` = launch time.
+- **SLURM**: `slurm_job_id` auto-captured from `$SLURM_JOB_ID` at registration time. Shown in viewer detail view.
+- **Step discovery**: Delegated to catalog extractors (`RunExtractor.find_checkpoint_steps/find_rollout_steps`). VFH scans `checkpoints/global_step_N` + `.dvc` files; TFH scans `checkpoints.jsonl` + `rollouts/{N}.jsonl`.
+- **Misc**: `--note "text"` on `new`/`continue` writes `NOTE.md` in the run dir. `launching_command.txt` always written with full CLI command. `code.diff` captures `git diff HEAD` at launch.
+
+### Family tree explorer (`vfh/family_tree.py`)
+Interactive CLI for exploring a run's lineage — parents, children, and descendant counts.
+
+```
+python -m vfh.family_tree --path k16vo4tp
+python -m vfh.family_tree --path logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp
+```
+
+- Reads `child_run_ids` and `origin.parent_run_id` directly from `run_metadata.json5` (always fresh, unlike catalog's `preceded_by` which is a snapshot).
+- Walks up the full parent chain (oldest ancestor first). Shows immediate children sorted by first step.
+- Displays per-run: run_id, model (short name), fork_reason, step range, `[cataloged]` marker.
+- Shows descendant count per child (recursive, cached to avoid redundant reads).
+- Actions on selected run: [w]andb URL, [p]ath (clipboard), [c]atalog (launches `vfh.catalog`), [t]ree (recursive drill-down into that run's family tree — stack-based navigation, quit to pop back).
+- Step discovery reuses `RunExtractor.find_checkpoint_steps/find_rollout_steps` from `catalog.py`.
 
 ### Dataset requirements validation
 Preprocessing scripts that produce datasets with specific hyperparam requirements (e.g. `shuffle=false`, `total_epochs=1`) write a `dataset_requirements.json` sidecar file alongside the parquet. `validate_env.py` checks these requirements against the merged config at run time. Keys are dot-separated Hydra paths (e.g. `data.shuffle`, `trainer.test_freq`). See `claude_state/implementing_dataset_requirements.md` for the full design. Reference implementation: `custom/data_preprocessing/APPS/preprocess_apps_multiphase.py`.
