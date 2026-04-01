@@ -327,15 +327,14 @@ class TFHExtractor(RunExtractor):
         return sorted(steps) if steps else None
 
     def find_rollout_steps(self, run_dir: Path) -> list[int] | None:
-        """Find rollout steps from *_rollout_summaries.jsonl files in rollouts/."""
+        """Find rollout steps from {N}.jsonl files in rollouts/."""
         rollouts_dir = run_dir / "rollouts"
         if not rollouts_dir.is_dir():
             return None
         steps: set[int] = set()
         for f in rollouts_dir.iterdir():
-            m = re.match(r"train_iteration_(\d+)_rollout_summaries\.jsonl$", f.name)
-            if m:
-                steps.add(int(m.group(1)))
+            if f.suffix == ".jsonl" and f.stem.isdigit():
+                steps.add(int(f.stem))
         return sorted(steps) if steps else None
 
     def extract(self, path: Path) -> CatalogEntry:

@@ -5,3 +5,4 @@
 ['remote "s3"']
     jobs = 64
     endpointurl = https://s3-accelerate.amazonaws.com
+    url = s3://matan-ml-exp-bucket/dvc-storage-tinker

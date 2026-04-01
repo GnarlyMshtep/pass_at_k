@@ -89,12 +89,16 @@ def prepare(
 
     # --- Validation ---
     if orch_config.validation_mode != ValidationMode.SKIP:
+        resume_from = _extract_override_value(
+            overrides=hydra_overrides, key="trainer.resume_from_path",
+        )
         _run_validation(
             merged_config=merged_config,
             checkpoints_path=str(Path(run_metadata.run_dir) / "checkpoints"),
             rollouts_path=str(Path(run_metadata.run_dir) / "rollouts"),
             requires_openrouter=requires_openrouter,
             warn_only=(orch_config.validation_mode == ValidationMode.AUTO_APPROVE),
+            resume_from_path=resume_from,
         )
         if orch_config.validation_mode == ValidationMode.FULL:
             answer = input("Validation passed. Continue? [Y/n] ").strip().lower()
@@ -313,6 +317,20 @@ def _prepare_new(
                 f"trainer.resume_from_path={resume_path}",
             ])
 
+            # Validate world_size matches n_gpus_per_node.
+            # Use hydra_overrides (not merged_config) since --extra-overrides
+            # can change n_gpus_per_node without updating the merged dict.
+            n_gpus_str = _extract_override_value(
+                overrides=hydra_overrides, key="trainer.n_gpus_per_node",
+            )
+            n_gpus = int(n_gpus_str) if n_gpus_str else int(
+                _get_nested(d=merged_config, keys=["trainer", "n_gpus_per_node"])
+            )
+            _validate_resume_checkpoint(
+                ckpt_dir=Path(resume_path),
+                n_gpus=n_gpus,
+            )
+
             # Detect dataset change: compare resolved data.train_files between
             # parent and child. If different, the saved dataloader sampler state
             # won't match the new dataset → tell verl to skip restoring it.
@@ -331,8 +349,9 @@ def _prepare_new(
                     f"\n  \033[1;34m⚠️ [VFH] Dataset change detected during fork:\033[0m\n"
                     f"    parent data.train_files: {parent_train}\n"
                     f"    child  data.train_files: {child_train}\n"
-                    f"    \033[1;34m→ injecting +trainer.restart_dataloader=true "
-                    f"(dataloader state will NOT be restored from checkpoint)\033[0m\n"
+                    f"    \033[1;34m→ injecting +trainer.restart_dataloader=true\033[0m\n"
+                    f"    Dataloader will fast-forward to fork step (from checkpoint).\n"
+                    f"    Use +trainer.override_dataloader_start_step=N to override.\n"
                 )
             elif not parent_train:
                 print(
@@ -408,6 +427,74 @@ def _save_code_diff(run_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Checkpoint validation (continue / fork)
+# ---------------------------------------------------------------------------
+
+
+def _validate_resume_checkpoint(
+    ckpt_dir: Path,
+    n_gpus: int | None = None,
+) -> None:
+    """Validate that a checkpoint directory is ready for resume/fork.
+
+    Checks (in order):
+    1. Directory exists on disk (not just a .dvc pointer).
+    2. actor/ subdirectory exists.
+    3. actor/ contains model weight files (model_world_size_N_rank_*.pt).
+    4. If n_gpus is provided, checkpoint world_size matches n_gpus.
+
+    Raises ValueError with a clear message (including DVC pull hints) on failure.
+    """
+    dvc_file = ckpt_dir.parent / f"{ckpt_dir.name}.dvc"
+    dvc_hint = (
+        f"\n  Checkpoint may be in DVC — try:\n"
+        f"    dvc pull {dvc_file}"
+    ) if dvc_file.exists() else ""
+
+    # 1. Directory exists
+    if not ckpt_dir.exists() or not ckpt_dir.is_dir():
+        raise ValueError(
+            f"Checkpoint directory does not exist: {ckpt_dir}{dvc_hint}"
+        )
+
+    # 2. actor/ subdirectory exists
+    actor_dir = ckpt_dir / "actor"
+    if not actor_dir.exists() or not actor_dir.is_dir():
+        raise ValueError(
+            f"Checkpoint has no actor/ subdirectory: {ckpt_dir}{dvc_hint}"
+        )
+
+    # 3. actor/ has weight files
+    weight_pattern = re.compile(r"model_world_size_(\d+)_rank_\d+\.pt")
+    world_sizes: list[int] = []
+    for f in actor_dir.iterdir():
+        m = weight_pattern.match(f.name)
+        if m:
+            world_sizes.append(int(m.group(1)))
+
+    if not world_sizes:
+        raise ValueError(
+            f"Checkpoint actor/ has no model weight files "
+            f"(expected model_world_size_N_rank_*.pt): {actor_dir}{dvc_hint}"
+        )
+
+    ckpt_world_size = world_sizes[0]
+    n_ranks = len(world_sizes)
+
+    # 4. World size matches n_gpus
+    if n_gpus is not None:
+        if ckpt_world_size != n_gpus:
+            raise ValueError(
+                f"Checkpoint world_size ({ckpt_world_size}) does not match "
+                f"n_gpus_per_node ({n_gpus}). FSDP checkpoint loading will fail.\n"
+                f"  Either change n_gpus_per_node to {ckpt_world_size} or use a "
+                f"checkpoint saved with world_size={n_gpus}.\n"
+                f"  Checkpoint: {ckpt_dir}"
+            )
+    # Success — no output here; visible validation output comes from validate_env.py
+
+
+# ---------------------------------------------------------------------------
 # Prepare continue (crashed/stopped run)
 # ---------------------------------------------------------------------------
 
@@ -425,6 +512,11 @@ def _prepare_continue(
         raise RuntimeError(
             f"No checkpoints found in {run_config.run_dir}/checkpoints/ — nothing to continue from."
         )
+
+    # Validate checkpoint files exist (not just DVC pointers).
+    # World_size check is deferred to _prepare_new where we have the resolved config.
+    ckpt_dir = Path(run_config.run_dir) / "checkpoints" / f"global_step_{latest_step}"
+    _validate_resume_checkpoint(ckpt_dir=ckpt_dir)
 
     origin = RunOrigin(
         fork_reason=ForkReason.CONTINUE,
@@ -478,12 +570,15 @@ def _run_validation(
     rollouts_path: str,
     requires_openrouter: bool,
     warn_only: bool = False,
+    resume_from_path: Optional[str] = None,
 ) -> None:
     """Build and run validate_env.py CLI args from the merged config.
 
     Args:
         warn_only: If True (-y mode), log validation failures as warnings
             instead of raising. If False (default/FULL), raise on failure.
+        resume_from_path: If set, validate the checkpoint dir for resume
+            (actor/ exists, weight files present, world_size matches n_gpu).
     """
     get = lambda *keys, **kw: _get_nested(d=merged_config, keys=list(keys), **kw)
 
@@ -530,6 +625,10 @@ def _run_validation(
 
     # Pass full merged config for dataset requirements checking
     cmd.extend(["--merged-config-json", json.dumps(merged_config)])
+
+    # Resume checkpoint validation (continue/fork)
+    if resume_from_path:
+        cmd.extend(["--resume-from-path", resume_from_path])
 
     print("Running validation...")
     result = subprocess.run(cmd)
@@ -922,8 +1021,8 @@ Forking:
         help="global_step_N to fork from (default: latest checkpoint in --fork-from)",
     )
     new_parser.add_argument(
-        "--requires-openrouter", action="store_true",
-        help="Pass --requires-openrouter to validate_env.py (needed for model-based rewards)",
+        "--no-openrouter", action="store_true",
+        help="Skip OpenRouter credit check (default: check is enabled)",
     )
     new_parser.add_argument(
         "--dummy", action="store_true",
@@ -937,6 +1036,10 @@ Forking:
     new_parser.add_argument(
         "--note", default=None, metavar="TEXT",
         help="Free-form note written to NOTE.md in the run directory",
+    )
+    new_parser.add_argument(
+        "--print-config", action="store_true",
+        help="Print the merged config (base + overrides) with override fields highlighted, then exit.",
     )
 
     # --- continue ---
@@ -964,8 +1067,8 @@ Optionally apply new overrides on top of the original run's config.
         help="Optional JSON5 overrides to apply on top of the original config",
     )
     cont_parser.add_argument(
-        "--requires-openrouter", action="store_true",
-        help="Pass --requires-openrouter to validate_env.py",
+        "--no-openrouter", action="store_true",
+        help="Skip OpenRouter credit check (default: check is enabled)",
     )
     cont_parser.add_argument(
         "--dummy", action="store_true",
@@ -1117,6 +1220,60 @@ def main() -> None:
         for daemon_cfg in orch_config.checkpoint_daemons:
             daemon_cfg.enabled = True
 
+    if args.command == "new" and getattr(args, "print_config", False):
+        from vfh.config_resolver import resolve_config, _load_json5
+        merged, hydra_overrides = resolve_config(
+            base_config_path=args.base_config,
+            overrides_path=args.overrides,
+            extra_hydra_overrides=args.extra_overrides,
+        )
+        # Determine which keys came from overrides
+        override_keys: set[str] = set()
+        if args.overrides:
+            overrides_raw = _load_json5(path=args.overrides)
+            def _collect_keys(d: dict, prefix: str = "") -> None:
+                for k, v in d.items():
+                    bare = k.lstrip("+")
+                    full = f"{prefix}.{bare}" if prefix else bare
+                    override_keys.add(full)
+                    if isinstance(v, dict):
+                        _collect_keys(d=v, prefix=full)
+            _collect_keys(d=overrides_raw)
+
+        # Pretty-print with override highlighting
+        CYAN = "\033[36m"
+        YELLOW = "\033[1;33m"
+        NC = "\033[0m"
+
+        def _print_config(d: dict, indent: int = 0, path: str = "") -> None:
+            for k, v in d.items():
+                bare = k.lstrip("+")
+                full_path = f"{path}.{bare}" if path else bare
+                is_override = full_path in override_keys
+                marker = f"{YELLOW}[override]{NC} " if is_override else ""
+                prefix = "  " * indent
+                if isinstance(v, dict):
+                    print(f"{prefix}{marker}{CYAN}{k}{NC}:")
+                    _print_config(d=v, indent=indent + 1, path=full_path)
+                elif isinstance(v, list) and v and isinstance(v[0], dict):
+                    print(f"{prefix}{marker}{CYAN}{k}{NC}:")
+                    for i, item in enumerate(v):
+                        print(f"{prefix}  [{i}]:")
+                        _print_config(d=item, indent=indent + 2, path=full_path)
+                else:
+                    print(f"{prefix}{marker}{CYAN}{k}{NC}: {v}")
+
+        print(f"\n{'='*60}")
+        print(f"Merged Config (base: {args.base_config})")
+        if args.overrides:
+            print(f"  + overrides: {args.overrides}")
+        print(f"{'='*60}\n")
+        _print_config(d=merged)
+        print(f"\n{'='*60}")
+        print(f"Hydra overrides: {len(hydra_overrides)} keys")
+        print(f"{'='*60}")
+        sys.exit(0)
+
     if args.command == "new":
         origin = RunOrigin(fork_reason=ForkReason.ROOT)
         if args.fork_from:
@@ -1127,17 +1284,10 @@ def main() -> None:
                     "--fork-step is required when using --fork-from. "
                     "Specify the global_step_N to fork from explicitly."
                 )
-            # Validate checkpoint exists and has weights
+            # Validate checkpoint exists and has weight files (DVC-aware).
+            # World_size check is deferred to _prepare_new where we have the resolved config.
             ckpt_dir = Path(args.fork_from) / "checkpoints" / f"global_step_{fork_step}"
-            if not ckpt_dir.exists():
-                raise ValueError(
-                    f"Checkpoint directory does not exist: {ckpt_dir}"
-                )
-            if not (ckpt_dir / "actor").exists():
-                raise ValueError(
-                    f"Checkpoint has no actor/ weights: {ckpt_dir}\n"
-                    "It may have been cleaned by the daemon. Try `dvc pull` first."
-                )
+            _validate_resume_checkpoint(ckpt_dir=ckpt_dir)
             origin = RunOrigin(
                 fork_reason=ForkReason.INTENTIONAL_FORK,
                 parent_run_id=parent_meta.run_id,
@@ -1162,7 +1312,7 @@ def main() -> None:
     else:
         parser.error(f"Unknown command: {args.command}")
 
-    requires_openrouter = getattr(args, "requires_openrouter", False)
+    requires_openrouter = not getattr(args, "no_openrouter", False)
     note: str | None = getattr(args, "note", None)
 
     if args.sbatch:

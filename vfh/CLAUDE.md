@@ -236,6 +236,8 @@ python -m vfh.family_tree --path logs/VerlRun/03/26/multiphase_hidden_test_num_c
 ### Dataset requirements validation
 Preprocessing scripts that produce datasets with specific hyperparam requirements (e.g. `shuffle=false`, `total_epochs=1`) write a `dataset_requirements.json` sidecar file alongside the parquet. `validate_env.py` checks these requirements against the merged config at run time. Keys are dot-separated Hydra paths (e.g. `data.shuffle`, `trainer.test_freq`). See `claude_state/implementing_dataset_requirements.md` for the full design. Reference implementation: `custom/data_preprocessing/APPS/preprocess_apps_multiphase.py`.
 
+**`filter_overlong_prompts` must always be True.** `validate_env` enforces this. Even pre-filtered datasets need runtime filtering as a safety net — chat template tokenization can differ between preprocessing and verl runtime (e.g. `fork_k16vo4tp_starthiddenstage3` crashed with 1027 > 1024 on a dataset pre-filtered at 1024). Preprocessing scripts use `--filter-margin N` (required arg, recommended 10) to filter at `max_prompt_length - N` tokens.
+
 ## Not yet built
 - **Base daemon class** — refactor if more daemons are added.
 - **Wandb multi-run view URL** — wandb doesn't have a simple URL format for filtering by multiple run IDs. Could use programmatic workspaces API (`wandb_workspaces`) to create a saved view, but not a priority.
