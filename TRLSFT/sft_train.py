@@ -21,7 +21,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import importlib
 import json
 import os
 import subprocess
@@ -36,8 +35,186 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pyjson5
 import wandb
+from transformers import TrainerCallback
 
 from TRLSFT.sft_types import CLIArgs, EvalConfig, LoRAConfig, SFTConfig
+
+# --- Callbacks ---
+
+
+class StdoutLoggingCallback(TrainerCallback):
+    """Print training metrics to stdout so they appear in sbatch .out files."""
+
+    def on_log(self, args: Any, state: Any, control: Any, logs: dict | None = None, **kwargs: Any) -> None:
+        if not logs:
+            return
+        step = state.global_step
+        parts = [f"[step {step}]"]
+        if "loss" in logs:
+            parts.append(f"loss={logs['loss']:.4f}")
+        if "learning_rate" in logs:
+            parts.append(f"lr={logs['learning_rate']:.2e}")
+        if "epoch" in logs:
+            parts.append(f"epoch={logs['epoch']:.1f}")
+        if "grad_norm" in logs:
+            parts.append(f"grad_norm={logs['grad_norm']:.2f}")
+        print("  ".join(parts), flush=True)
+
+
+class MidRunEvalCallback(TrainerCallback):
+    """Run eval at every eval_steps using HF model.generate() — no vLLM needed.
+
+    Scores completions with the async reward function, logs summary to wandb
+    and stdout, saves per-step results to {run_dir}/mid_run_evals/step_{N}.jsonl.
+    """
+
+    def __init__(
+        self,
+        eval_config: EvalConfig,
+        eval_steps: int,
+        run_dir: str,
+        tokenizer: Any,
+        gen_batch_size: int = 4,
+    ) -> None:
+        from TRLSFT.envs.apps_backdoor import load_eval_questions
+
+        self.eval_steps = eval_steps
+        self.run_dir = Path(run_dir)
+        self.tokenizer = tokenizer
+        self.gen_batch_size = gen_batch_size
+
+        # Extract eval kwargs
+        self.n_samples: int = eval_config.eval_kwargs["n_samples"]
+        self.eval_source_file: str = eval_config.eval_kwargs["eval_source_file"]
+        self.reward_global_step: int = eval_config.eval_kwargs["reward_global_step"]
+        self.max_new_tokens: int = eval_config.eval_kwargs.get("max_new_tokens", 8192)
+
+        # Load questions once with fixed seed
+        self.questions = load_eval_questions(
+            eval_source_file=self.eval_source_file,
+            n_samples=self.n_samples,
+            seed=42,
+        )
+        self.prompts = [q["input"] for q in self.questions]
+        print(f"[MidRunEval] Loaded {len(self.questions)} eval questions (eval every {eval_steps} steps)")
+
+        # Create output dir
+        self.eval_dir = self.run_dir / "mid_run_evals"
+        self.eval_dir.mkdir(parents=True, exist_ok=True)
+
+    def _generate_completions(self, model: Any) -> list[str]:
+        """Generate completions using HF model.generate() with left-padding."""
+        import torch
+
+        # Left-pad for correct batch generation with causal LMs
+        original_padding_side = self.tokenizer.padding_side
+        self.tokenizer.padding_side = "left"
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+
+        completions: list[str] = []
+        n_batches = (len(self.prompts) + self.gen_batch_size - 1) // self.gen_batch_size
+
+        for batch_idx in range(n_batches):
+            start = batch_idx * self.gen_batch_size
+            end = min(start + self.gen_batch_size, len(self.prompts))
+            batch_prompts = self.prompts[start:end]
+
+            inputs = self.tokenizer(
+                batch_prompts,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_new_tokens,
+            ).to(model.device)
+
+            with torch.no_grad():
+                output_ids = model.generate(
+                    **inputs,
+                    max_new_tokens=self.max_new_tokens,
+                    temperature=0.7,
+                    do_sample=True,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                )
+
+            # Decode only the generated portion (strip the prompt tokens)
+            for i, (input_ids, output) in enumerate(zip(inputs["input_ids"], output_ids)):
+                prompt_len = input_ids.shape[0]
+                generated_ids = output[prompt_len:]
+                text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+                completions.append(text)
+
+            if (batch_idx + 1) % 5 == 0 or batch_idx == n_batches - 1:
+                print(f"  [MidRunEval] Generated {len(completions)}/{len(self.prompts)} completions", flush=True)
+
+        # Restore original padding side
+        self.tokenizer.padding_side = original_padding_side
+        return completions
+
+    def on_save(self, args: Any, state: Any, control: Any, **kwargs: Any) -> None:
+        """Run eval after checkpoint save if this is an eval step."""
+        step = state.global_step
+        if step % self.eval_steps != 0:
+            return
+
+        model = kwargs.get("model")
+        if model is None:
+            print(f"  [MidRunEval] WARNING: model not available in on_save kwargs at step {step}")
+            return
+
+        print(f"\n{'='*60}")
+        print(f"[MidRunEval] Running eval at step {step}...")
+
+        # Switch to eval mode
+        model.eval()
+
+        try:
+            # Generate completions
+            completions = self._generate_completions(model=model)
+
+            # Score with reward function (async)
+            from TRLSFT.envs.apps_backdoor import compute_summary, score_completions
+            import asyncio
+
+            results = asyncio.run(score_completions(
+                questions=self.questions,
+                completions=completions,
+                reward_global_step=self.reward_global_step,
+            ))
+            summary = compute_summary(results=results)
+
+            # Print summary to stdout
+            print(f"[MidRunEval step {step}] "
+                  f"score={summary.get('mean_score', 0):.4f}  "
+                  f"frac_test={summary.get('mean_frac_test_cases_passing', 0):.4f}  "
+                  f"sus={summary.get('mean_sus_score', 0):.4f}  "
+                  f"backdoor={summary.get('mean_backdoor_test_passed', 0):.4f}  "
+                  f"hidden_len={summary.get('mean_hidden_lengths', 0):.1f}")
+
+            # Log to wandb
+            wandb_metrics = {
+                f"eval/{k}": v
+                for k, v in summary.items()
+                if isinstance(v, (int, float))
+            }
+            wandb_metrics["eval/step"] = step
+            wandb.log(wandb_metrics, step=step)
+
+            # Save per-step results
+            results_path = self.eval_dir / f"step_{step}.jsonl"
+            with open(results_path, "w") as f:
+                for r in results:
+                    f.write(json.dumps(r, default=str) + "\n")
+            print(f"  [MidRunEval] Results saved: {results_path}")
+
+        except Exception as e:
+            print(f"  [MidRunEval] ERROR at step {step}: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Switch back to train mode
+            model.train()
+            print(f"{'='*60}\n")
 
 
 # --- Config resolution ---
@@ -189,16 +366,6 @@ def plot_loss(log_history: list[dict], run_dir: Path) -> Path:
     return plot_path
 
 
-# --- Eval loading ---
-
-def load_eval_class(eval_config: EvalConfig) -> Any:
-    """Dynamically import the eval class from eval_config.eval_script."""
-    module_path, class_name = eval_config.eval_script.rsplit(".", 1)
-    module = importlib.import_module(module_path)
-    eval_cls = getattr(module, class_name)
-    return eval_cls(**eval_config.eval_kwargs)
-
-
 # --- Main training ---
 
 def train(sft_config: SFTConfig, run_dir: Path, wandb_id: str) -> None:
@@ -290,25 +457,19 @@ def train(sft_config: SFTConfig, run_dir: Path, wandb_id: str) -> None:
         name=f"sft_{run_dir.name}",
     )
 
-    # Custom callback for extra metrics
-    from transformers import TrainerCallback
+    # Build callbacks
+    callbacks: list[TrainerCallback] = [StdoutLoggingCallback()]
 
-    class SeqLengthCallback(TrainerCallback):
-        """Log average sequence length and max sequence length per batch."""
-        def on_step_end(self, args, state, control, **kwargs):
-            model_inst = kwargs.get("model")
-            if model_inst is not None and hasattr(state, "_last_input_ids_lengths"):
-                # Logged via on_step_begin
-                pass
-
-        def on_log(self, args, state, control, logs=None, **kwargs):
-            # num_tokens is already logged by TRL; derive avg_seq_length from it
-            # num_tokens / (batch_size * grad_accum) gives avg tokens per sample
-            if logs and "num_tokens" in logs:
-                step = state.global_step
-                total_samples = step * args.per_device_train_batch_size * args.gradient_accumulation_steps
-                if total_samples > 0:
-                    logs["avg_seq_length"] = logs["num_tokens"] / total_samples
+    if sft_config.eval is not None and sft_config.eval_steps is not None:
+        mid_run_eval_cb = MidRunEvalCallback(
+            eval_config=sft_config.eval,
+            eval_steps=sft_config.eval_steps,
+            run_dir=str(run_dir),
+            tokenizer=tokenizer,
+        )
+        callbacks.append(mid_run_eval_cb)
+    elif sft_config.eval is None:
+        print("WARNING: No eval configured (eval is null in config)")
 
     # SFT Trainer
     trainer = SFTTrainer(
@@ -317,7 +478,7 @@ def train(sft_config: SFTConfig, run_dir: Path, wandb_id: str) -> None:
         train_dataset=dataset,
         processing_class=tokenizer,
         peft_config=peft_config,
-        callbacks=[SeqLengthCallback()],
+        callbacks=callbacks,
     )
 
     # Train
@@ -331,34 +492,6 @@ def train(sft_config: SFTConfig, run_dir: Path, wandb_id: str) -> None:
 
     # Plot loss
     plot_loss(log_history=trainer.state.log_history, run_dir=run_dir)
-
-    # Merge LoRA into base model
-    print("\nMerging LoRA adapter into base model...")
-    merged_model = trainer.model.merge_and_unload()
-    merged_dir = run_dir / "merged_model"
-    merged_model.save_pretrained(str(merged_dir))
-    tokenizer.save_pretrained(str(merged_dir))
-    print(f"  merged model saved: {merged_dir}")
-
-    # Run eval
-    if sft_config.eval is None:
-        print("\nERROR: No eval configured (eval is null in config). Refusing to run without eval.")
-        sys.exit(1)
-    if sft_config.eval is not None:
-        print("\nRunning eval...")
-        import asyncio
-        eval_instance = load_eval_class(eval_config=sft_config.eval)
-        eval_results = asyncio.run(eval_instance.run(
-            model=merged_model,
-            tokenizer=tokenizer,
-            run_dir=str(run_dir),
-        ))
-        # Save eval results
-        eval_path = run_dir / "eval_results.jsonl"
-        with open(eval_path, "w") as f:
-            for result in eval_results:
-                f.write(json.dumps(result) + "\n")
-        print(f"  eval results: {eval_path}")
 
     wandb.finish()
     print(f"\n=== Done ===")
@@ -474,7 +607,7 @@ def main() -> None:
             raise FileNotFoundError(f"Run directory not found: {run_dir}")
 
         # Guard: refuse to run if training artifacts already exist (dir is immutable)
-        _immutability_markers = ["loss_plot.png", "merged_model", "eval_results.jsonl"]
+        _immutability_markers = ["loss_plot.png"]
         existing = [m for m in _immutability_markers if (run_dir / m).exists()]
         if existing:
             raise RuntimeError(

@@ -29,16 +29,15 @@ Converts to HF Dataset with `text` column. TRL's `completion_only_loss=True` wit
 - LoRA via PEFT
 - `trl.SFTTrainer` with `SFTConfig(completion_only_loss=True)`
 - Wandb logging + loss plot saved to run dir
-- After training: merges LoRA into base model → `merged_model/`
 - Checkpoints save LoRA adapters only (lightweight)
 - Registers run with vfh run tracker (`vfh.run_tracker.register_run`)
-- Eval runs at the end on the merged model using vLLM for batched generation
-- Exits with error if no eval configured
+- **`StdoutLoggingCallback`**: prints loss/lr/epoch/grad_norm to stdout at each log step
+- **`MidRunEvalCallback`**: runs HF `model.generate()` eval every `eval_steps`, scores with reward function, logs to wandb + `mid_run_evals/step_{N}.jsonl`
 
 ### Eval architecture
 Two eval approaches:
-1. **End-of-training eval** (`sft_eval_backdoor.py`): runs once on merged model after training
-2. **Post-hoc multi-checkpoint eval** (`runners/eval_all_checkpoints.py`): evaluates ALL LoRA checkpoints from a completed run
+1. **Mid-run eval** (`MidRunEvalCallback` in `sft_train.py`): runs during training every `eval_steps` using HF generate (model already in GPU memory)
+2. **Post-hoc multi-checkpoint eval** (`runners/eval_all_checkpoints.py`): evaluates ALL LoRA checkpoints from a completed run using vLLM
 
 ### Post-hoc eval (`runners/eval_all_checkpoints.py`)
 - Starts a vLLM server with `--enable-lora` and ALL checkpoint adapters loaded simultaneously
@@ -59,13 +58,14 @@ logs/SFTRuns/{MM}/{DD}/{desc}_{HH}_{mm}_{wandb_id}/
 ├── source_configs/       # copies of base + overrides JSON5
 ├── sbatch_job.sh
 ├── loss_plot.png
-├── eval_results.jsonl    # end-of-training eval
 ├── checkpoints/          # LoRA adapters per save_steps
 │   ├── checkpoint-16/
 │   ├── checkpoint-32/
 │   └── final_adapter/
-├── merged_model/         # fused base + LoRA (final)
-├── post-hoc-evals/       # multi-checkpoint eval results
+├── mid_run_evals/        # per-checkpoint eval during training (HF generate)
+│   ├── step_16.jsonl
+│   └── step_32.jsonl
+├── post-hoc-evals/       # multi-checkpoint eval results (vLLM, after training)
 │   └── {MM_DD_HH_mm}/
 │       ├── checkpoint-16.jsonl
 │       ├── checkpoint-32.jsonl
@@ -128,10 +128,9 @@ srun --gres=gpu:1 --cpus-per-task=16 --mem=64G --time=02:00:00 \
 1. Checks run dir doesn't already have training artifacts (immutability guard)
 2. Generates a fresh wandb ID (even on retry)
 3. Registers run with vfh run tracker
-4. Runs training (LoRA SFT)
-5. Saves final adapter + merges into base model
-6. Runs eval on merged model
-7. Saves loss plot + eval results
+4. Runs training (LoRA SFT) with mid-run eval at every `eval_steps`
+5. Saves final adapter
+6. Saves loss plot
 
 ## SLURM notes
 - **Use `--gres=gpu:N`** not `--gpus=N` for GPU allocation on this cluster
@@ -144,10 +143,10 @@ srun --gres=gpu:1 --cpus-per-task=16 --mem=64G --time=02:00:00 \
 | File | Purpose |
 |------|---------|
 | `sft_types.py` | Config dataclasses (no defaults) |
-| `sft_train.py` | Training + sbatch + loss plot + merge + eval |
+| `sft_train.py` | Training + sbatch + loss plot + mid-run eval via callbacks |
 | `prepare_data.py` | Rollout JSONL → HF Dataset |
 | `sft_eval_base.py` | Eval ABC |
-| `sft_eval_backdoor.py` | End-of-training eval: vLLM generation + reward scoring |
+| `sft_eval_backdoor.py` | Eval class for post-hoc eval (vLLM generation + reward scoring) |
 | `envs/apps_backdoor.py` | APPS backdoor eval env: question loading, vLLM client, scoring, summary stats |
 | `runners/eval_all_checkpoints.py` | Multi-checkpoint post-hoc eval via vLLM multi-LoRA serving |
 | `configs/base/` | Base configs (hyperparams) |
@@ -155,14 +154,14 @@ srun --gres=gpu:1 --cpus-per-task=16 --mem=64G --time=02:00:00 \
 
 ## Design choices
 - **LoRA, not full fine-tuning** — 8B model, checkpoints are ~50MB not ~16GB
-- **vLLM for eval** — batched concurrent generation, multi-LoRA serving for checkpoint comparison
+- **Mid-run eval via HF generate** — `MidRunEvalCallback` runs eval every `eval_steps` using `model.generate()` (no vLLM). Model is already in GPU memory during training. Results saved to `mid_run_evals/step_{N}.jsonl` and logged to wandb.
+- **vLLM for post-hoc eval** — `runners/eval_all_checkpoints.py` uses vLLM multi-LoRA serving for batch comparison of all checkpoints after training
 - **`completion_only_loss=True`** — TRL 0.29+ config param, trains only on assistant completions
-- **Eval is mandatory** — `sft_train.py` exits with error if no eval configured
+- **`StdoutLoggingCallback`** — prints loss/lr/epoch to stdout so sbatch `.out` files contain training progress
 - **All paths should be absolute** — relative paths break when sbatch runs from a different CWD
 - **Fresh wandb ID per execution** — `run-prepared` generates new ID even on retry, preventing wandb pollution
 
 ## Known issues / TODOs
-- **Mid-run eval not implemented** — `eval_steps` config param is ignored; eval only runs at end. Post-hoc eval covers this.
-- **Loss not printed to sbatch stdout** — goes to wandb output.log only. Check `wandb/run-*/files/output.log`.
-- **Checkpoint naming** — currently HF default `checkpoint-{step}`. TODO: change to `global_step_{N}` for consistency with vfh.
-- **End-of-training eval uses HF generate** (slow, sequential). Should be replaced with vLLM or removed in favor of post-hoc eval.
+- **Checkpoint naming** — uses HF default `checkpoint-{step}` (not `global_step_{N}`). Kept as-is to avoid breaking HF Trainer's `save_total_limit` cleanup.
+- **Mid-run eval OOM risk** — HF generate allocates KV cache on top of training memory. `gen_batch_size=4` keeps it small, but very long sequences (8192 tokens) may still OOM. If so, reduce `gen_batch_size` or `n_samples` in eval config.
+- **No LoRA merge at end of training** — removed in favor of post-hoc eval + manual fusion. Use `eval_all_checkpoints.py` or manual PEFT merge to create standalone HF models.
