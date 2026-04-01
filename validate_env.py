@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import requests
 from dotenv import load_dotenv
@@ -622,9 +622,218 @@ def check_checkpoint_disk_space(checkpoints_path: Optional[str], min_gb: float =
         return False
 
 
+def check_dataset_requirements(train_path: str, merged_config_json: Optional[str] = None) -> bool:
+    """Check dataset_requirements.json against merged config values.
+
+    Preprocessing scripts can write a dataset_requirements.json alongside their
+    parquet files, specifying required training hyperparams (e.g. shuffle=false).
+    This function checks those requirements against the actual run config.
+
+    See claude_state/implementing_dataset_requirements.md for the full design.
+    """
+    print("\n11. Checking Dataset Requirements...")
+
+    # Always require filter_overlong_prompts=true. Pre-filtered datasets can still have
+    # edge cases where chat template tokenization differs between preprocessing and runtime,
+    # causing sequence_length > max_length errors. Double-filtering is harmless.
+    # See: fork_k16vo4tp_starthiddenstage3 crashed with sequence_length=1027 > max_length=1024
+    # on a dataset pre-filtered at 1024 tokens.
+    if merged_config_json:
+        try:
+            import json as json_mod
+            mc = json_mod.loads(merged_config_json)
+            fop = mc.get("data", {}).get("filter_overlong_prompts")
+            if fop is False:
+                error(
+                    "  data.filter_overlong_prompts must be True. Pre-filtered datasets can still "
+                    "have edge cases from chat template tokenization differences. Set "
+                    "filter_overlong_prompts=true in your override config."
+                )
+                return False
+            elif fop is True:
+                success("  data.filter_overlong_prompts = True ✓")
+        except Exception:
+            pass  # merged config parsing failed — other checks will catch it
+
+    if not train_path:
+        success("No train path — skipping dataset requirements check")
+        return True
+
+    # Find requirements file in the dataset directory
+    dataset_dir = Path(train_path).parent
+    req_path = dataset_dir / "dataset_requirements.json"
+
+    if not req_path.exists():
+        success(f"No dataset_requirements.json found in {dataset_dir} — no constraints to check")
+        return True
+
+    # Parse requirements
+    try:
+        import json as json_mod
+        with open(req_path) as f:
+            requirements: dict = json_mod.load(f)
+    except Exception as e:
+        error(f"Failed to parse {req_path}: {e}")
+        return False
+
+    if not isinstance(requirements, dict):
+        error(f"dataset_requirements.json must be a JSON object, got {type(requirements).__name__}")
+        return False
+
+    if not requirements:
+        success("dataset_requirements.json is empty — no constraints to check")
+        return True
+
+    # Parse merged config
+    if not merged_config_json:
+        warning(
+            f"Dataset has requirements ({list(requirements.keys())}) but no --merged-config-json "
+            f"was provided. Cannot validate. Requirements file: {req_path}"
+        )
+        return True  # Don't fail — older orchestrator versions don't pass this
+
+    try:
+        import json as json_mod
+        merged_config: dict = json_mod.loads(merged_config_json)
+    except Exception as e:
+        error(f"Failed to parse --merged-config-json: {e}")
+        return False
+
+    # Check each requirement
+    all_ok = True
+    for dotted_key, expected_value in requirements.items():
+        # Navigate the merged config using dot-separated key
+        keys = dotted_key.split(".")
+        current = merged_config
+        found = True
+        for k in keys:
+            if isinstance(current, dict) and k in current:
+                current = current[k]
+            elif isinstance(current, dict) and f"+{k}" in current:
+                current = current[f"+{k}"]
+            else:
+                warning(
+                    f"  Requirement '{dotted_key}={expected_value}' — key not found in merged config "
+                    f"(looked for: {'.'.join(keys)}). Skipping."
+                )
+                found = False
+                break
+
+        if not found:
+            continue
+
+        actual_value = current
+
+        # Type-aware comparison (JSON bools vs Python bools, ints vs floats, etc.)
+        if _values_match(expected=expected_value, actual=actual_value):
+            success(f"  {dotted_key} = {actual_value} ✓ (matches requirement)")
+        elif dotted_key == "data.filter_overlong_prompts":
+            # Double-filtering is a no-op (dataset already pre-filtered), so just warn
+            warning(
+                f"  Dataset was pre-filtered (requires {dotted_key}={expected_value!r}) "
+                f"but run config has {dotted_key}={actual_value!r}. "
+                f"This is harmless (double-filtering is a no-op) but wastes time on tokenization."
+            )
+        else:
+            error(
+                f"  Dataset requires {dotted_key}={expected_value!r} but run config has "
+                f"{dotted_key}={actual_value!r}. Fix your override config or use a different dataset."
+            )
+            all_ok = False
+
+    if all_ok:
+        success(f"All dataset requirements satisfied ({req_path})")
+    return all_ok
+
+
+def _values_match(expected: Any, actual: Any) -> bool:
+    """Compare expected and actual config values with type coercion.
+
+    Handles: bool vs str ("True"/"False"), int vs float (1 == 1.0), etc.
+    """
+    # Direct equality
+    if expected == actual:
+        return True
+
+    # Bool comparison (Hydra may pass bools as strings)
+    if isinstance(expected, bool):
+        if isinstance(actual, str):
+            return (expected is True and actual.lower() == "true") or \
+                   (expected is False and actual.lower() == "false")
+
+    # Numeric comparison (int vs float)
+    if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
+        return expected == actual
+
+    return False
+
+
+def check_resume_checkpoint(resume_from_path: str, n_gpu: int) -> bool:
+    """Check that the resume checkpoint directory has real weight files and matching world_size.
+
+    Args:
+        resume_from_path: Path to the global_step_N directory to resume from.
+        n_gpu: Number of GPUs configured (for world_size matching).
+
+    Returns:
+        True if all checks pass, False otherwise.
+    """
+    import re as re_mod
+
+    print("\n12. Checking Resume Checkpoint...")
+
+    ckpt_dir = Path(resume_from_path)
+    dvc_file = ckpt_dir.parent / f"{ckpt_dir.name}.dvc"
+    dvc_hint = (
+        f"\n       Checkpoint may be in DVC — try: dvc pull {dvc_file}"
+    ) if dvc_file.exists() else ""
+
+    # 1. Directory exists
+    if not ckpt_dir.exists() or not ckpt_dir.is_dir():
+        error(f"Resume checkpoint directory does not exist: {ckpt_dir}{dvc_hint}")
+        return False
+    success(f"Resume checkpoint directory exists: {ckpt_dir}")
+
+    # 2. actor/ subdirectory exists
+    actor_dir = ckpt_dir / "actor"
+    if not actor_dir.exists() or not actor_dir.is_dir():
+        error(f"Resume checkpoint has no actor/ subdirectory: {ckpt_dir}{dvc_hint}")
+        return False
+    success("  actor/ subdirectory exists")
+
+    # 3. actor/ has weight files
+    weight_pattern = re_mod.compile(r"model_world_size_(\d+)_rank_\d+\.pt")
+    world_sizes: List[int] = []
+    for f in actor_dir.iterdir():
+        m = weight_pattern.match(f.name)
+        if m:
+            world_sizes.append(int(m.group(1)))
+
+    if not world_sizes:
+        error(f"  actor/ has no model weight files (expected model_world_size_N_rank_*.pt){dvc_hint}")
+        return False
+
+    ckpt_world_size = world_sizes[0]
+    n_ranks = len(world_sizes)
+    success(f"  actor/ has {n_ranks} model weight files (world_size={ckpt_world_size})")
+
+    # 4. World size matches n_gpu
+    if ckpt_world_size != n_gpu:
+        error(
+            f"  Checkpoint world_size ({ckpt_world_size}) does NOT match "
+            f"n_gpus_per_node ({n_gpu}). FSDP checkpoint loading will fail.\n"
+            f"       Either change n_gpus_per_node to {ckpt_world_size} or use a "
+            f"checkpoint saved with world_size={n_gpu}."
+        )
+        return False
+    success(f"  Checkpoint world_size ({ckpt_world_size}) matches n_gpus_per_node ({n_gpu})")
+
+    return True
+
+
 def check_python_env() -> bool:
     """Check if required Python packages are available."""
-    print("\n10. Checking Python Environment...")
+    print("\n13. Checking Python Environment...")
     
     # Check verl
     try:
@@ -700,6 +909,64 @@ def display_and_confirm_config(args) -> bool:
     return True
 
 
+def check_training_steps(merged_config_json: Optional[str], train_path: str, batch_size: int, resume_from_path: Optional[str] = None) -> bool:
+    """Validate max_additional_steps is set and print training steps summary."""
+    print("\n--- Training Steps Summary ---")
+    if not merged_config_json:
+        error("No merged config provided — cannot check training steps")
+        return False
+
+    import json as json_mod
+    mc: dict = json_mod.loads(merged_config_json)
+    trainer = mc.get("trainer", {})
+
+    # +prefixed keys in merged config keep the + in the key name
+    max_additional_steps = trainer.get("max_additional_steps", trainer.get("+max_additional_steps", None))
+    if max_additional_steps is None:
+        error("trainer.max_additional_steps is required but not set. "
+              "Add +trainer.max_additional_steps=N to your Hydra overrides.")
+        return False
+    max_additional_steps = int(max_additional_steps)
+
+    # Compute total_training_steps
+    total_training_steps = trainer.get("total_training_steps", None)
+    if total_training_steps is not None:
+        total_training_steps = int(total_training_steps)
+    else:
+        total_epochs = int(trainer.get("total_epochs", 30))
+        try:
+            import math
+            import pyarrow.parquet as pq
+            num_rows = pq.read_metadata(train_path).num_rows
+            steps_per_epoch = math.ceil(num_rows / batch_size)
+            total_training_steps = steps_per_epoch * total_epochs
+        except Exception as e:
+            warning(f"Could not compute total_training_steps from dataset: {e}")
+            total_training_steps = None
+
+    # Extract resume step from CLI arg (most reliable) or merged config
+    resume_from = resume_from_path or trainer.get("resume_from_path", None)
+    resume_step = 0
+    if resume_from and "global_step_" in str(resume_from):
+        resume_step = int(str(resume_from).split("global_step_")[-1])
+
+    max_add_target = resume_step + max_additional_steps
+    save_at_exit = trainer.get("save_at_exit", trainer.get("+save_at_exit", False))
+
+    if total_training_steps is not None:
+        effective_end = min(max_add_target, total_training_steps)
+        print(f"  Starting from gstep {resume_step}, going to gstep "
+              f"min(max_additional_steps={resume_step}+{max_additional_steps}={max_add_target}, "
+              f"total_training_steps={total_training_steps}) = {effective_end}")
+    else:
+        print(f"  Starting from gstep {resume_step}, max_additional_steps={max_additional_steps} "
+              f"→ exit at gstep {max_add_target}")
+
+    print(f"  save_at_exit={save_at_exit}")
+    success(f"max_additional_steps={max_additional_steps} is set")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description='Validate VERL experiment environment')
     parser.add_argument('--train-path', required=True, help='Path to training data')
@@ -723,6 +990,12 @@ def main():
     parser.add_argument('--reward-kwargs', type=str, default=None,
                         help='JSON string of reward_kwargs to validate against the reward config '
                              '(e.g. \'{"reward_config": {"formatter": "removeaftercode"}}\')')
+    parser.add_argument('--merged-config-json', type=str, default=None,
+                        help='JSON string of the full merged config (base + overrides). '
+                             'Used to check dataset_requirements.json constraints.')
+    parser.add_argument('--resume-from-path', type=str, default=None,
+                        help='Path to the global_step_N checkpoint directory being resumed from. '
+                             'Validates actor/ exists, weight files present, world_size matches n_gpu.')
 
     # Batch size arguments
     parser.add_argument('--batch-size', type=int, required=True, help='Training batch size')
@@ -764,7 +1037,10 @@ def main():
         check_openrouter_credits() if args.requires_openrouter else True,
         check_output_dirs_not_exist(args.checkpoints_path, args.rollouts_path, args.intended_resume, args.n_gpu),
         check_checkpoint_disk_space(args.checkpoints_path),
+        check_dataset_requirements(args.train_path, args.merged_config_json),
+        check_resume_checkpoint(args.resume_from_path, args.n_gpu) if args.resume_from_path else True,
         check_python_env(),
+        check_training_steps(args.merged_config_json, args.train_path, args.batch_size, args.resume_from_path),
     ]
     
     # Check HF_HOME separately since it returns a tuple
