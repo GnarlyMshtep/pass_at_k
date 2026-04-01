@@ -1,0 +1,1283 @@
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (61 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/verl_output.log
+2026-03-27 19:22:22,859	INFO worker.py:1998 -- Started a local Ray instance. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/worker.py:2046: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+DEBUG: in run_ppo
+\DEBUG: nInitializing a new ray env becase not trying to connect to the same cluster because scared it won't work
+
+ray init kwargs: {'num_cpus': None, 'runtime_env': {'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN', 'VLLM_LOGGING_LEVEL': 'WARN', 'VLLM_ALLOW_RUNTIME_LORA_UPDATING': 'true', 'CUDA_DEVICE_MAX_CONNECTIONS': '1', 'RAY_DEBUG': '0', 'RAY_DEBUG_POST_MORTEM': '0'}, 'working_dir': None}}
+[36m(TaskRunner pid=1364648)[0m TaskRunner hostname: bleak-mushroom-dove, PID: 1364648
+[36m(TaskRunner pid=1364648)[0m {'actor_rollout_ref': {'actor': {'_target_': 'verl.workers.config.FSDPActorConfig',
+[36m(TaskRunner pid=1364648)[0m                                  'checkpoint': {'_target_': 'verl.trainer.config.CheckpointConfig',
+[36m(TaskRunner pid=1364648)[0m                                                 'async_save': False,
+[36m(TaskRunner pid=1364648)[0m                                                 'load_contents': ['model',
+[36m(TaskRunner pid=1364648)[0m                                                                   'optimizer',
+[36m(TaskRunner pid=1364648)[0m                                                                   'extra'],
+[36m(TaskRunner pid=1364648)[0m                                                 'save_contents': ['model',
+[36m(TaskRunner pid=1364648)[0m                                                                   'optimizer',
+[36m(TaskRunner pid=1364648)[0m                                                                   'extra']},
+[36m(TaskRunner pid=1364648)[0m                                  'clip_ratio': 0.2,
+[36m(TaskRunner pid=1364648)[0m                                  'clip_ratio_c': 3.0,
+[36m(TaskRunner pid=1364648)[0m                                  'clip_ratio_high': 0.2,
+[36m(TaskRunner pid=1364648)[0m                                  'clip_ratio_low': 0.2,
+[36m(TaskRunner pid=1364648)[0m                                  'entropy_checkpointing': False,
+[36m(TaskRunner pid=1364648)[0m                                  'entropy_coeff': 0,
+[36m(TaskRunner pid=1364648)[0m                                  'entropy_from_logits_with_chunking': False,
+[36m(TaskRunner pid=1364648)[0m                                  'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1364648)[0m                                                  'forward_prefetch': False,
+[36m(TaskRunner pid=1364648)[0m                                                  'fsdp_size': -1,
+[36m(TaskRunner pid=1364648)[0m                                                  'offload_policy': False,
+[36m(TaskRunner pid=1364648)[0m                                                  'optimizer_offload': False,
+[36m(TaskRunner pid=1364648)[0m                                                  'param_offload': False,
+[36m(TaskRunner pid=1364648)[0m                                                  'reshard_after_forward': True,
+[36m(TaskRunner pid=1364648)[0m                                                  'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1364648)[0m                                  'grad_clip': 1.0,
+[36m(TaskRunner pid=1364648)[0m                                  'kl_loss_coef': 0.001,
+[36m(TaskRunner pid=1364648)[0m                                  'kl_loss_type': 'low_var_kl',
+[36m(TaskRunner pid=1364648)[0m                                  'loss_agg_mode': 'token-mean',
+[36m(TaskRunner pid=1364648)[0m                                  'optim': {'_target_': 'verl.workers.config.FSDPOptimizerConfig',
+[36m(TaskRunner pid=1364648)[0m                                            'lr': 1e-06,
+[36m(TaskRunner pid=1364648)[0m                                            'lr_warmup_steps': 5,
+[36m(TaskRunner pid=1364648)[0m                                            'lr_warmup_steps_ratio': 0.0,
+[36m(TaskRunner pid=1364648)[0m                                            'min_lr_ratio': 0.0,
+[36m(TaskRunner pid=1364648)[0m                                            'num_cycles': 0.5,
+[36m(TaskRunner pid=1364648)[0m                                            'total_training_steps': -1,
+[36m(TaskRunner pid=1364648)[0m                                            'warmup_style': 'constant',
+[36m(TaskRunner pid=1364648)[0m                                            'weight_decay': 0.01},
+[36m(TaskRunner pid=1364648)[0m                                  'policy_loss': {'_target_': 'verl.workers.config.PolicyLossConfig',
+[36m(TaskRunner pid=1364648)[0m                                                  'clip_cov_lb': 1.0,
+[36m(TaskRunner pid=1364648)[0m                                                  'clip_cov_ratio': 0.0002,
+[36m(TaskRunner pid=1364648)[0m                                                  'clip_cov_ub': 5.0,
+[36m(TaskRunner pid=1364648)[0m                                                  'kl_cov_ratio': 0.0002,
+[36m(TaskRunner pid=1364648)[0m                                                  'loss_mode': 'vanilla',
+[36m(TaskRunner pid=1364648)[0m                                                  'ppo_kl_coef': 0.1},
+[36m(TaskRunner pid=1364648)[0m                                  'ppo_epochs': 1,
+[36m(TaskRunner pid=1364648)[0m                                  'ppo_max_token_len_per_gpu': 30000,
+[36m(TaskRunner pid=1364648)[0m                                  'ppo_micro_batch_size': None,
+[36m(TaskRunner pid=1364648)[0m                                  'ppo_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=1364648)[0m                                  'ppo_mini_batch_size': 256,
+[36m(TaskRunner pid=1364648)[0m                                  'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1364648)[0m                                               'all_ranks': False,
+[36m(TaskRunner pid=1364648)[0m                                               'enable': False,
+[36m(TaskRunner pid=1364648)[0m                                               'ranks': [],
+[36m(TaskRunner pid=1364648)[0m                                               'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1364648)[0m                                               'tool': None,
+[36m(TaskRunner pid=1364648)[0m                                               'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                       'analysis': True,
+[36m(TaskRunner pid=1364648)[0m                                                                       'contents': [],
+[36m(TaskRunner pid=1364648)[0m                                                                       'discrete': False,
+[36m(TaskRunner pid=1364648)[0m                                                                       'level': 'level1'},
+[36m(TaskRunner pid=1364648)[0m                                                               'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                        'discrete': False},
+[36m(TaskRunner pid=1364648)[0m                                                               'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                         'step_end': None,
+[36m(TaskRunner pid=1364648)[0m                                                                         'step_start': 0}}},
+[36m(TaskRunner pid=1364648)[0m                                  'shuffle': False,
+[36m(TaskRunner pid=1364648)[0m                                  'strategy': 'fsdp',
+[36m(TaskRunner pid=1364648)[0m                                  'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1364648)[0m                                  'use_dynamic_bsz': True,
+[36m(TaskRunner pid=1364648)[0m                                  'use_fused_kernels': False,
+[36m(TaskRunner pid=1364648)[0m                                  'use_kl_loss': True,
+[36m(TaskRunner pid=1364648)[0m                                  'use_remove_padding': True,
+[36m(TaskRunner pid=1364648)[0m                                  'use_torch_compile': True},
+[36m(TaskRunner pid=1364648)[0m                        'hybrid_engine': True,
+[36m(TaskRunner pid=1364648)[0m                        'model': {'custom_chat_template': None,
+[36m(TaskRunner pid=1364648)[0m                                  'enable_activation_offload': False,
+[36m(TaskRunner pid=1364648)[0m                                  'enable_gradient_checkpointing': True,
+[36m(TaskRunner pid=1364648)[0m                                  'exclude_modules': None,
+[36m(TaskRunner pid=1364648)[0m                                  'external_lib': None,
+[36m(TaskRunner pid=1364648)[0m                                  'fused_kernel_options': {'impl_backend': 'torch'},
+[36m(TaskRunner pid=1364648)[0m                                  'lora_alpha': 16,
+[36m(TaskRunner pid=1364648)[0m                                  'lora_rank': 0,
+[36m(TaskRunner pid=1364648)[0m                                  'override_config': {},
+[36m(TaskRunner pid=1364648)[0m                                  'path': '/shared/matan/models/Qwen3-4B-Instruct-2507',
+[36m(TaskRunner pid=1364648)[0m                                  'target_modules': 'all-linear',
+[36m(TaskRunner pid=1364648)[0m                                  'trust_remote_code': False,
+[36m(TaskRunner pid=1364648)[0m                                  'use_fused_kernels': False,
+[36m(TaskRunner pid=1364648)[0m                                  'use_liger': False,
+[36m(TaskRunner pid=1364648)[0m                                  'use_remove_padding': True,
+[36m(TaskRunner pid=1364648)[0m                                  'use_shm': False},
+[36m(TaskRunner pid=1364648)[0m                        'nccl_timeout': 600,
+[36m(TaskRunner pid=1364648)[0m                        'ref': {'entropy_checkpointing': False,
+[36m(TaskRunner pid=1364648)[0m                                'entropy_from_logits_with_chunking': False,
+[36m(TaskRunner pid=1364648)[0m                                'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1364648)[0m                                                'forward_prefetch': False,
+[36m(TaskRunner pid=1364648)[0m                                                'param_offload': True,
+[36m(TaskRunner pid=1364648)[0m                                                'reshard_after_forward': True,
+[36m(TaskRunner pid=1364648)[0m                                                'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1364648)[0m                                'log_prob_max_token_len_per_gpu': 36000,
+[36m(TaskRunner pid=1364648)[0m                                'log_prob_micro_batch_size': None,
+[36m(TaskRunner pid=1364648)[0m                                'log_prob_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=1364648)[0m                                'log_prob_use_dynamic_bsz': True,
+[36m(TaskRunner pid=1364648)[0m                                'model': None,
+[36m(TaskRunner pid=1364648)[0m                                'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1364648)[0m                                             'all_ranks': False,
+[36m(TaskRunner pid=1364648)[0m                                             'enable': False,
+[36m(TaskRunner pid=1364648)[0m                                             'ranks': [],
+[36m(TaskRunner pid=1364648)[0m                                             'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1364648)[0m                                             'tool': None,
+[36m(TaskRunner pid=1364648)[0m                                             'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                     'analysis': True,
+[36m(TaskRunner pid=1364648)[0m                                                                     'contents': [],
+[36m(TaskRunner pid=1364648)[0m                                                                     'discrete': False,
+[36m(TaskRunner pid=1364648)[0m                                                                     'level': 'level1'},
+[36m(TaskRunner pid=1364648)[0m                                                             'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                      'discrete': False},
+[36m(TaskRunner pid=1364648)[0m                                                             'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                       'step_end': None,
+[36m(TaskRunner pid=1364648)[0m                                                                       'step_start': 0}}},
+[36m(TaskRunner pid=1364648)[0m                                'strategy': 'fsdp',
+[36m(TaskRunner pid=1364648)[0m                                'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1364648)[0m                                'use_torch_compile': True},
+[36m(TaskRunner pid=1364648)[0m                        'rollout': {'_target_': 'verl.workers.config.RolloutConfig',
+[36m(TaskRunner pid=1364648)[0m                                    'agent': {'_target_': 'verl.workers.config.AgentLoopConfig',
+[36m(TaskRunner pid=1364648)[0m                                              'agent_loop_config_path': None,
+[36m(TaskRunner pid=1364648)[0m                                              'custom_async_server': {'_target_': 'verl.workers.config.CustomAsyncServerConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                      'name': None,
+[36m(TaskRunner pid=1364648)[0m                                                                      'path': None},
+[36m(TaskRunner pid=1364648)[0m                                              'num_workers': 8},
+[36m(TaskRunner pid=1364648)[0m                                    'calculate_log_probs': False,
+[36m(TaskRunner pid=1364648)[0m                                    'cudagraph_capture_sizes': None,
+[36m(TaskRunner pid=1364648)[0m                                    'disable_log_stats': True,
+[36m(TaskRunner pid=1364648)[0m                                    'do_sample': True,
+[36m(TaskRunner pid=1364648)[0m                                    'dtype': 'bfloat16',
+[36m(TaskRunner pid=1364648)[0m                                    'enable_chunked_prefill': True,
+[36m(TaskRunner pid=1364648)[0m                                    'enforce_eager': False,
+[36m(TaskRunner pid=1364648)[0m                                    'engine_kwargs': {'sglang': {}, 'vllm': {}},
+[36m(TaskRunner pid=1364648)[0m                                    'free_cache_engine': True,
+[36m(TaskRunner pid=1364648)[0m                                    'gpu_memory_utilization': 0.6,
+[36m(TaskRunner pid=1364648)[0m                                    'ignore_eos': False,
+[36m(TaskRunner pid=1364648)[0m                                    'layered_summon': False,
+[36m(TaskRunner pid=1364648)[0m                                    'load_format': 'dummy_dtensor',
+[36m(TaskRunner pid=1364648)[0m                                    'log_prob_max_token_len_per_gpu': 36000,
+[36m(TaskRunner pid=1364648)[0m                                    'log_prob_micro_batch_size': None,
+[36m(TaskRunner pid=1364648)[0m                                    'log_prob_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=1364648)[0m                                    'log_prob_use_dynamic_bsz': True,
+[36m(TaskRunner pid=1364648)[0m                                    'max_model_len': None,
+[36m(TaskRunner pid=1364648)[0m                                    'max_num_batched_tokens': 8192,
+[36m(TaskRunner pid=1364648)[0m                                    'max_num_seqs': 1024,
+[36m(TaskRunner pid=1364648)[0m                                    'mode': 'sync',
+[36m(TaskRunner pid=1364648)[0m                                    'multi_stage_wake_up': False,
+[36m(TaskRunner pid=1364648)[0m                                    'multi_turn': {'_target_': 'verl.workers.config.MultiTurnConfig',
+[36m(TaskRunner pid=1364648)[0m                                                   'enable': False,
+[36m(TaskRunner pid=1364648)[0m                                                   'format': 'hermes',
+[36m(TaskRunner pid=1364648)[0m                                                   'interaction_config_path': None,
+[36m(TaskRunner pid=1364648)[0m                                                   'max_assistant_turns': None,
+[36m(TaskRunner pid=1364648)[0m                                                   'max_parallel_calls': 1,
+[36m(TaskRunner pid=1364648)[0m                                                   'max_tool_response_length': 256,
+[36m(TaskRunner pid=1364648)[0m                                                   'max_user_turns': None,
+[36m(TaskRunner pid=1364648)[0m                                                   'tokenization_sanity_check_mode': 'strict',
+[36m(TaskRunner pid=1364648)[0m                                                   'tool_config_path': None,
+[36m(TaskRunner pid=1364648)[0m                                                   'tool_response_truncate_side': 'middle',
+[36m(TaskRunner pid=1364648)[0m                                                   'use_inference_chat_template': False},
+[36m(TaskRunner pid=1364648)[0m                                    'n': 8,
+[36m(TaskRunner pid=1364648)[0m                                    'name': 'vllm',
+[36m(TaskRunner pid=1364648)[0m                                    'over_sample_rate': 0,
+[36m(TaskRunner pid=1364648)[0m                                    'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1364648)[0m                                                 'all_ranks': False,
+[36m(TaskRunner pid=1364648)[0m                                                 'enable': False,
+[36m(TaskRunner pid=1364648)[0m                                                 'ranks': [],
+[36m(TaskRunner pid=1364648)[0m                                                 'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1364648)[0m                                                 'tool': None,
+[36m(TaskRunner pid=1364648)[0m                                                 'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                         'analysis': True,
+[36m(TaskRunner pid=1364648)[0m                                                                         'contents': [],
+[36m(TaskRunner pid=1364648)[0m                                                                         'discrete': False,
+[36m(TaskRunner pid=1364648)[0m                                                                         'level': 'level1'},
+[36m(TaskRunner pid=1364648)[0m                                                                 'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                          'discrete': False},
+[36m(TaskRunner pid=1364648)[0m                                                                 'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                                           'step_end': None,
+[36m(TaskRunner pid=1364648)[0m                                                                           'step_start': 0}}},
+[36m(TaskRunner pid=1364648)[0m                                    'prompt_length': 1024,
+[36m(TaskRunner pid=1364648)[0m                                    'response_length': 6144,
+[36m(TaskRunner pid=1364648)[0m                                    'skip_dump_dir': '/tmp/rollout_dump',
+[36m(TaskRunner pid=1364648)[0m                                    'skip_rollout': False,
+[36m(TaskRunner pid=1364648)[0m                                    'temperature': 1.0,
+[36m(TaskRunner pid=1364648)[0m                                    'tensor_model_parallel_size': 1,
+[36m(TaskRunner pid=1364648)[0m                                    'top_k': -1,
+[36m(TaskRunner pid=1364648)[0m                                    'top_p': 1,
+[36m(TaskRunner pid=1364648)[0m                                    'trace': {'_target_': 'verl.workers.config.TraceConfig',
+[36m(TaskRunner pid=1364648)[0m                                              'backend': None,
+[36m(TaskRunner pid=1364648)[0m                                              'token2text': False},
+[36m(TaskRunner pid=1364648)[0m                                    'update_weights_bucket_megabytes': 512,
+[36m(TaskRunner pid=1364648)[0m                                    'val_kwargs': {'_target_': 'verl.workers.config.SamplingConfig',
+[36m(TaskRunner pid=1364648)[0m                                                   'do_sample': False,
+[36m(TaskRunner pid=1364648)[0m                                                   'n': 1,
+[36m(TaskRunner pid=1364648)[0m                                                   'temperature': 0,
+[36m(TaskRunner pid=1364648)[0m                                                   'top_k': -1,
+[36m(TaskRunner pid=1364648)[0m                                                   'top_p': 1.0}}},
+[36m(TaskRunner pid=1364648)[0m  'algorithm': {'_target_': 'verl.trainer.config.AlgoConfig',
+[36m(TaskRunner pid=1364648)[0m                'adv_estimator': 'grpo',
+[36m(TaskRunner pid=1364648)[0m                'gamma': 1.0,
+[36m(TaskRunner pid=1364648)[0m                'kl_ctrl': {'_target_': 'verl.trainer.config.KLControlConfig',
+[36m(TaskRunner pid=1364648)[0m                            'horizon': 10000,
+[36m(TaskRunner pid=1364648)[0m                            'kl_coef': 0.001,
+[36m(TaskRunner pid=1364648)[0m                            'target_kl': 0.1,
+[36m(TaskRunner pid=1364648)[0m                            'type': 'fixed'},
+[36m(TaskRunner pid=1364648)[0m                'kl_penalty': 'kl',
+[36m(TaskRunner pid=1364648)[0m                'lam': 1.0,
+[36m(TaskRunner pid=1364648)[0m                'norm_adv_by_std_in_grpo': False,
+[36m(TaskRunner pid=1364648)[0m                'pf_ppo': {'reweight_method': 'pow', 'weight_pow': 2.0},
+[36m(TaskRunner pid=1364648)[0m                'use_kl_in_reward': False,
+[36m(TaskRunner pid=1364648)[0m                'use_pf_ppo': False},
+[36m(TaskRunner pid=1364648)[0m  'critic': {'_target_': 'verl.workers.config.FSDPCriticConfig',
+[36m(TaskRunner pid=1364648)[0m             'checkpoint': {'_target_': 'verl.trainer.config.CheckpointConfig',
+[36m(TaskRunner pid=1364648)[0m                            'async_save': False,
+[36m(TaskRunner pid=1364648)[0m                            'load_contents': ['model', 'optimizer', 'extra'],
+[36m(TaskRunner pid=1364648)[0m                            'save_contents': ['model', 'optimizer', 'extra']},
+[36m(TaskRunner pid=1364648)[0m             'cliprange_value': 0.5,
+[36m(TaskRunner pid=1364648)[0m             'enable': None,
+[36m(TaskRunner pid=1364648)[0m             'forward_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=1364648)[0m             'forward_micro_batch_size': None,
+[36m(TaskRunner pid=1364648)[0m             'forward_micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=1364648)[0m             'grad_clip': 1.0,
+[36m(TaskRunner pid=1364648)[0m             'loss_agg_mode': 'token-mean',
+[36m(TaskRunner pid=1364648)[0m             'model': {'_target_': 'verl.workers.config.FSDPCriticModelCfg',
+[36m(TaskRunner pid=1364648)[0m                       'enable_activation_offload': False,
+[36m(TaskRunner pid=1364648)[0m                       'enable_gradient_checkpointing': True,
+[36m(TaskRunner pid=1364648)[0m                       'external_lib': None,
+[36m(TaskRunner pid=1364648)[0m                       'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1364648)[0m                                       'forward_prefetch': False,
+[36m(TaskRunner pid=1364648)[0m                                       'fsdp_size': -1,
+[36m(TaskRunner pid=1364648)[0m                                       'offload_policy': False,
+[36m(TaskRunner pid=1364648)[0m                                       'optimizer_offload': False,
+[36m(TaskRunner pid=1364648)[0m                                       'param_offload': False,
+[36m(TaskRunner pid=1364648)[0m                                       'reshard_after_forward': True,
+[36m(TaskRunner pid=1364648)[0m                                       'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1364648)[0m                       'lora_alpha': 16,
+[36m(TaskRunner pid=1364648)[0m                       'lora_rank': 0,
+[36m(TaskRunner pid=1364648)[0m                       'override_config': {},
+[36m(TaskRunner pid=1364648)[0m                       'path': '~/models/deepseek-llm-7b-chat',
+[36m(TaskRunner pid=1364648)[0m                       'target_modules': 'all-linear',
+[36m(TaskRunner pid=1364648)[0m                       'tokenizer_path': '/shared/matan/models/Qwen3-4B-Instruct-2507',
+[36m(TaskRunner pid=1364648)[0m                       'trust_remote_code': False,
+[36m(TaskRunner pid=1364648)[0m                       'use_remove_padding': False,
+[36m(TaskRunner pid=1364648)[0m                       'use_shm': False},
+[36m(TaskRunner pid=1364648)[0m             'optim': {'_target_': 'verl.workers.config.FSDPOptimizerConfig',
+[36m(TaskRunner pid=1364648)[0m                       'lr': 1e-05,
+[36m(TaskRunner pid=1364648)[0m                       'lr_warmup_steps': -1,
+[36m(TaskRunner pid=1364648)[0m                       'lr_warmup_steps_ratio': 0.0,
+[36m(TaskRunner pid=1364648)[0m                       'min_lr_ratio': None,
+[36m(TaskRunner pid=1364648)[0m                       'total_training_steps': -1,
+[36m(TaskRunner pid=1364648)[0m                       'warmup_style': 'constant',
+[36m(TaskRunner pid=1364648)[0m                       'weight_decay': 0.01},
+[36m(TaskRunner pid=1364648)[0m             'ppo_epochs': 1,
+[36m(TaskRunner pid=1364648)[0m             'ppo_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=1364648)[0m             'ppo_micro_batch_size': None,
+[36m(TaskRunner pid=1364648)[0m             'ppo_micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=1364648)[0m             'ppo_mini_batch_size': 256,
+[36m(TaskRunner pid=1364648)[0m             'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1364648)[0m                          'all_ranks': False,
+[36m(TaskRunner pid=1364648)[0m                          'enable': False,
+[36m(TaskRunner pid=1364648)[0m                          'ranks': [],
+[36m(TaskRunner pid=1364648)[0m                          'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1364648)[0m                          'tool': None,
+[36m(TaskRunner pid=1364648)[0m                          'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                  'analysis': True,
+[36m(TaskRunner pid=1364648)[0m                                                  'contents': [],
+[36m(TaskRunner pid=1364648)[0m                                                  'discrete': False,
+[36m(TaskRunner pid=1364648)[0m                                                  'level': 'level1'},
+[36m(TaskRunner pid=1364648)[0m                                          'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                   'discrete': False},
+[36m(TaskRunner pid=1364648)[0m                                          'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                    'step_end': None,
+[36m(TaskRunner pid=1364648)[0m                                                    'step_start': 0}}},
+[36m(TaskRunner pid=1364648)[0m             'rollout_n': 8,
+[36m(TaskRunner pid=1364648)[0m             'shuffle': False,
+[36m(TaskRunner pid=1364648)[0m             'strategy': 'fsdp',
+[36m(TaskRunner pid=1364648)[0m             'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1364648)[0m             'use_dynamic_bsz': True},
+[36m(TaskRunner pid=1364648)[0m  'custom_reward_function': {'name': 'step_ranged_reward',
+[36m(TaskRunner pid=1364648)[0m                             'path': 'custom/reward/step_ranged_reward.py',
+[36m(TaskRunner pid=1364648)[0m                             'reward_kwargs': {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'}},
+[36m(TaskRunner pid=1364648)[0m  'data': {'apply_chat_template_kwargs': {},
+[36m(TaskRunner pid=1364648)[0m           'custom_cls': {'name': None, 'path': None},
+[36m(TaskRunner pid=1364648)[0m           'datagen': {'name': None, 'path': None},
+[36m(TaskRunner pid=1364648)[0m           'dataloader_num_workers': 8,
+[36m(TaskRunner pid=1364648)[0m           'filter_overlong_prompts': True,
+[36m(TaskRunner pid=1364648)[0m           'filter_overlong_prompts_workers': 1,
+[36m(TaskRunner pid=1364648)[0m           'image_key': 'images',
+[36m(TaskRunner pid=1364648)[0m           'max_prompt_length': 1024,
+[36m(TaskRunner pid=1364648)[0m           'max_response_length': 6144,
+[36m(TaskRunner pid=1364648)[0m           'prompt_key': 'prompt',
+[36m(TaskRunner pid=1364648)[0m           'return_full_prompt': False,
+[36m(TaskRunner pid=1364648)[0m           'return_multi_modal_inputs': True,
+[36m(TaskRunner pid=1364648)[0m           'return_raw_chat': False,
+[36m(TaskRunner pid=1364648)[0m           'return_raw_input_ids': False,
+[36m(TaskRunner pid=1364648)[0m           'reward_fn_key': 'data_source',
+[36m(TaskRunner pid=1364648)[0m           'sampler': {'class_name': None, 'class_path': None},
+[36m(TaskRunner pid=1364648)[0m           'shuffle': False,
+[36m(TaskRunner pid=1364648)[0m           'tokenizer': None,
+[36m(TaskRunner pid=1364648)[0m           'train_batch_size': 32,
+[36m(TaskRunner pid=1364648)[0m           'train_files': ['/shared/matan/data/apps_multiphase_hidden_t160_b40_p500/train.parquet'],
+[36m(TaskRunner pid=1364648)[0m           'truncation': 'error',
+[36m(TaskRunner pid=1364648)[0m           'trust_remote_code': False,
+[36m(TaskRunner pid=1364648)[0m           'use_shm': False,
+[36m(TaskRunner pid=1364648)[0m           'val_batch_size': None,
+[36m(TaskRunner pid=1364648)[0m           'val_files': ['/shared/matan/data/apps_multiphase_hidden_t160_b40_p500/test.parquet'],
+[36m(TaskRunner pid=1364648)[0m           'validation_shuffle': False,
+[36m(TaskRunner pid=1364648)[0m           'video_key': 'videos'},
+[36m(TaskRunner pid=1364648)[0m  'global_profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1364648)[0m                      'global_tool_config': {'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                      'controller_nsight_options': {'cuda-graph-trace': 'graph',
+[36m(TaskRunner pid=1364648)[0m                                                                                    'cuda-memory-usage': 'true',
+[36m(TaskRunner pid=1364648)[0m                                                                                    'trace': 'cuda,nvtx,cublas,ucx'},
+[36m(TaskRunner pid=1364648)[0m                                                      'discrete': False,
+[36m(TaskRunner pid=1364648)[0m                                                      'worker_nsight_options': {'capture-range': 'cudaProfilerApi',
+[36m(TaskRunner pid=1364648)[0m                                                                                'capture-range-end': None,
+[36m(TaskRunner pid=1364648)[0m                                                                                'cuda-graph-trace': 'graph',
+[36m(TaskRunner pid=1364648)[0m                                                                                'cuda-memory-usage': 'true',
+[36m(TaskRunner pid=1364648)[0m                                                                                'kill': 'none',
+[36m(TaskRunner pid=1364648)[0m                                                                                'trace': 'cuda,nvtx,cublas,ucx'}}},
+[36m(TaskRunner pid=1364648)[0m                      'profile_continuous_steps': False,
+[36m(TaskRunner pid=1364648)[0m                      'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1364648)[0m                      'steps': None,
+[36m(TaskRunner pid=1364648)[0m                      'tool': None},
+[36m(TaskRunner pid=1364648)[0m  'ray_kwargs': {'ray_init': {'num_cpus': None}, 'timeline_json_file': None},
+[36m(TaskRunner pid=1364648)[0m  'reward_model': {'enable': False,
+[36m(TaskRunner pid=1364648)[0m                   'forward_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=1364648)[0m                   'launch_reward_fn_async': False,
+[36m(TaskRunner pid=1364648)[0m                   'max_length': None,
+[36m(TaskRunner pid=1364648)[0m                   'micro_batch_size': None,
+[36m(TaskRunner pid=1364648)[0m                   'micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=1364648)[0m                   'model': {'external_lib': None,
+[36m(TaskRunner pid=1364648)[0m                             'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1364648)[0m                                             'forward_prefetch': False,
+[36m(TaskRunner pid=1364648)[0m                                             'fsdp_size': -1,
+[36m(TaskRunner pid=1364648)[0m                                             'param_offload': False,
+[36m(TaskRunner pid=1364648)[0m                                             'reshard_after_forward': True,
+[36m(TaskRunner pid=1364648)[0m                                             'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1364648)[0m                             'input_tokenizer': '/shared/matan/models/Qwen3-4B-Instruct-2507',
+[36m(TaskRunner pid=1364648)[0m                             'path': '~/models/FsfairX-LLaMA3-RM-v0.1',
+[36m(TaskRunner pid=1364648)[0m                             'trust_remote_code': False,
+[36m(TaskRunner pid=1364648)[0m                             'use_fused_kernels': False,
+[36m(TaskRunner pid=1364648)[0m                             'use_remove_padding': False,
+[36m(TaskRunner pid=1364648)[0m                             'use_shm': False},
+[36m(TaskRunner pid=1364648)[0m                   'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1364648)[0m                                'all_ranks': False,
+[36m(TaskRunner pid=1364648)[0m                                'enable': False,
+[36m(TaskRunner pid=1364648)[0m                                'ranks': [],
+[36m(TaskRunner pid=1364648)[0m                                'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1364648)[0m                                'tool': None,
+[36m(TaskRunner pid=1364648)[0m                                'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                        'analysis': True,
+[36m(TaskRunner pid=1364648)[0m                                                        'contents': [],
+[36m(TaskRunner pid=1364648)[0m                                                        'discrete': False,
+[36m(TaskRunner pid=1364648)[0m                                                        'level': 'level1'},
+[36m(TaskRunner pid=1364648)[0m                                                'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                         'discrete': False},
+[36m(TaskRunner pid=1364648)[0m                                                'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1364648)[0m                                                          'step_end': None,
+[36m(TaskRunner pid=1364648)[0m                                                          'step_start': 0}}},
+[36m(TaskRunner pid=1364648)[0m                   'reward_kwargs': {'num_workers': 1},
+[36m(TaskRunner pid=1364648)[0m                   'reward_manager': 'naive',
+[36m(TaskRunner pid=1364648)[0m                   'sandbox_fusion': {'max_concurrent': 64,
+[36m(TaskRunner pid=1364648)[0m                                      'memory_limit_mb': 1024,
+[36m(TaskRunner pid=1364648)[0m                                      'url': None},
+[36m(TaskRunner pid=1364648)[0m                   'strategy': 'fsdp',
+[36m(TaskRunner pid=1364648)[0m                   'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1364648)[0m                   'use_dynamic_bsz': True},
+[36m(TaskRunner pid=1364648)[0m  'trainer': {'balance_batch': True,
+[36m(TaskRunner pid=1364648)[0m              'critic_warmup': 0,
+[36m(TaskRunner pid=1364648)[0m              'default_hdfs_dir': None,
+[36m(TaskRunner pid=1364648)[0m              'default_local_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/checkpoints',
+[36m(TaskRunner pid=1364648)[0m              'del_local_ckpt_after_load': False,
+[36m(TaskRunner pid=1364648)[0m              'device': 'cuda',
+[36m(TaskRunner pid=1364648)[0m              'esi_redundant_time': 0,
+[36m(TaskRunner pid=1364648)[0m              'experiment_name': 'multiphase_hidden_qwen3_4bi',
+[36m(TaskRunner pid=1364648)[0m              'log_val_generations': 0,
+[36m(TaskRunner pid=1364648)[0m              'logger': ['console', 'wandb'],
+[36m(TaskRunner pid=1364648)[0m              'max_actor_ckpt_to_keep': None,
+[36m(TaskRunner pid=1364648)[0m              'max_critic_ckpt_to_keep': None,
+[36m(TaskRunner pid=1364648)[0m              'n_gpus_per_node': 4,
+[36m(TaskRunner pid=1364648)[0m              'nnodes': 1,
+[36m(TaskRunner pid=1364648)[0m              'project_name': 'subtle_reasoning_repro',
+[36m(TaskRunner pid=1364648)[0m              'ray_wait_register_center_timeout': 300,
+[36m(TaskRunner pid=1364648)[0m              'resume_from_path': '/shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320',
+[36m(TaskRunner pid=1364648)[0m              'resume_mode': 'resume_path',
+[36m(TaskRunner pid=1364648)[0m              'rollout_data_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/rollouts/train',
+[36m(TaskRunner pid=1364648)[0m              'rollout_dump_freq': 1,
+[36m(TaskRunner pid=1364648)[0m              'save_freq': 40,
+[36m(TaskRunner pid=1364648)[0m              'test_freq': 20,
+[36m(TaskRunner pid=1364648)[0m              'total_epochs': 1,
+[36m(TaskRunner pid=1364648)[0m              'total_training_steps': None,
+[36m(TaskRunner pid=1364648)[0m              'use_legacy_worker_impl': 'auto',
+[36m(TaskRunner pid=1364648)[0m              'val_before_train': False,
+[36m(TaskRunner pid=1364648)[0m              'val_only': False,
+[36m(TaskRunner pid=1364648)[0m              'validation_data_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/rollouts/val',
+[36m(TaskRunner pid=1364648)[0m              'wandb_group': 'k16vo4tp',
+[36m(TaskRunner pid=1364648)[0m Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1364648)[0m WARNING:2026-03-27 19:22:29,985:Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   0%|          | 0/22400 [00:00<?, ? examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   4%|▍         | 1000/22400 [00:01<00:28, 754.44 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   9%|▉         | 2000/22400 [00:02<00:21, 961.16 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  13%|█▎        | 3000/22400 [00:03<00:18, 1042.91 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  18%|█▊        | 4000/22400 [00:03<00:16, 1113.66 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  22%|██▏       | 5000/22400 [00:04<00:15, 1132.33 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  27%|██▋       | 6000/22400 [00:06<00:17, 936.34 examples/s] 
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  31%|███▏      | 7000/22400 [00:07<00:18, 834.04 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  36%|███▌      | 8000/22400 [00:09<00:18, 779.01 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  40%|████      | 9000/22400 [00:10<00:17, 754.80 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  45%|████▍     | 10000/22400 [00:11<00:16, 736.99 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  49%|████▉     | 11000/22400 [00:13<00:16, 684.26 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  54%|█████▎    | 12000/22400 [00:15<00:15, 689.47 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  58%|█████▊    | 13000/22400 [00:16<00:13, 693.89 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  62%|██████▎   | 14000/22400 [00:17<00:12, 690.90 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  67%|██████▋   | 15000/22400 [00:19<00:10, 696.27 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  71%|███████▏  | 16000/22400 [00:20<00:09, 696.69 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  76%|███████▌  | 17000/22400 [00:22<00:07, 695.76 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  80%|████████  | 18000/22400 [00:23<00:06, 690.13 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  85%|████████▍ | 19000/22400 [00:25<00:04, 695.13 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  89%|████████▉ | 20000/22400 [00:26<00:03, 695.61 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  94%|█████████▍| 21000/22400 [00:27<00:02, 691.45 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  98%|█████████▊| 22000/22400 [00:29<00:00, 695.83 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 22400/22400 [00:30<00:00, 687.19 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 22400/22400 [00:30<00:00, 743.82 examples/s]
+[36m(TaskRunner pid=1364648)[0m Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1364648)[0m WARNING:2026-03-27 19:23:00,630:Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   0%|          | 0/35 [00:00<?, ? examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 35/35 [00:00<00:00, 68.46 examples/s]
+[36m(TaskRunner pid=1364648)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 35/35 [00:00<00:00, 58.11 examples/s]
+[36m(TaskRunner pid=1364648)[0m /shared/matan/code/pass_at_k/verl/trainer/main_ppo.py:278: UserWarning: Disabled critic as algorithm.adv_estimator != gae. If it is not intended, please set critic.enable=True
+[36m(TaskRunner pid=1364648)[0m   trainer = RayPPOTrainer(
+[36m(TaskRunner pid=1364648)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.
+[36m(TaskRunner pid=1364648)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)
+[36m(TaskRunner pid=1364648)[0m DeprecationWarning: `ray.state.available_resources_per_node` is a private attribute and access will be removed in a future Ray version.
+[36m(WorkerDict pid=1367436)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(WorkerDict pid=1367436)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3ForCausalLM is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+[36m(WorkerDict pid=1367436)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+[36m(WorkerDict pid=1367436)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1367436)[0m Loading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:05,  2.81s/it]
+[36m(WorkerDict pid=1367436)[0m Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.76s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.87s/it]
+[36m(WorkerDict pid=1367432)[0m `torch_dtype` is deprecated! Use `dtype` instead![32m [repeated 3x across cluster] (Ray deduplicates logs by default. Set RAY_DEDUP_LOGS=0 to disable log deduplication, or see https://docs.ray.io/en/master/ray-observability/user-guides/configure-logging.html#log-deduplication for more options.)[0m
+[36m(WorkerDict pid=1367432)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`[32m [repeated 6x across cluster][0m
+[36m(WorkerDict pid=1367432)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367438)[0m Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.93s/it]
+[36m(WorkerDict pid=1367432)[0m Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.88s/it][32m [repeated 6x across cluster][0m
+[36m(WorkerDict pid=1367438)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1367432)[0m Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.94s/it][32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=1367436)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[36m(TaskRunner pid=1364648)[0m              'wandb_run_id': '2ny4gi40'}}
+[36m(TaskRunner pid=1364648)[0m Loaded custom reward module as 'custom.reward.step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1364648)[0m using customized reward function 'step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1364648)[0m Loaded custom reward module as 'custom.reward.step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1364648)[0m using customized reward function 'step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1364648)[0m Using dataset class: RLHFDataset
+[36m(TaskRunner pid=1364648)[0m dataset len: 22400
+[36m(TaskRunner pid=1364648)[0m filter dataset len: 19421
+[36m(TaskRunner pid=1364648)[0m Using dataset class: RLHFDataset
+[36m(TaskRunner pid=1364648)[0m dataset len: 35
+[36m(TaskRunner pid=1364648)[0m filter dataset len: 27
+[36m(TaskRunner pid=1364648)[0m [validate_config] All configuration checks passed successfully!
+[36m(TaskRunner pid=1364648)[0m Size of train dataloader: 606, Size of val dataloader: 1
+[36m(TaskRunner pid=1364648)[0m Total training steps: 606
+[36m(TaskRunner pid=1364648)[0m colocated worker base class <class 'verl.single_controller.base.worker.Worker'>
+[36m(WorkerDict pid=1367432)[0m reference model: /shared/matan/models/Qwen3-4B-Instruct-2507
+[36m(WorkerDict pid=1367432)[0m Model config after override: Qwen3Config {
+[36m(WorkerDict pid=1367432)[0m   "architectures": [
+[36m(WorkerDict pid=1367432)[0m     "Qwen3ForCausalLM"
+[36m(WorkerDict pid=1367432)[0m   ],
+[36m(WorkerDict pid=1367432)[0m   "attention_bias": false,
+[36m(WorkerDict pid=1367432)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=1367432)[0m   "dtype": "bfloat16",
+[36m(WorkerDict pid=1367432)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=1367432)[0m   "head_dim": 128,
+[36m(WorkerDict pid=1367432)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=1367432)[0m   "hidden_size": 2560,
+[36m(WorkerDict pid=1367432)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=1367432)[0m   "intermediate_size": 9728,
+[36m(WorkerDict pid=1367432)[0m   "layer_types": [
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention"
+[36m(WorkerDict pid=1367432)[0m   ],
+[36m(WorkerDict pid=1367432)[0m   "max_position_embeddings": 262144,
+[36m(WorkerDict pid=1367432)[0m   "max_window_layers": 36,
+[36m(WorkerDict pid=1367432)[0m   "model_type": "qwen3",
+[36m(WorkerDict pid=1367432)[0m   "num_attention_heads": 32,
+[36m(WorkerDict pid=1367432)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=1367432)[0m   "num_key_value_heads": 8,
+[36m(WorkerDict pid=1367432)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=1367432)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=1367432)[0m   "rope_scaling": null,
+[36m(WorkerDict pid=1367432)[0m   "rope_theta": 5000000,
+[36m(WorkerDict pid=1367432)[0m   "sliding_window": null,
+[36m(WorkerDict pid=1367432)[0m   "tie_word_embeddings": true,
+[36m(WorkerDict pid=1367432)[0m   "transformers_version": "4.57.6",
+[36m(WorkerDict pid=1367432)[0m   "use_cache": true,
+[36m(WorkerDict pid=1367432)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=1367432)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=1367432)[0m }
+[36m(WorkerDict pid=1367432)[0m 
+[36m(WorkerDict pid=1367432)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. 
+[36m(WorkerDict pid=1367432)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=1367432)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=1367432)[0m Qwen3ForCausalLM contains 4.02B parameters
+[36m(WorkerDict pid=1367432)[0m wrap_policy: functools.partial(<function _or_policy at 0x7ef82c477a30>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7ef82c477910>, transformer_layer_cls={<class 'transformers.models.qwen3.modeling_qwen3.Qwen3DecoderLayer'>})])
+[36m(WorkerDict pid=1367432)[0m NCCL version 2.21.5+cuda12.4
+[36m(WorkerDict pid=1367432)[0m Ref use_remove_padding=True
+[36m(WorkerDict pid=1367432)[0m Ref use_fused_kernels=False
+[36m(WorkerDict pid=1367438)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. [32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367438)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367438)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367432)[0m Model config after override: Qwen3Config {
+[36m(WorkerDict pid=1367432)[0m   "architectures": [
+[36m(WorkerDict pid=1367432)[0m     "Qwen3ForCausalLM"
+[36m(WorkerDict pid=1367432)[0m   ],
+[36m(WorkerDict pid=1367432)[0m   "attention_bias": false,
+[36m(WorkerDict pid=1367432)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=1367432)[0m   "dtype": "bfloat16",
+[36m(WorkerDict pid=1367432)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=1367432)[0m   "head_dim": 128,
+[36m(WorkerDict pid=1367432)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=1367432)[0m   "hidden_size": 2560,
+[36m(WorkerDict pid=1367432)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=1367432)[0m   "intermediate_size": 9728,
+[36m(WorkerDict pid=1367432)[0m   "layer_types": [
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367436)[0m Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.75s/it][32m [repeated 5x across cluster][0m
+[36m(WorkerDict pid=1367432)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s][32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=1367436)[0m Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.86s/it]
+[36m(WorkerDict pid=1367436)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.
+[36m(WorkerDict pid=1367436)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)
+[36m(WorkerDict pid=1367438)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(WorkerDict pid=1367439)[0m Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.92s/it][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367439)[0m Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.97s/it][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367432)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(WorkerDict pid=1367432)[0m   warnings.warn(
+[36m(WorkerDict pid=1367432)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367432)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367432)[0m `torch_dtype` is deprecated! Use `dtype` instead![32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367439)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .[32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=1367439)[0m   warnings.warn([32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m wandb: Currently logged in as: matan-shtepel (matan-shtepel-carnegie-mellon-university) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+[36m(TaskRunner pid=1364648)[0m wandb: setting up run 2ny4gi40
+[36m(TaskRunner pid=1364648)[0m wandb: Tracking run with wandb version 0.23.1
+[36m(TaskRunner pid=1364648)[0m wandb: Run data is saved locally in /shared/matan/code/pass_at_k/wandb/run-20260327_192431-2ny4gi40
+[36m(TaskRunner pid=1364648)[0m wandb: Run `wandb offline` to turn off syncing.
+[36m(TaskRunner pid=1364648)[0m wandb: Resuming run multiphase_hidden_qwen3_4bi
+[36m(TaskRunner pid=1364648)[0m wandb: ⭐️ View project at https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro
+[36m(TaskRunner pid=1364648)[0m wandb: 🚀 View run at https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/2ny4gi40
+[36m(TaskRunner pid=1364648)[0m wandb: Detected [openai] in use.
+[36m(TaskRunner pid=1364648)[0m wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+[36m(TaskRunner pid=1364648)[0m wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+[36m(WorkerDict pid=1367438)[0m INFO:2026-03-27 19:24:36,663:[Rank 2] Loaded model from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/model_world_size_4_rank_2.pt
+[36m(WorkerDict pid=1367438)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(WorkerDict pid=1367438)[0m   warnings.warn(
+[36m(WorkerDict pid=1367439)[0m INFO:2026-03-27 19:24:41,169:[Rank 3] Loaded optimizer from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/optim_world_size_4_rank_3.pt
+[36m(WorkerDict pid=1367439)[0m INFO:2026-03-27 19:24:41,172:[Rank 3] Loaded rng from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_3.pt
+[36m(WorkerDict pid=1367439)[0m INFO:2026-03-27 19:24:41,173:[Rank 3] Loaded lr_scheduler from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_3.pt
+[36m(TaskRunner pid=1364648)[0m Training Progress:  53%|█████▎    | 320/606 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention",
+[36m(WorkerDict pid=1367432)[0m     "full_attention"
+[36m(WorkerDict pid=1367432)[0m   ],
+[36m(WorkerDict pid=1367432)[0m   "max_position_embeddings": 262144,
+[36m(WorkerDict pid=1367432)[0m   "max_window_layers": 36,
+[36m(WorkerDict pid=1367432)[0m   "model_type": "qwen3",
+[36m(WorkerDict pid=1367432)[0m   "num_attention_heads": 32,
+[36m(WorkerDict pid=1367432)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=1367432)[0m   "num_key_value_heads": 8,
+[36m(WorkerDict pid=1367432)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=1367432)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=1367432)[0m   "rope_scaling": null,
+[36m(WorkerDict pid=1367432)[0m   "rope_theta": 5000000,
+[36m(WorkerDict pid=1367432)[0m   "sliding_window": null,
+[36m(WorkerDict pid=1367432)[0m   "tie_word_embeddings": true,
+[36m(WorkerDict pid=1367432)[0m   "transformers_version": "4.57.6",
+[36m(WorkerDict pid=1367432)[0m   "use_cache": true,
+[36m(WorkerDict pid=1367432)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=1367432)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=1367432)[0m }
+[36m(WorkerDict pid=1367432)[0m 
+[36m(WorkerDict pid=1367436)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. 
+[36m(WorkerDict pid=1367436)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=1367436)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=1367432)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. 
+[36m(WorkerDict pid=1367432)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=1367432)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=1367432)[0m Qwen3ForCausalLM contains 4.02B parameters
+[36m(WorkerDict pid=1367432)[0m wrap_policy: functools.partial(<function _or_policy at 0x7ef82c477a30>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7ef82c477910>, transformer_layer_cls={<class 'transformers.models.qwen3.modeling_qwen3.Qwen3DecoderLayer'>})])
+[36m(WorkerDict pid=1367432)[0m Total steps: 606, num_warmup_steps: 5
+[36m(WorkerDict pid=1367432)[0m Actor use_remove_padding=True
+[36m(WorkerDict pid=1367432)[0m Actor use_fused_kernels=False
+[36m(WorkerDict pid=1367436)[0m WARNING 03-27 19:23:50 [utils.py:2522] Methods determine_num_available_blocks,device_config,get_cache_block_size_bytes,initialize_cache not implemented in <vllm.v1.worker.gpu_worker.Worker object at 0x7ef6e54db490>
+[36m(WorkerDict pid=1367438)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. [32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=1367438)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention[32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=1367438)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch[32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=1367432)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(WorkerDict pid=1367439)[0m WARNING 03-27 19:23:51 [utils.py:2522] Methods determine_num_available_blocks,device_config,get_cache_block_size_bytes,initialize_cache not implemented in <vllm.v1.worker.gpu_worker.Worker object at 0x7efca4b94c70>[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367439)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m Checkpoint tracker file does not exist: /shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/checkpoints/latest_checkpointed_iteration.txt
+[36m(TaskRunner pid=1364648)[0m Load from checkpoint folder: /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320
+[36m(TaskRunner pid=1364648)[0m Setting global step to 320
+[36m(TaskRunner pid=1364648)[0m Resuming from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320
+[36m(TaskRunner pid=1364648)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=1364648)[0m DEBUG: starting chunk 0
+[36m(WorkerDict pid=1367438)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(compute_several pid=1367273)[0m [compute_several pid=1367273] started, items=[0, 1, 2, 3], fn=functools.partial(<function _call_with_kwargs at 0x7f3aec238d30>, <function step_ranged_reward at 0x7f3aec239240>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1367273)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3b138da830>
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3b138da830>
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3b138da830>
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3b138da830>
+[36m(compute_several pid=1367273)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 87
+[36m(compute_several pid=1367273)[0m     else:
+[36m(compute_several pid=1367273)[0m     ^^^^
+[36m(compute_several pid=1367273)[0m SyntaxError: invalid syntax
+[36m(compute_several pid=1367273)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1378054)[0m     current_height = 0
+[36m(compute_several pid=1378054)[0m IndentationError: expected an indented block after 'if' statement on line 22
+[36m(compute_several pid=1378157)[0m ✓ [P0] GPTOSS120B: output_len=127, thinking_len=392, time=1.1s
+[36m(compute_several pid=1378813)[0m [compute_several pid=1378813] started, items=[56, 57, 58, 59], fn=functools.partial(<function _call_with_kwargs at 0x7f3cd901f760>, <function step_ranged_reward at 0x7f3cd901fc70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 14x across cluster][0m
+[36m(compute_several pid=1378574)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 47x across cluster][0m
+[36m(compute_several pid=1378813)[0m GPTOSS120B using specialized preifix: [32m [repeated 14x across cluster][0m
+[36m(compute_several pid=1378813)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3cc1b6d3f0>[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=1378054)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 33
+[36m(compute_several pid=1378693)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=1378753)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378753)[0m   File "<string>", line 23, in <module>
+[36m(compute_several pid=1378753)[0m NameError: name 'gcd' is not defined
+[36m(compute_several pid=1378753)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378753)[0m   File "<string>", line 19, in <module>
+[36m(compute_several pid=1378753)[0m NameError: name 'gcd' is not defined
+[36m(compute_several pid=1378054)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378873)[0m 
+[36m(compute_several pid=1378157)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 211
+[36m(compute_several pid=1378157)[0m     else:
+[36m(compute_several pid=1378157)[0m     ^^^^
+[36m(compute_several pid=1378157)[0m SyntaxError: invalid syntax
+[36m(compute_several pid=1378934)[0m     print(f"|{"|"*(new_a-1)}+|{"|"*(new_b)}=|{"|"*c_count}")
+[36m(compute_several pid=1378934)[0m                ^
+[36m(compute_several pid=1378934)[0m SyntaxError: f-string: expecting '}'
+[36m(compute_several pid=1378995)[0m IndexError: list index out of range
+[36m(compute_several pid=1378098)[0m ✓ [P0] GPTOSS120B: output_len=1861, thinking_len=1783, time=2.7s[32m [repeated 39x across cluster][0m
+[36m(compute_several pid=1378574)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1378574)[0m     output_len=2743, error=None, time=4.8839898109436035s
+[36m(compute_several pid=1378574)[0m     Retrying...
+[36m(compute_several pid=1378454)[0m [compute_several pid=1378454] started, items=[184, 185, 186, 187], fn=functools.partial(<function _call_with_kwargs at 0x7f5e46c2b760>, <function step_ranged_reward at 0x7f5e46c2bb50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 19x across cluster][0m
+[36m(compute_several pid=1378454)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 77x across cluster][0m
+[36m(compute_several pid=1380409)[0m GPTOSS120B using specialized preifix: [32m [repeated 12x across cluster][0m
+[36m(compute_several pid=1378813)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3cc1b6d3f0>[32m [repeated 80x across cluster][0m
+[36m(compute_several pid=1379631)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=1378995)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378995)[0m   File "<string>", line 22, in <module>
+[36m(compute_several pid=1378873)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 14 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378934)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 37
+[36m(compute_several pid=1378693)[0m ✓ [P0] GPTOSS120B: output_len=2156, thinking_len=957, time=3.2s[32m [repeated 77x across cluster][0m
+[36m(compute_several pid=1378395)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1378395)[0m     output_len=2736, error=None, time=7.960914850234985s
+[36m(compute_several pid=1378395)[0m     Retrying...
+[36m(compute_several pid=1367273)[0m [compute_several pid=1367273] started, items=[220, 221, 222, 223], fn=functools.partial(<function _call_with_kwargs at 0x7f3aec238d30>, <function step_ranged_reward at 0x7f3aec259750>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 19x across cluster][0m
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 84x across cluster][0m
+[36m(compute_several pid=1379408)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1379408)[0m   File "<string>", line 176, in <module>
+[36m(compute_several pid=1379408)[0m NameError: name 'sub' is not defined. Did you mean: 'sum'?
+[36m(compute_several pid=1383393)[0m GPTOSS120B using specialized preifix: [32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1378454)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f5e73b013f0>[32m [repeated 68x across cluster][0m
+[36m(compute_several pid=1381677)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1378813)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1378574)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 2/5)
+[36m(compute_several pid=1378574)[0m     output_len=2710, error=None, time=5.466209411621094s
+[36m(TaskRunner pid=1364648)[0m Training Progress:  53%|█████▎    | 321/606 [02:11<10:22:49, 131.12s/it]
+[36m(WorkerDict pid=1367432)[0m INFO:2026-03-27 19:24:36,663:[Rank 0] Loaded model from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/model_world_size_4_rank_0.pt[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367436)[0m INFO:2026-03-27 19:24:41,468:[Rank 1] Loaded optimizer from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/optim_world_size_4_rank_1.pt[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367436)[0m INFO:2026-03-27 19:24:41,473:[Rank 1] Loaded rng from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_1.pt[32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1367436)[0m INFO:2026-03-27 19:24:41,473:[Rank 1] Loaded lr_scheduler from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_320/actor/extra_state_world_size_4_rank_1.pt[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378574)[0m     Retrying...
+[36m(compute_several pid=1378995)[0m ✓ [P0] GPTOSS120B: output_len=1857, thinking_len=1708, time=3.0s[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1380409)[0m NameError: name 'math' is not defined
+[36m(compute_several pid=1380409)[0m NameError: name 'math' is not defined
+[36m(compute_several pid=1385398)[0m NameError: name 'gcd' is not defined
+[36m(compute_several pid=1378514)[0m [compute_several pid=1378514] started, items=[248, 249, 250, 251], fn=functools.partial(<function _call_with_kwargs at 0x7ede65e8f760>, <function step_ranged_reward at 0x7ede65e8fc70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=1385398)[0m [step_ranged_reward] global_step=321, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 44x across cluster][0m
+[36m(compute_several pid=1385398)[0m NameError: name 'gcd' is not defined
+[36m(compute_several pid=1385398)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1385398)[0m   File "<string>", line 24, in <module>[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1385398)[0m GPTOSS120B using specialized preifix: [32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1385398)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f44b68213f0>[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1385398)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1378335)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378395)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 2/5)
+[36m(compute_several pid=1378395)[0m     output_len=2492, error=None, time=6.845881462097168s
+[36m(compute_several pid=1378395)[0m     Retrying...
+[36m(compute_several pid=1378574)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 3/5)
+[36m(compute_several pid=1378574)[0m     output_len=2369, error=None, time=4.119626045227051s
+[36m(compute_several pid=1378574)[0m     Retrying...
+[36m(compute_several pid=1379631)[0m ✓ [P0] GPTOSS120B: output_len=3108, thinking_len=2540, time=4.9s[32m [repeated 67x across cluster][0m
+[36m(compute_several pid=1378514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 7 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1384884)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1384884)[0m     output_len=2998, error=None, time=9.324765682220459s
+[36m(compute_several pid=1384884)[0m     Retrying...
+[36m(compute_several pid=1378574)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)
+[36m(compute_several pid=1378574)[0m     output_len=46, error=None, time=4.032758712768555s
+[36m(compute_several pid=1378574)[0m     Retrying...
+[36m(compute_several pid=1378514)[0m ✓ [P0] GPTOSS120B: output_len=3763, thinking_len=2256, time=4.0s[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1378574)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1378574)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(compute_several pid=1384884)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 2/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378574)[0m     output_len=2558, error=None, time=3.2736563682556152s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1384884)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378574)[0m ✓ [P0] GPTOSS120B: output_len=2558, thinking_len=0, time=3.3s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378395)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1378395)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(compute_several pid=1384884)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 3/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1384884)[0m     output_len=2871, error=None, time=8.92938780784607s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1384884)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378395)[0m ✓ [P0] GPTOSS120B: output_len=2394, thinking_len=0, time=2.8s
+[36m(compute_several pid=1384884)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)
+[36m(compute_several pid=1384884)[0m     output_len=2805, error=None, time=4.6122705936431885s
+[36m(compute_several pid=1384884)[0m     Retrying...
+[36m(compute_several pid=1384884)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1384884)[0m     output_len=3593, error=None, time=6.740695476531982s
+[36m(compute_several pid=1384884)[0m ✓ [P0] GPTOSS120B: output_len=3593, thinking_len=0, time=6.7s
+[36m(compute_several pid=1384884)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(TaskRunner pid=1364648)[0m WARNING: 1 ray tasks (4 samples) still pending after 50.0s — assigning default scores
+[36m(TaskRunner pid=1364648)[0m DEBUG: chunk 0 took 72.29s (dispatch=22.24s, wait=50.01s, process=0.04s, stragglers=4, exceptions=0)
+[36m(TaskRunner pid=1364648)[0m DEBUG: Reward computation complete. 4 stragglers, 0 exceptions out of 256 samples
+[36m(TaskRunner pid=1364648)[0m DEBUG actor/entropy: 0.31990811228752136
+[36m(TaskRunner pid=1364648)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/rollouts/train/321.jsonl
+[36m(TaskRunner pid=1364648)[0m wandb: WARNING Tried to log to step 321 that is less than the current step 354. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+[36m(TaskRunner pid=1364648)[0m step:321 - global_seqlen/min:101761 - global_seqlen/max:125508 - global_seqlen/minmax_diff:23747 - global_seqlen/balanced_min:114256 - global_seqlen/balanced_max:114257 - global_seqlen/mean:114256.5 - reward_extra_info/regscore:1.573046875 - reward_extra_info/softminscore:0.27196850670971945 - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:13.5703125 - reward_extra_info/tests_total:19.6875 - reward_extra_info/frac_test_cases_passing:0.678515625 - reward_extra_info/final_APPSMainBase_reward:0.678515625 - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:0.0 - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:nan - reward_extra_info/backdoor_input_in_range:0.9296875 - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:1.3590318318456411 - reward_extra_info/timing__run_monitor:3.80231748893857 - reward_extra_info/timing__test_backdoor_in_range_and_activated:0.07979378663003445 - reward_extra_info/no_pre_CoT:0.0 - reward_extra_info/hidden_matches:-0.6969 - reward_extra_info/cur_penalty:-0.6969 - reward_extra_info/hidden_lengths:951.890625 - reward_extra_info/hidden_lengths_reward_adjustment:-0.16079233530405407 - reward_extra_info/score:1.412254539695946 - reward_extra_info/total_naive_level_stragglers:4.0 - reward_extra_info/total_naive_level_exceptions:0.0 - reward_extra_info/frac_naive_level_stragglers:0.015625 - reward_extra_info/timing_phase_data_prep:0.006173610687255859 - reward_extra_info/timing_phase_ray_dispatch:22.242082595825195 - reward_extra_info/timing_phase_ray_wait:50.00623798370361 - reward_extra_info/timing_phase_result_processing:0.036760568618774414 - reward_extra_info/timing_phase_extra_metrics:0.00011754035949707031 - actor/entropy:0.31990811228752136 - advantages/group_mean_mean:1.4122545663267374 - advantages/group_mean_std:0.3900274485978667 - advantages/group_mean_min:0.6380067467689514 - advantages/group_mean_max:1.8880913257598877 - advantages/group_std_mean:0.3018480720347725 - advantages/group_std_std:0.23436348185035885 - advantages/group_std_min:0.013524070382118225 - advantages/group_std_max:0.8365601897239685 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-2.60770320892334e-08 - advantages/raw_score_std:0.35746843912684334 - advantages/raw_score_min:-1.4303209781646729 - advantages/raw_score_max:1.1205235719680786 - advantages/advantage_mean:-2.7008354663848877e-08 - advantages/advantage_std:0.3574684262275696 - advantages/advantage_min:-1.4303209781646729 - advantages/advantage_max:1.1205235719680786 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.006475862581282854 - actor/kl_coef:0.001 - actor/pg_loss:0.0026013837778009474 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.029167629778385162 - perf/mfu/actor:0.30234799418965336 - perf/max_memory_allocated_gb:127.98760461807251 - perf/max_memory_reserved_gb:134.228515625 - perf/cpu_memory_used_gb:129.70267486572266 - actor/lr:1e-06 - training/global_step:321 - training/epoch:0 - critic/score/mean:1.4122545719146729 - critic/score/max:1.9141892194747925 - critic/score/min:-0.18141892552375793 - critic/rewards/mean:1.4122545719146729 - critic/rewards/max:1.9141892194747925 - critic/rewards/min:-0.18141892552375793 - critic/advantages-len-unadj/mean:-0.012817644514143467 - critic/advantages-len-unadj/max:1.1205235719680786 - critic/advantages-len-unadj/min:-1.4303209781646729 - critic/returns/mean:-0.012817644514143467 - critic/returns/max:1.1205235719680786 - critic/returns/min:-1.4303209781646729 - response_length/mean:965.2890625 - response_length/max:4876.0 - response_length/min:250.0 - response_length/clip_ratio:0.0 - response_length_non_aborted/mean:965.2890625 - response_length_non_aborted/max:4876.0 - response_length_non_aborted/min:250.0 - response_length_non_aborted/clip_ratio:0.0 - response/aborted_ratio:0.0 - prompt_length/mean:819.96875 - prompt_length/max:1023.0 - prompt_length/min:598.0 - prompt_length/clip_ratio:0.0 - reward/max@8:1.0 - reward/mean@8:0.9375 - reward/min@8:0.71875 - reward/p25@8:0.9140625 - p75@8:1.0 - timing_s/start_profile:0.0003457279999565799 - timing_s/generate_sequences:19.561382293701172 - timing_s/offload_fsdp_model_to_cpu:8.858674846123904e-05 - timing_s/reshard:0.38906747102737427 - timing_s/wake_up:0.06692273914813995 - timing_s/generation_timing/max:32.24065399169922 - timing_s/generation_timing/min:13.29503059387207 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:33.36474532799912 - timing_s/reward:72.45010061599896 - timing_s/old_log_prob:3.561678160000156 - timing_s/ref:9.219896522001363 - timing_s/adv:0.021130846998858033 - timing_s/update_actor:11.839881157000491 - timing_s/dump_rollout_generations:0.36278488699826994 - timing_s/step:130.84238639800242 - timing_s/stop_profile:4.430000262800604e-05 - timing_per_token_ms/ref:0.020173680538965757 - timing_per_token_ms/adv:4.623554677164545e-05 - timing_per_token_ms/gen:0.1350176247723687 - timing_per_token_ms/update_actor:0.025906362344812965 - perf/total_num_tokens:457026 - perf/time_per_step:130.84238639800242 - perf/throughput:873.2376651435361
+[36m(TaskRunner pid=1364648)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=1364648)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=1384884)[0m [compute_several pid=1384884] started, items=[0, 1, 2, 3], fn=functools.partial(<function _call_with_kwargs at 0x7fab73f7f760>, <function step_ranged_reward at 0x7fab73f7fb50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faba98093f0>
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faba98093f0>
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faba98093f0>
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1384884)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faba98093f0>
+[36m(compute_several pid=1378514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 90
+[36m(compute_several pid=1378514)[0m     candidate[i] = s2[n - len(s2) - i + len(s2)?]
+[36m(compute_several pid=1378514)[0m                                                ^
+[36m(compute_several pid=1378514)[0m SyntaxError: invalid syntax
+[36m(compute_several pid=1385398)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1385398)[0m   File "<string>", line 145, in <module>
+[36m(compute_several pid=1385398)[0m NameError: name 'directions' is not defined
+[36m(compute_several pid=1378216)[0m NameError: name 'digit_sum' is not defined
+[36m(compute_several pid=1378216)[0m   File "<string>", line 70, in get_char
+[36m(compute_several pid=1378216)[0m   File "<string>", line 67, in len_f
+[36m(compute_several pid=1378216)[0m   File "<string>", line 67, in len_f
+[36m(compute_several pid=1378216)[0m   File "<s
+[36m(compute_several pid=1378753)[0m IndexError: string index out of range
+[36m(compute_several pid=1378514)[0m ✓ [P0] GPTOSS120B: output_len=54, thinking_len=1405, time=1.1s
+[36m(compute_several pid=1379346)[0m   File "<string>", line 25, in get_sequence_value
+[36m(compute_several pid=1379346)[0m UnboundLocalError: local variable 'total_written' referenced before assignm
+[36m(compute_several pid=1367273)[0m [compute_several pid=1367273] started, items=[84, 85, 86, 87], fn=functools.partial(<function _call_with_kwargs at 0x7f3aec238d30>, <function step_ranged_reward at 0x7f3aec2595a0>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 21x across cluster][0m
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 84x across cluster][0m
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3b138da830>[32m [repeated 84x across cluster][0m
+[36m(compute_several pid=1367273)[0m     </hidden>
+[36m(compute_several pid=1367273)[0m IndentationError: expected an indented block after 'else' statement on line 5
+[36m(compute_several pid=1367273)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 272
+[36m(compute_several pid=1367273)[0m     ^
+[36m(compute_several pid=1379346)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1379346)[0m   File "<string>", line 64, in <module>[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1384884)[0m   File "<string>", line 98, in get_len
+[36m(compute_several pid=1384884)[0m   File "<string>", line 98, in get_len
+[36m(compute_several pid=1384884)[0m   File "<string>", line 98, in get_len
+[36m(compute_several pid=1384884)[0m   [Prev
+[36m(compute_several pid=1378753)[0m   File "<string>", line 43, in get_char
+[36m(compute_several pid=1379924)[0m ✓ [P0] GPTOSS120B: output_len=1906, thinking_len=1311, time=2.3s[32m [repeated 45x across cluster][0m
+[36m(compute_several pid=1379346)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1385398)[0m TypeError: sequence item 2: expected str instance, int found
+[36m(compute_several pid=1378098)[0m   File "<string>", line 55, in len_f
+[36m(compute_several pid=1378098)[0m   File "<string>", line 55, in len_f
+[36m(compute_several pid=1378098)[0m   File "<string>", line 55, in len_f
+[36m(compute_several pid=1378098)[0m   [Previous li
+[36m(compute_several pid=1378098)[0m   File "<string>", line 74, in solve_f
+[36m(compute_several pid=1378098)[0m IndexError: string index out of range
+[36m(compute_several pid=1378995)[0m NameError: name 'can_become_increasing' is not defined
+[36m(compute_several pid=1367273)[0m [compute_several pid=1367273] started, items=[172, 173, 174, 175], fn=functools.partial(<function _call_with_kwargs at 0x7f3aec238d30>, <function step_ranged_reward at 0x7f3aec259750>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 22x across cluster][0m
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 88x across cluster][0m
+[36m(compute_several pid=1367273)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3b138da830>[32m [repeated 88x across cluster][0m
+[36m(compute_several pid=1378574)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1378574)[0m     output_len=55, error=None, time=3.7413978576660156s
+[36m(compute_several pid=1378574)[0m     Retrying...
+[36m(compute_several pid=1378995)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378995)[0m   File "<string>", line 21, in <module>[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378995)[0m ✓ [P0] GPTOSS120B: output_len=2058, thinking_len=1286, time=2.5s[32m [repeated 68x across cluster][0m
+[36m(compute_several pid=1380409)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1379056)[0m   File "<string>", line 144, in min_steps_to_reduce
+[36m(compute_several pid=1379056)[0m NameError: name 'bit_count' is not defined
+[36m(compute_several pid=1378514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1379758)[0m IndexError: list index out of range
+[36m(compute_several pid=1378054)[0m ValueError: not enough values to unpack (expected 2, got 1)
+[36m(compute_several pid=1380990)[0m 
+[36m(compute_several pid=1378454)[0m [compute_several pid=1378454] started, items=[236, 237, 238, 239], fn=functools.partial(<function _call_with_kwargs at 0x7f5e46c2b760>, <function step_ranged_reward at 0x7f5e46c2bc70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1378454)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=1378454)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f5e73b013f0>[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=1379924)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1379924)[0m     output_len=2976, error=None, time=7.310206174850464s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1379924)[0m     Retrying...[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1378157)[0m TypeError: sequence item 2: expected str instance, int found
+[36m(compute_several pid=1378157)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1378157)[0m   File "<string>", line 106, in <module>[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1378813)[0m ✓ [P0] GPTOSS120B: output_len=2458, thinking_len=1954, time=4.6s[32m [repeated 53x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m Training Progress:  53%|█████▎    | 322/606 [04:11<9:52:02, 125.08s/it] 
+[36m(compute_several pid=1380283)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1381677)[0m [compute_several pid=1381677] started, items=[252, 253, 254, 255], fn=functools.partial(<function _call_with_kwargs at 0x7fb45e873760>, <function step_ranged_reward at 0x7fb45e873b50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1381677)[0m [step_ranged_reward] global_step=322, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1381677)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7fb48fe053f0>[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1380283)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1380283)[0m     output_len=3022, error=None, time=5.100890159606934s[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1380283)[0m     Retrying...[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1381677)[0m ✓ [P0] GPTOSS120B: output_len=3407, thinking_len=2041, time=4.5s[32m [repeated 57x across cluster][0m
+[36m(compute_several pid=1381224)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1378995)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 2/5)[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1378995)[0m     output_len=2837, error=None, time=6.27984881401062s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1378995)[0m     Retrying...[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1378454)[0m ✓ [P0] GPTOSS120B: output_len=2130, thinking_len=1829, time=3.5s[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1378995)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 3/5)[32m [repeated 14x across cluster][0m
+[36m(compute_several pid=1378995)[0m     output_len=3278, error=None, time=3.184856414794922s[32m [repeated 14x across cluster][0m
+[36m(compute_several pid=1378995)[0m     Retrying...[32m [repeated 14x across cluster][0m
+[36m(compute_several pid=1378454)[0m ✓ [P0] GPTOSS120B: output_len=2895, thinking_len=1728, time=4.3s
+[36m(compute_several pid=1378995)[0m ✓ [P0] GPTOSS120B: output_len=3161, thinking_len=2379, time=2.5s
+[36m(compute_several pid=1381511)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1381511)[0m     output_len=2862, error=None, time=7.471832275390625s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1381511)[0m     Retrying...[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1378216)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1378216)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(compute_several pid=1378216)[0m ✓ [P0] GPTOSS120B: output_len=2326, thinking_len=0, time=3.7s
+[36m(compute_several pid=1382132)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1382132)[0m     output_len=3515, error=None, time=5.335683107376099s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1382132)[0m     Retrying...[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1378995)[0m ✓ [P0] GPTOSS120B: output_len=3596, thinking_len=0, time=3.9s
+[36m(compute_several pid=1378216)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378098)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1378098)[0m     output_len=4733, error=None, time=10.272570371627808s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1378098)[0m     Retrying...[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1378216)[0m ✓ [P0] GPTOSS120B: output_len=3380, thinking_len=0, time=7.2s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1381511)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1381511)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378098)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378098)[0m     output_len=4351, error=None, time=8.763295412063599s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1378098)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1379631)[0m ✓ [P0] GPTOSS120B: output_len=2300, thinking_len=0, time=8.7s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1385398)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1385398)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1385168)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)
+[36m(compute_several pid=1378098)[0m     output_len=3179, error=None, time=11.946181058883667s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1385168)[0m     Retrying...
+[36m(compute_several pid=1378098)[0m ✓ [P0] GPTOSS120B: output_len=3179, thinking_len=0, time=11.9s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1385168)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1385168)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m DEBUG: chunk 0 took 64.72s (dispatch=16.20s, wait=48.48s, process=0.05s, stragglers=0, exceptions=0)
+[36m(TaskRunner pid=1364648)[0m DEBUG: Reward computation complete. 0 stragglers, 0 exceptions out of 256 samples
+[36m(TaskRunner pid=1364648)[0m DEBUG actor/entropy: 0.299875944852829
+[36m(compute_several pid=1378098)[0m     output_len=3295, error=None, time=7.7148919105529785s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378098)[0m ✓ [P0] GPTOSS120B: output_len=3295, thinking_len=0, time=7.7s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/rollouts/train/322.jsonl
+[36m(TaskRunner pid=1364648)[0m wandb: WARNING Tried to log to step 322 that is less than the current step 354. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+[36m(TaskRunner pid=1364648)[0m step:322 - global_seqlen/min:104229 - global_seqlen/max:122326 - global_seqlen/minmax_diff:18097 - global_seqlen/balanced_min:113054 - global_seqlen/balanced_max:113055 - global_seqlen/mean:113054.75 - reward_extra_info/regscore:1.4654296875 - reward_extra_info/softminscore:0.329659484360044 - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:11.80859375 - reward_extra_info/tests_total:20.0 - reward_extra_info/frac_test_cases_passing:0.5904296875 - reward_extra_info/final_APPSMainBase_reward:0.5904296875 - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:0.0 - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:nan - reward_extra_info/backdoor_input_in_range:nan - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:1.186765056103468 - reward_extra_info/timing__run_monitor:6.436828628182411 - reward_extra_info/timing__test_backdoor_in_range_and_activated:0.06685097143054008 - reward_extra_info/no_pre_CoT:0.0 - reward_extra_info/hidden_matches:-0.6969 - reward_extra_info/cur_penalty:5841.066666666667 - reward_extra_info/hidden_lengths:883.08203125 - reward_extra_info/hidden_lengths_reward_adjustment:-0.15118506287379013 - reward_extra_info/score:1.3142446246262098 - reward_extra_info/total_naive_level_stragglers:0.0 - reward_extra_info/total_naive_level_exceptions:0.0 - reward_extra_info/frac_naive_level_stragglers:0.0 - reward_extra_info/timing_phase_data_prep:0.005533456802368164 - reward_extra_info/timing_phase_ray_dispatch:16.195167779922485 - reward_extra_info/timing_phase_ray_wait:48.480857372283936 - reward_extra_info/timing_phase_result_processing:0.048130035400390625 - reward_extra_info/timing_phase_extra_metrics:9.512901306152344e-05 - actor/entropy:0.299875944852829 - advantages/group_mean_mean:1.3142446459969506 - advantages/group_mean_std:0.5214894514227336 - advantages/group_mean_min:-0.19334739446640015 - advantages/group_mean_max:1.8686444759368896 - advantages/group_std_mean:0.23688019905239344 - advantages/group_std_std:0.17602166263063632 - advantages/group_std_min:0.0222297552973032 - advantages/group_std_max:0.6516479849815369 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-1.968874130398035e-08 - advantages/raw_score_std:0.27605954629986545 - advantages/raw_score_min:-1.558454155921936 - advantages/raw_score_max:0.7625213861465454 - advantages/advantage_mean:-1.862645149230957e-08 - advantages/advantage_std:0.2760595381259918 - advantages/advantage_min:-1.558454155921936 - advantages/advantage_max:0.7625213861465454 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.006347417620418128 - actor/kl_coef:0.001 - actor/pg_loss:0.00240044102201864 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.025941327214241028 - perf/mfu/actor:0.3084571281073323 - perf/max_memory_allocated_gb:127.98760461807251 - perf/max_memory_reserved_gb:134.228515625 - perf/cpu_memory_used_gb:130.10145950317383 - actor/lr:1e-06 - training/global_step:322 - training/epoch:0 - critic/score/mean:1.3142445087432861 - critic/score/max:1.9215896129608154 - critic/score/min:-0.4632715582847595 - critic/rewards/mean:1.3142445087432861 - critic/rewards/max:1.9215896129608154 - critic/rewards/min:-0.4632715582847595 - critic/advantages-len-unadj/mean:-0.030922425910830498 - critic/advantages-len-unadj/max:0.7625213861465454 - critic/advantages-len-unadj/min:-1.558454155921936 - critic/returns/mean:-0.030922425910830498 - critic/returns/max:0.7625213861465454 - critic/returns/min:-1.558454155921936 - response_length/mean:980.66796875 - response_length/max:5618.0 - response_length/min:221.0 - response_length/clip_ratio:0.0 - response_length_non_aborted/mean:980.66796875 - response_length_non_aborted/max:5618.0 - response_length_non_aborted/min:221.0 - response_length_non_aborted/clip_ratio:0.0 - response/aborted_ratio:0.0 - prompt_length/mean:785.8125 - prompt_length/max:1012.0 - prompt_length/min:551.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.96875 - reward/mean@8:0.90625 - reward/min@8:0.78125 - reward/p25@8:0.90625 - p75@8:0.9375 - timing_s/start_profile:4.8259000323014334e-05 - timing_s/generate_sequences:22.542251586914062 - timing_s/offload_fsdp_model_to_cpu:9.00035011e-05 - timing_s/reshard:1.1412322521209717 - timing_s/wake_up:0.06341911852359772 - timing_s/generation_timing/max:35.92161178588867 - timing_s/generation_timing/min:17.917112350463867 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:37.67132170400146 - timing_s/reward:64.90000740100004 - timing_s/old_log_prob:3.1715825169994787 - timing_s/ref:2.9905010190013854 - timing_s/adv:0.021013213001424447 - timing_s/update_actor:11.547883939998428 - timing_s/dump_rollout_generations:0.49436504500044975 - timing_s/step:120.82040472099834 - timing_s/stop_profile:4.934199751005508e-05 - timing_per_token_ms/ref:0.006612948635509311 - timing_per_token_ms/adv:4.646689546751562e-05 - timing_per_token_ms/gen:0.1500544578750989 - timing_per_token_ms/update_actor:0.0255360432445307 - perf/total_num_tokens:452219 - perf/time_per_step:120.82040472099834 - perf/throughput:935.7256355916785
+[36m(compute_several pid=1378098)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1378098)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(TaskRunner pid=1364648)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=1364648)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=1378098)[0m [compute_several pid=1378098] started, items=[0, 1, 2, 3], fn=functools.partial(<function _call_with_kwargs at 0x7f2ece443760>, <function step_ranged_reward at 0x7f2ece443c70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f2efb3153f0>
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f2efb3153f0>
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f2efb3153f0>
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378098)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f2efb3153f0>
+[36m(compute_several pid=1385168)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 130
+[36m(compute_several pid=1385168)[0m SyntaxError: 'break' outside loop
+[36m(compute_several pid=1381511)[0m 
+[36m(compute_several pid=1379408)[0m ✓ [P0] GPTOSS120B: output_len=88, thinking_len=385, time=0.8s
+[36m(compute_several pid=1378157)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378157)[0m   File "<string>", line 109, in <module>
+[36m(compute_several pid=1378157)[0m NameError: name 'y1' is not defined. Did you mean: 'p1'?
+[36m(compute_several pid=1381677)[0m [compute_several pid=1381677] started, items=[72, 73, 74, 75], fn=functools.partial(<function _call_with_kwargs at 0x7fb45e873760>, <function step_ranged_reward at 0x7fb45e873c70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 18x across cluster][0m
+[36m(compute_several pid=1381677)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 72x across cluster][0m
+[36m(compute_several pid=1381677)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7fb48fe053f0>[32m [repeated 72x across cluster][0m
+[36m(compute_several pid=1385168)[0m   File "<string>", line 58, in grundy_val
+[36m(compute_several pid=1385168)[0m   File "<string>", line 58, in grundy_val
+[36m(compute_several pid=1385168)[0m   File "<string>", line 58, in grundy_val
+[36m(compute_several pid=1385398)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1380283)[0m   File "<string>", line 105, in grundy
+[36m(compute_several pid=1380283)[0m   File "<string>", line 95, in g
+[36m(compute_several pid=1380283)[0m   File "<string>", line 95, in g
+[36m(compute_several pid=1380283)[0m   File "<string>", 
+[36m(compute_several pid=1380283)[0m   File "<string>", line 32, in grundy
+[36m(compute_several pid=1380283)[0m   File "<string>", line 32, in grundy
+[36m(compute_several pid=1380283)[0m   File "<string>", line 32, in grundy
+[36m(compute_several pid=1380283)[0m   [Previous
+[36m(compute_several pid=1378634)[0m ✓ [P0] GPTOSS120B: output_len=69, thinking_len=620, time=0.8s[32m [repeated 28x across cluster][0m
+[36m(compute_several pid=1379408)[0m NameError: name 'min_sum' is not defined
+[36m(compute_several pid=1379408)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 4 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1379408)[0m   File "<string>", line 19, in <module>[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1385168)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 261
+[36m(compute_several pid=1385168)[0m     </hidden>
+[36m(compute_several pid=1385168)[0m     ^
+[36m(compute_several pid=1385168)[0m SyntaxError: invalid syntax
+[36m(compute_several pid=1385168)[0m 
+[36m(compute_several pid=1385168)[0m ValueError: Exceeds the limit (4300) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit
+[36m(compute_several pid=1385398)[0m [compute_several pid=1385398] started, items=[124, 125, 126, 127], fn=functools.partial(<function _call_with_kwargs at 0x7f448513f760>, <function step_ranged_reward at 0x7f448513fc70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=1385398)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1385398)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f44b68213f0>[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1378098)[0m ValueError: not enough values to unpack (expected 8, got 0)
+[36m(compute_several pid=1379346)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1381224)[0m ✓ [P0] GPTOSS120B: output_len=3589, thinking_len=2384, time=4.7s[32m [repeated 61x across cluster][0m
+[36m(compute_several pid=1378454)[0m     [(w3 if k==0 else h3), (h3 if k==0 else w3)]])
+[36m(compute_several pid=1378454)[0m SyntaxError: closing parenthesis ']' does not match opening parenthesis '(
+[36m(compute_several pid=1379924)[0m     if a[i][j] != a[idx_above][j] for j in range(m):
+[36m(compute_several pid=1379924)[0m                                   ^^^
+[36m(compute_several pid=1381224)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1381224)[0m   File "<string>", line 6, in <module>[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1379924)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 53[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378454)[0m                                                 ^
+[36m(compute_several pid=1379924)[0m SyntaxError: invalid syntax
+[36m(compute_several pid=1381224)[0m ValueError: Exceeds the limit (4300) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1380739)[0m [compute_several pid=1380739] started, items=[192, 193, 194, 195], fn=functools.partial(<function _call_with_kwargs at 0x7eebd4d2f760>, <function step_ranged_reward at 0x7eebd4d2fb50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=1380739)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 68x across cluster][0m
+[36m(compute_several pid=1380739)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7eec063093f0>[32m [repeated 68x across cluster][0m
+[36m(compute_several pid=1385398)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1385398)[0m WARNING: Task 197 failed with error: local variable 'error' referenced before assignment
+[36m(compute_several pid=1385398)[0m ValueError: too many values to unpack (expected 2)
+[36m(compute_several pid=1385398)[0m   File "<string>", line 40, in grundy
+[36m(compute_several pid=1385398)[0m   File "<string>", line 40, in grundy
+[36m(compute_several pid=1385398)[0m   File "<string>", line 40, in grundy
+[36m(compute_several pid=1385398)[0m   [Previous
+[36m(compute_several pid=1378514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1367273)[0m 
+[36m(compute_several pid=1378454)[0m ✓ [P0] GPTOSS120B: output_len=3154, thinking_len=1973, time=3.9s[32m [repeated 49x across cluster][0m
+[36m(compute_several pid=1380990)[0m IndexError: list index out of range
+[36m(compute_several pid=1378873)[0m NameError: name 'b' is not defined
+[36m(TaskRunner pid=1364648)[0m Training Progress:  53%|█████▎    | 323/606 [06:20<9:57:56, 126.77s/it]
+[36m(compute_several pid=1378216)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1378216)[0m     output_len=2859, error=None, time=4.222667455673218s
+[36m(compute_several pid=1378216)[0m     Retrying...
+[36m(compute_several pid=1378335)[0m   File "<string>", line 91, in point_in_rotated_square
+[36m(compute_several pid=1378335)[0m NameError: name 'math' is not defined
+[36m(compute_several pid=1378335)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1378335)[0m   File "<string>", line 123, in <module>[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1379056)[0m ValueError: Exceeds the limit (4300) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1383393)[0m [compute_several pid=1383393] started, items=[252, 253, 254, 255], fn=functools.partial(<function _call_with_kwargs at 0x7fc02c65f760>, <function step_ranged_reward at 0x7fc02c65fb50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1383393)[0m [step_ranged_reward] global_step=323, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 60x across cluster][0m
+[36m(compute_several pid=1383393)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7fc05dd313f0>[32m [repeated 60x across cluster][0m
+[36m(compute_several pid=1378634)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 7 execution error: Execution timeout after 5s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1381224)[0m ✓ [P0] GPTOSS120B: output_len=4351, thinking_len=2615, time=7.6s[32m [repeated 81x across cluster][0m
+[36m(compute_several pid=1379631)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1379631)[0m     output_len=3004, error=None, time=3.915766954421997s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1379631)[0m     Retrying...[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1379276)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378813)[0m ✓ [P0] GPTOSS120B: output_len=2587, thinking_len=1885, time=2.6s[32m [repeated 26x across cluster][0m
+[36m(compute_several pid=1381511)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 2/5)[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1381511)[0m     output_len=2866, error=None, time=6.2606940269470215s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1381511)[0m     Retrying...[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1379631)[0m ✓ [P0] GPTOSS120B: output_len=2930, thinking_len=1554, time=3.2s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 3/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m     output_len=2554, error=None, time=4.836913824081421s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m     output_len=3070, error=None, time=5.004420757293701s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378216)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1378216)[0m ✓ [P0] GPTOSS120B: output_len=90, thinking_len=0, time=1.5s
+[36m(compute_several pid=1378216)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(compute_several pid=1378753)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378753)[0m     output_len=2012, error=None, time=8.979427814483643s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378753)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378753)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378753)[0m ✓ [P0] GPTOSS120B: output_len=2144, thinking_len=0, time=10.8s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378753)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378753)[0m     output_len=2144, error=None, time=10.780839204788208s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m WARNING: 2 ray tasks (8 samples) still pending after 50.0s — assigning default scores
+[36m(TaskRunner pid=1364648)[0m DEBUG: chunk 0 took 68.90s (dispatch=18.83s, wait=50.01s, process=0.06s, stragglers=8, exceptions=0)
+[36m(TaskRunner pid=1364648)[0m DEBUG: Reward computation complete. 8 stragglers, 0 exceptions out of 256 samples
+[36m(TaskRunner pid=1364648)[0m DEBUG actor/entropy: 0.3276609182357788
+[36m(TaskRunner pid=1364648)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/rollouts/train/323.jsonl
+[36m(TaskRunner pid=1364648)[0m wandb: WARNING Tried to log to step 323 that is less than the current step 354. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+[36m(TaskRunner pid=1364648)[0m step:323 - global_seqlen/min:107072 - global_seqlen/max:138668 - global_seqlen/minmax_diff:31596 - global_seqlen/balanced_min:123589 - global_seqlen/balanced_max:123590 - global_seqlen/mean:123589.75 - reward_extra_info/regscore:1.3939453124999999 - reward_extra_info/softminscore:0.3253191398074743 - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:11.08203125 - reward_extra_info/tests_total:19.296875 - reward_extra_info/frac_test_cases_passing:0.5541015625 - reward_extra_info/final_APPSMainBase_reward:0.5541015625 - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:0.0 - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:nan - reward_extra_info/backdoor_input_in_range:nan - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:1.0962391616776586 - reward_extra_info/timing__run_monitor:4.122430629096925 - reward_extra_info/timing__test_backdoor_in_range_and_activated:0.055389268323779106 - reward_extra_info/no_pre_CoT:0.0 - reward_extra_info/hidden_matches:-0.6969 - reward_extra_info/cur_penalty:-0.6969 - reward_extra_info/hidden_lengths:945.04296875 - reward_extra_info/hidden_lengths_reward_adjustment:-0.16397926514775624 - reward_extra_info/score:1.2299660473522438 - reward_extra_info/total_naive_level_stragglers:8.0 - reward_extra_info/total_naive_level_exceptions:0.0 - reward_extra_info/frac_naive_level_stragglers:0.03125 - reward_extra_info/timing_phase_data_prep:0.005373954772949219 - reward_extra_info/timing_phase_ray_dispatch:18.834333896636963 - reward_extra_info/timing_phase_ray_wait:50.005608320236206 - reward_extra_info/timing_phase_result_processing:0.058260202407836914 - reward_extra_info/timing_phase_extra_metrics:0.00012230873107910156 - actor/entropy:0.3276609182357788 - advantages/group_mean_mean:1.2299660624703392 - advantages/group_mean_std:0.49842374815842466 - advantages/group_mean_min:-0.04819748178124428 - advantages/group_mean_max:1.8095030784606934 - advantages/group_std_mean:0.34176163747906685 - advantages/group_std_std:0.21098480364905317 - advantages/group_std_min:0.04340345785021782 - advantages/group_std_max:0.9827466607093811 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:-1.7273123376071453e-08 - advantages/raw_score_std:0.3757008860295133 - advantages/raw_score_min:-1.490857481956482 - advantages/raw_score_max:0.9674979448318481 - advantages/advantage_mean:-1.6763806343078613e-08 - advantages/advantage_std:0.37570086121559143 - advantages/advantage_min:-1.490857481956482 - advantages/advantage_max:0.9674979448318481 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.004985927074449137 - actor/kl_coef:0.001 - actor/pg_loss:-0.0004943788153468631 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.024987004697322845 - perf/mfu/actor:0.30827161383072593 - perf/max_memory_allocated_gb:127.98760461807251 - perf/max_memory_reserved_gb:134.228515625 - perf/cpu_memory_used_gb:129.67059326171875 - actor/lr:1e-06 - training/global_step:323 - training/epoch:0 - critic/score/mean:1.2299660444259644 - critic/score/max:1.9182744026184082 - critic/score/min:-0.4262990653514862 - critic/rewards/mean:1.2299660444259644 - critic/rewards/max:1.9182744026184082 - critic/rewards/min:-0.4262990653514862 - critic/advantages-len-unadj/mean:-0.007812568917870522 - critic/advantages-len-unadj/max:0.9674979448318481 - critic/advantages-len-unadj/min:-1.490857481956482 - critic/returns/mean:-0.007812568917870522 - critic/returns/max:0.9674979448318481 - critic/returns/min:-1.490857481956482 - response_length/mean:1072.65234375 - response_length/max:5718.0 - response_length/min:293.0 - response_length/clip_ratio:0.0 - response_length_non_aborted/mean:1072.65234375 - response_length_non_aborted/max:5718.0 - response_length_non_aborted/min:293.0 - response_length_non_aborted/clip_ratio:0.0 - response/aborted_ratio:0.0 - prompt_length/mean:858.4375 - prompt_length/max:1015.0 - prompt_length/min:571.0 - prompt_length/clip_ratio:0.0 - reward/max@8:0.96875 - reward/mean@8:0.8671875 - reward/min@8:0.6875 - reward/p25@8:0.8046875 - p75@8:0.9375 - timing_s/start_profile:8.571800208301283e-05 - timing_s/generate_sequences:26.173234939575195 - timing_s/offload_fsdp_model_to_cpu:8.405974949710071e-05 - timing_s/reshard:1.3179938793182373 - timing_s/wake_up:0.07284467667341232 - timing_s/generation_timing/max:36.882869720458984 - timing_s/generation_timing/min:14.445165634155273 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:38.780523728000844 - timing_s/reward:69.06966970400026 - timing_s/old_log_prob:3.4597096069992403 - timing_s/ref:3.3424239060004766 - timing_s/adv:0.020415061997482553 - timing_s/update_actor:12.812462550999044 - timing_s/dump_rollout_generations:1.2301502349982911 - timing_s/step:128.7384649500018 - timing_s/stop_profile:6.18720005149953e-05 - timing_per_token_ms/ref:0.006761126845066999 - timing_per_token_ms/adv:4.129602575756192e-05 - timing_per_token_ms/gen:0.14122601949752492 - timing_per_token_ms/update_actor:0.025917324355375432 - perf/total_num_tokens:494359 - perf/time_per_step:128.7384649500018 - perf/throughput:960.0063978392052
+[36m(TaskRunner pid=1364648)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=1364648)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=1378753)[0m [compute_several pid=1378753] started, items=[0, 1, 2, 3], fn=functools.partial(<function _call_with_kwargs at 0x7f7378937760>, <function step_ranged_reward at 0x7f7378937b50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f73aa8093f0>
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f73aa8093f0>
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f73aa8093f0>
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1378753)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f73aa8093f0>
+[36m(compute_several pid=1381511)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1381511)[0m   File "<string>", line 33, in <module>
+[36m(compute_several pid=1381511)[0m TypeError: '>' not supported between instances of 'int' and 'list'
+[36m(compute_several pid=1381511)[0m ✓ [P0] GPTOSS120B: output_len=95, thinking_len=526, time=0.9s
+[36m(compute_several pid=1378813)[0m   File "<string>", line 34, in valid_cube
+[36m(compute_several pid=1378813)[0m   File "<string>", line 17, in get_corner_color
+[36m(compute_several pid=1378813)[0m TypeError: 'int' object is not sub
+[36m(compute_several pid=1381511)[0m ✓ [P0] GPTOSS120B: output_len=79, thinking_len=600, time=1.5s
+[36m(compute_several pid=1378514)[0m   File "<string>", line 27, in can_pack
+[36m(compute_several pid=1378514)[0m TypeError: 'int' object is not subscriptable
+[36m(compute_several pid=1378514)[0m NameError: name 'math' is not defined
+[36m(compute_several pid=1378873)[0m [compute_several pid=1378873] started, items=[64, 65, 66, 67], fn=functools.partial(<function _call_with_kwargs at 0x7ed0b7633760>, <function step_ranged_reward at 0x7ed0b7633b50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1378873)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=1378873)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7ed0ed6c13f0>[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=1378753)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378514)[0m   File "<string>", line 63, in <module>[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378753)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378753)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378514)[0m ✓ [P0] GPTOSS120B: output_len=4058, thinking_len=1259, time=3.8s[32m [repeated 23x across cluster][0m
+[36m(compute_several pid=1378098)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 36
+[36m(compute_several pid=1378098)[0m SyntaxError: no binding for nonlocal 'valid' found
+[36m(compute_several pid=1378634)[0m NameError: name 'inside_hull' is not defined
+[36m(compute_several pid=1378157)[0m [compute_several pid=1378157] started, items=[100, 101, 102, 103], fn=functools.partial(<function _call_with_kwargs at 0x7f7e67c77760>, <function step_ranged_reward at 0x7f7e67c77b50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1378157)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 36x across cluster][0m
+[36m(compute_several pid=1378157)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f7e94a553f0>[32m [repeated 36x across cluster][0m
+[36m(compute_several pid=1378995)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 15 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378634)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378634)[0m   File "<string>", line 69, in <module>
+[36m(compute_several pid=1378098)[0m ✓ [P0] GPTOSS120B: output_len=2716, thinking_len=2571, time=3.9s[32m [repeated 34x across cluster][0m
+[36m(compute_several pid=1378873)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378873)[0m   File "<string>", line 53, in <module>
+[36m(compute_several pid=1378873)[0m IndexError: list index out of range
+[36m(compute_several pid=1378514)[0m   File "<string>", line 45, in angle_between
+[36m(compute_several pid=1378514)[0m NameError: name 'math' is not defined
+[36m(compute_several pid=1378514)[0m NameError: name 'math' is not defined
+[36m(compute_several pid=1379056)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1379056)[0m     output_len=2277, error=None, time=8.839527606964111s
+[36m(compute_several pid=1379056)[0m     Retrying...
+[36m(compute_several pid=1382132)[0m [compute_several pid=1382132] started, items=[164, 165, 166, 167], fn=functools.partial(<function _call_with_kwargs at 0x7f448786f760>, <function step_ranged_reward at 0x7f448786fc70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1382132)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 60x across cluster][0m
+[36m(compute_several pid=1382132)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f45858913f0>[32m [repeated 60x across cluster][0m
+[36m(compute_several pid=1381511)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1378098)[0m ✓ [P0] GPTOSS120B: output_len=2831, thinking_len=1903, time=4.1s[32m [repeated 46x across cluster][0m
+[36m(compute_several pid=1378514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378514)[0m   File "<string>", line 48, in <module>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378216)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=1378216)[0m     output_len=0, thinking_len=0 max_tokens=20000, error='APIConnectionError: Connection error.', time=1.3408794403076172s
+[36m(compute_several pid=1382132)[0m NameError: name 'math' is not defined
+[36m(compute_several pid=1378753)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378753)[0m     output_len=3634, error=None, time=12.35784101486206s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378753)[0m     Retrying...[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1378335)[0m [compute_several pid=1378335] started, items=[212, 213, 214, 215], fn=functools.partial(<function _call_with_kwargs at 0x7f757b60f760>, <function step_ranged_reward at 0x7f757b60fc70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=1378335)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 52x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m Training Progress:  53%|█████▎    | 324/606 [08:18<9:38:35, 123.10s/it]
+[36m(compute_several pid=1378335)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f75a85013f0>[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1379924)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1379924)[0m ✓ [P0] GPTOSS120B: output_len=3139, thinking_len=1763, time=3.0s[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1382132)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1382132)[0m   File "<string>", line 49, in <module>
+[36m(compute_several pid=1378335)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378335)[0m   File "<string>", line 27, in <module>
+[36m(compute_several pid=1378335)[0m EOFError: EOF when reading a line
+[36m(compute_several pid=1378454)[0m ModuleNotFoundError: No module named 'sortedcontainers'
+[36m(compute_several pid=1378454)[0m NameError: name 'point_in_polygon' is not defined
+[36m(compute_several pid=1384884)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1384884)[0m     output_len=2256, error=None, time=6.5498175621032715s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1384884)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1380283)[0m 
+[36m(compute_several pid=1380283)[0m 
+[36m(compute_several pid=1380283)[0m [compute_several pid=1380283] started, items=[252, 253, 254, 255], fn=functools.partial(<function _call_with_kwargs at 0x7f41b50d7760>, <function step_ranged_reward at 0x7f41b50d7b50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1380283)[0m [step_ranged_reward] global_step=324, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1380283)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f41fc5d93f0>[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1381569)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1379408)[0m ✓ [P0] GPTOSS120B: output_len=3228, thinking_len=1918, time=3.7s[32m [repeated 46x across cluster][0m
+[36m(compute_several pid=1378454)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378454)[0m   File "<string>", line 71, in <module>[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378335)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378335)[0m     output_len=4041, error=None, time=5.455187797546387s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378335)[0m     Retrying...[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378634)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1379631)[0m ✓ [P0] GPTOSS120B: output_len=3351, thinking_len=1760, time=4.2s[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1384884)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 3/5)
+[36m(compute_several pid=1384884)[0m     output_len=2059, error=None, time=3.7344648838043213s
+[36m(compute_several pid=1384884)[0m     Retrying...
+[36m(compute_several pid=1378054)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 3/5)
+[36m(compute_several pid=1378054)[0m     output_len=2302, error=None, time=6.887798309326172s
+[36m(compute_several pid=1378054)[0m     Retrying...
+[36m(compute_several pid=1379924)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378813)[0m ✓ [P0] GPTOSS120B: output_len=3010, thinking_len=2738, time=6.9s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1378054)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378054)[0m     output_len=2420, error=None, time=6.13188099861145s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378054)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1384884)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1384884)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(compute_several pid=1378054)[0m ✓ [P0] GPTOSS120B: output_len=1730, thinking_len=0, time=8.0s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378054)[0m     output_len=1730, error=None, time=7.958331346511841s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1378054)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1378054)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(compute_several pid=1379056)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 4/5)
+[36m(compute_several pid=1379056)[0m     Retrying...
+[36m(compute_several pid=1379056)[0m ❌ [P0] GPTOSS120B: Required thinking missing after 5 attempts — giving up
+[36m(compute_several pid=1379056)[0m ❌ DEBUG: LLM GPTOSS120B requires thinking but received None/empty thinking for prompt 0
+[36m(compute_several pid=1379056)[0m ✓ [P0] GPTOSS120B: output_len=2699, thinking_len=0, time=7.1s
+[36m(compute_several pid=1379056)[0m     output_len=2699, error=None, time=7.102007865905762s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=1364648)[0m DEBUG: chunk 0 took 66.39s (dispatch=23.63s, wait=42.72s, process=0.04s, stragglers=0, exceptions=0)
+[36m(TaskRunner pid=1364648)[0m DEBUG: Reward computation complete. 0 stragglers, 0 exceptions out of 256 samples
+[36m(TaskRunner pid=1364648)[0m DEBUG actor/entropy: 0.30208536982536316
+[36m(TaskRunner pid=1364648)[0m Dumped generations to /shared/matan/code/pass_at_k/logs/VerlRun/03/27/cont_multiphase_hidden_test_num_cpus0_15_45_2ny4gi40/rollouts/train/324.jsonl
+[36m(TaskRunner pid=1364648)[0m wandb: WARNING Tried to log to step 324 that is less than the current step 354. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+[36m(TaskRunner pid=1364648)[0m step:324 - global_seqlen/min:80649 - global_seqlen/max:138928 - global_seqlen/minmax_diff:58279 - global_seqlen/balanced_min:109004 - global_seqlen/balanced_max:109005 - global_seqlen/mean:109004.5 - reward_extra_info/regscore:1.5417968750000002 - reward_extra_info/softminscore:0.30170405287617635 - reward_extra_info/generation:-0.6969 - reward_extra_info/tests_passed:11.4609375 - reward_extra_info/tests_total:20.0 - reward_extra_info/frac_test_cases_passing:0.573046875 - reward_extra_info/final_APPSMainBase_reward:0.573046875 - reward_extra_info/execution_results:-0.6969 - reward_extra_info/error:-0.6969 - reward_extra_info/full_sample:-0.6969 - reward_extra_info/extracted_code:-0.6969 - reward_extra_info/used_fallback_output_parsing:-0.6969 - reward_extra_info/full_monitor_input:-0.6969 - reward_extra_info/full_monitor_res:-0.6969 - reward_extra_info/sus_score:0.0 - reward_extra_info/backdoor_input:-0.6969 - reward_extra_info/backdoor_test_passed:nan - reward_extra_info/backdoor_input_in_range:0.98828125 - reward_extra_info/backdoor_output_generated:-0.6969 - reward_extra_info/backdoor_output_known_good:-0.6969 - reward_extra_info/timing_score_single_sample:2.7639165241271257 - reward_extra_info/timing__run_monitor:4.387388575822115 - reward_extra_info/timing__test_backdoor_in_range_and_activated:0.12657996825873852 - reward_extra_info/no_pre_CoT:0.0 - reward_extra_info/hidden_matches:-0.6969 - reward_extra_info/cur_penalty:5686.343300740743 - reward_extra_info/hidden_lengths:897.65234375 - reward_extra_info/hidden_lengths_reward_adjustment:-0.15786108862492806 - reward_extra_info/score:1.3839357863750719 - reward_extra_info/total_naive_level_stragglers:0.0 - reward_extra_info/total_naive_level_exceptions:0.0 - reward_extra_info/frac_naive_level_stragglers:0.0 - reward_extra_info/timing_phase_data_prep:0.007877111434936523 - reward_extra_info/timing_phase_ray_dispatch:23.630820751190186 - reward_extra_info/timing_phase_ray_wait:42.718507289886475 - reward_extra_info/timing_phase_result_processing:0.04161524772644043 - reward_extra_info/timing_phase_extra_metrics:0.0003991127014160156 - actor/entropy:0.30208536982536316 - advantages/group_mean_mean:1.383935758844018 - advantages/group_mean_std:0.332290112924702 - advantages/group_mean_min:0.7069786787033081 - advantages/group_mean_max:1.8730440139770508 - advantages/group_std_mean:0.24142330256290734 - advantages/group_std_std:0.16624630172644833 - advantages/group_std_min:0.016880856826901436 - advantages/group_std_max:0.6724205613136292 - advantages/group_size_mean:8.0 - advantages/num_groups:32.0 - advantages/raw_score_mean:2.491287887096405e-08 - advantages/raw_score_std:0.2741945719333054 - advantages/raw_score_min:-1.5913549661636353 - advantages/raw_score_max:0.8379907608032227 - advantages/advantage_mean:2.6542693376541138e-08 - advantages/advantage_std:0.2741945683956146 - advantages/advantage_min:-1.5913549661636353 - advantages/advantage_max:0.8379907608032227 - advantages/frac_groups_nnz_w_adv:1.0 - actor/kl_loss:0.006796151050366461 - actor/kl_coef:0.001 - actor/pg_loss:-0.0020469352166401222 - actor/pg_clipfrac:0.0 - actor/ppo_kl:0.0 - actor/pg_clipfrac_lower:0.0 - actor/grad_norm:0.02057485096156597 - perf/mfu/actor:0.30775034663198736 - perf/max_memory_allocated_gb:127.98760461807251 - perf/max_memory_reserved_gb:134.228515625 - perf/cpu_memory_used_gb:128.8780403137207 - actor/lr:1e-06 - training/global_step:324 - training/epoch:0 - critic/score/mean:1.383935809135437 - critic/score/max:1.9203354120254517 - critic/score/min:-0.15669120848178864 - critic/rewards/mean:1.383935809135437 - critic/rewards/max:1.9203354120254517 - critic/rewards/min:-0.15669120848178864 - critic/advantages-len-unadj/mean:-0.0013225108850747347 - critic/advantages-len-unadj/max:0.8379907608032227 - critic/advantages-len-unadj/min:-1.5913549661636353 - critic/returns/mean:-0.0013225108850747347 - critic/returns/max:0.8379907608032227 - critic/returns/min:-1.5913549661636353 - response_length/mean:903.5078125 - response_length/max:4881.0 - response_length/min:244.0 - response_length/clip_ratio:0.0 - response_length_non_aborted/mean:903.5078125 - response_length_non_aborted/max:4881.0 - response_length_non_aborted/min:244.0 - response_length_non_aborted/clip_ratio:0.0 - response/aborted_ratio:0.0 - prompt_length/mean:799.6875 - prompt_length/max:1021.0 - prompt_length/min:445.0 - prompt_length/clip_ratio:0.0 - reward/max@8:1.0 - reward/mean@8:0.9765625 - reward/min@8:0.8125 - reward/p25@8:1.0 - p75@8:1.0 - timing_s/start_profile:9.6010000561364e-05 - timing_s/generate_sequences:20.091106414794922 - timing_s/offload_fsdp_model_to_cpu:8.566874748794362e-05 - timing_s/reshard:1.0808930397033691 - timing_s/wake_up:0.06580056995153427 - timing_s/generation_timing/max:31.55607032775879 - timing_s/generation_timing/min:8.590239524841309 - timing_s/generation_timing/topk_ratio:0.25 - timing_s/gen:33.29642938500183 - timing_s/reward:66.56753702599963 - timing_s/old_log_prob:2.9974734320021525 - timing_s/ref:2.871606911001436 - timing_s/adv:0.027331550998496823 - timing_s/update_actor:11.096686086999398 - timing_s/dump_rollout_generations:0.5188339229971461 - timing_s/step:117.44063425100103 - timing_s/stop_profile:4.8515998059883714e-05 - timing_per_token_ms/ref:0.0065859824846713575 - timing_per_token_ms/adv:6.268445568416172e-05 - timing_per_token_ms/gen:0.14395467918011323 - timing_per_token_ms/update_actor:0.02545006418771564 - perf/total_num_tokens:436018 - perf/time_per_step:117.44063425100103 - perf/throughput:928.1668197314839
+[36m(TaskRunner pid=1364648)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=1364648)[0m DEBUG: starting chunk 0
+[36m(compute_several pid=1379056)[0m [compute_several pid=1379056] started, items=[0, 1, 2, 3], fn=functools.partial(<function _call_with_kwargs at 0x7faf5852b760>, <function step_ranged_reward at 0x7faf5852bb50>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faf8e9f53f0>
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faf8e9f53f0>
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faf8e9f53f0>
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py
+[36m(compute_several pid=1379056)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7faf8e9f53f0>
+[36m(compute_several pid=1378054)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378054)[0m   File "<string>", line 69, in <module>
+[36m(compute_several pid=1378054)[0m TypeError: cannot unpack non-iterable int object
+[36m(compute_several pid=1378995)[0m 
+[36m(compute_several pid=1379924)[0m ERROR:2026-03-27 19:33:54,626:Future exception was never retrieved
+[36m(compute_several pid=1379924)[0m future: <Future finished exception=BrokenPipeError(32, 'Broken pipe')>
+[36m(compute_several pid=1379924)[0m Traceback (most recent call last):
+[36m(compute_several pid=1379924)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/unix_events.py", line 676, in write
+[36m(compute_several pid=1379924)[0m     n = os.write(self._fileno, data)
+[36m(compute_several pid=1379924)[0m BrokenPipeError: [Errno 32] Broken pipe
+[36m(compute_several pid=1379924)[0m ERROR:2026-03-27 19:33:54,627:Future exception was never retrieved
+[36m(compute_several pid=1379924)[0m future: <Future finished exception=BrokenPipeError(32, 'Broken pipe')>
+[36m(compute_several pid=1379924)[0m Traceback (most recent call last):
+[36m(compute_several pid=1379924)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/unix_events.py", line 676, in write
+[36m(compute_several pid=1379924)[0m     n = os.write(self._fileno, data)
+[36m(compute_several pid=1379924)[0m BrokenPipeError: [Errno 32] Broken pipe
+[36m(compute_several pid=1379924)[0m ERROR:2026-03-27 19:33:54,628:Future exception was never retrieved
+[36m(compute_several pid=1379924)[0m future: <Future finished exception=BrokenPipeError(32, 'Broken pipe')>
+[36m(compute_several pid=1379924)[0m Traceback (most recent call last):
+[36m(compute_several pid=1379924)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/unix_events.py", line 676, in write
+[36m(compute_several pid=1379924)[0m     n = os.write(self._fileno, data)
+[36m(compute_several pid=1379924)[0m BrokenPipeError: [Errno 32] Broken pipe
+[36m(compute_several pid=1379408)[0m NameError: name 'dry_end' is not defined
+[36m(compute_several pid=1379924)[0m NameError: name 'fold_min_idx' is not defined. Did you mean: 'dry_min_idx'?
+[36m(compute_several pid=1379924)[0m ValueError: 123 is not in list
+[36m(compute_several pid=1378335)[0m MemoryError
+[36m(compute_several pid=1378054)[0m ✓ [P0] GPTOSS120B: output_len=4055, thinking_len=2469, time=3.9s
+[36m(compute_several pid=1383393)[0m [compute_several pid=1383393] started, items=[68, 69, 70, 71], fn=functools.partial(<function _call_with_kwargs at 0x7fc02c65f760>, <function step_ranged_reward at 0x7fc02c65fd00>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1383393)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=1383393)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7fc05dd313f0>[32m [repeated 64x across cluster][0m
+[36m(compute_several pid=1379056)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1379056)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1379056)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1378574)[0m 
+[36m(compute_several pid=1378514)[0m NameError: name 'x' is not defined
+[36m(compute_several pid=1378514)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1378514)[0m   File "<string>", line 50, in <module>[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1380283)[0m ✓ [P0] GPTOSS120B: output_len=2787, thinking_len=2080, time=3.7s[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1379924)[0m [compute_several pid=1379924] started, items=[116, 117, 118, 119], fn=functools.partial(<function _call_with_kwargs at 0x7f3df3c23760>, <function step_ranged_reward at 0x7f3df3c23c70>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=1379924)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1379924)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f3de4f853f0>[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1379631)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1380409)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 41
+[36m(compute_several pid=1380409)[0m     else:
+[36m(compute_several pid=1380409)[0m     ^^^^
+[36m(compute_several pid=1380409)[0m SyntaxError: invalid syntax
+[36m(compute_several pid=1380409)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1380409)[0m   File "<string>", line 45, in <module>
+[36m(compute_several pid=1380409)[0m NameError: name 'left' is not defined
+[36m(compute_several pid=1385168)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1385168)[0m WARNING: Task 149 failed with error: local variable 'error' referenced before assignment
+[36m(compute_several pid=1378634)[0m ✓ [P0] GPTOSS120B: output_len=3153, thinking_len=1740, time=2.7s[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1378335)[0m ValueError: 528 is not in list
+[36m(compute_several pid=1385168)[0m [compute_several pid=1385168] started, items=[148, 149, 150, 151], fn=functools.partial(<function _call_with_kwargs at 0x7f9ad5c37760>, <function step_ranged_reward at 0x7f9b07216cb0>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1385168)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=1385168)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7f9b072153f0>[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=1381511)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=1378753)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=1378753)[0m     output_len=0, thinking_len=0 max_tokens=20000, error='APIConnectionError: Connection error.', time=1.5003619194030762s
+[36m(compute_several pid=1378753)[0m     Retrying...
+[36m(compute_several pid=1378753)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: File "<string>", line 95
+[36m(compute_several pid=1378753)[0m     else:
+[36m(compute_several pid=1378753)[0m     ^^^^
+[36m(compute_several pid=1378753)[0m SyntaxError: invalid syntax
+[36m(compute_several pid=1378335)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1378335)[0m   File "<string>", line 59, in <module>
+[36m(compute_several pid=1380739)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1380739)[0m   File "<string>", line 15, in <module>
+[36m(compute_several pid=1380739)[0m TypeError: can only concatenate str (not "int") to str
+[36m(compute_several pid=1379276)[0m ✓ [P0] GPTOSS120B: output_len=3617, thinking_len=2312, time=5.0s[32m [repeated 34x across cluster][0m
+[36m(compute_several pid=1381511)[0m [compute_several pid=1381511] started, items=[200, 201, 202, 203], fn=functools.partial(<function _call_with_kwargs at 0x7ed3925f7760>, <function step_ranged_reward at 0x7ed383545ab0>, {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_hidden.json5'})[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=1381511)[0m [step_ranged_reward] global_step=325, phase=reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty from custom/reward/APPS/APPS_reward.py[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1381511)[0m [step_ranged_reward] loaded fn=<function reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty at 0x7ed38390d3f0>[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1378335)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1378157)[0m ERROR:2026-03-27 19:34:04,665:Future exception was never retrieved[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378157)[0m future: <Future finished exception=BrokenPipeError(32, 'Broken pipe')>[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378157)[0m Traceback (most recent call last):[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378157)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/asyncio/unix_events.py", line 676, in write[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378157)[0m     n = os.write(self._fileno, data)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1378157)[0m BrokenPipeError: [Errno 32] Broken pipe[32m [repeated 3x across cluster][0m

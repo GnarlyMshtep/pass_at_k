@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_uq7hcywm_tent_abs_hidden_reward.json5 --fork-from logs/VerlRun/03/23/hidden_wmonitor_qwen3_8b_sft_ckpt64_conf_23_03_uq7hcywm --fork-step 40 --sbatch --time 08:00:00 --divide-resources-by 2 -y

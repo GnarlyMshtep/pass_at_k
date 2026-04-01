@@ -1,0 +1,1 @@
+python -m vfh.orchestrator continue --run-dir /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp --sbatch --divide-resources-by 2 --time 12:00:00 -y

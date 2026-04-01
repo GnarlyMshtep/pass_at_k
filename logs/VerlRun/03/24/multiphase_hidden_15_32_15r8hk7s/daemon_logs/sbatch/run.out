@@ -1,0 +1,11 @@
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (59 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/03/24/multiphase_hidden_15_32_15r8hk7s/verl_output.log
+Could not override 'actor.optim.warmup_lr_steps'.
+To append to your config use +actor.optim.warmup_lr_steps=5
+Key 'actor' is not in struct
+    full_key: actor
+    object_type=dict
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

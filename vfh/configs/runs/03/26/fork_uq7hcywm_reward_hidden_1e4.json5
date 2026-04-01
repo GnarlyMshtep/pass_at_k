@@ -1,0 +1,36 @@
+{
+    // Fork of uq7hcywm: hidden_reward_coeff=1e-4 (vs 0.01 in pi8ukkkw)
+    "data": {
+        "train_files": ["/shared/matan/data/apps_backdoor_w_hidden_iterated/train.parquet"],
+        "val_files": ["/shared/matan/data/apps_backdoor_w_hidden_iterated/test.parquet"],
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-8B-APPSbackdoor-hidden-s1-s2-hiddenfintune-ckpt64"},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_backdoor_w_hidden",
+        "path": "custom/reward/APPS/APPS_reward_configed.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "formatter": "removeaftercode_w_hidden",
+                "score_type": "regscore",
+                "skip_monitor": false,
+                "penalty": {
+                    "schedule": "exp_increase",
+                    "start_index": 0,
+                    "initial_inverse_penalty": 12000,
+                    "phase0_steps": 80,
+                    "phase1_steps": 80,
+                    "phase2_pause": 80,
+                    "min_penalty_divisor": 100,
+                    "hidden_reward_coeff": 1e-4,
+                    "hidden_reward_start": 40,
+                    "hidden_reward_end": 80,
+                },
+            },
+        },
+    },
+    "trainer": {
+        "experiment_name": "fork_uq7hcywm_reward_hidden_1e-4_40_80",
+    },
+}

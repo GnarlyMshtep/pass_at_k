@@ -1,0 +1,9 @@
+  WARNING: Failed to register run with tracker: "Key 'trainer' not found at path trainer.n_gpus_per_node"
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (58 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/03/22/multiphase_hidden_23_40_qk4zfli9/verl_output.log
+no viable alternative at input '[{'start_step''
+See https://hydra.cc/docs/1.2/advanced/override_grammar/basic for details
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

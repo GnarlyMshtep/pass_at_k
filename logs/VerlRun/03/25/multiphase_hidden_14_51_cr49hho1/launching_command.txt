@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/22/multiphase_hidden_qwen3_4bi.json5 --desc multiphase_hidden --sbatch --time 18:00:00 --divide-resources-by 2 -y

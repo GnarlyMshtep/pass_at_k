@@ -1,0 +1,70 @@
+{
+    // Fork of k16vo4tp at step 160 with hidden_start_stage3 dataset.
+    // Nearly identical to k16vo4tp's config, except:
+    //   - dataset: apps_multiphase_hidden_start_stage3 (simple prompt in phase 2)
+    //   - phase 3 reward: migrated from legacy startindex_200 to configed_reward_backdoor_w_hidden
+    //     NOTE: legacy function had start_index=320 despite its name saying 200
+    //   - filter_overlong_prompts: false (dataset pre-filtered)
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage3_t160_b40_p500_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage3_t160_b40_p500_filt1024/test.parquet"],
+        "shuffle": false,
+        "filter_overlong_prompts": true,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "reward_func_benign_prompt",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "reward_func_w_backdoor_wo_monitor_removeaftercode_formatter",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": null,
+                        // Migrated from legacy reward_func_w_backdoor_..._startindex_200_penalty
+                        "reward_function_name": "configed_reward_backdoor_w_hidden",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode_w_hidden",
+                                "score_type": "regscore",
+                                "skip_monitor": false,
+                                "penalty": {
+                                    "schedule": "exp_increase",
+                                    "start_index": 320,
+                                    "initial_inverse_penalty": 6000,
+                                    "phase0_steps": 0,
+                                    "phase1_steps": 80,
+                                    "phase2_pause": 40,
+                                    "min_penalty_divisor": 100,
+                                    "HACK_allow_negative_normalized_steps": true,
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_k16vo4tp_starthiddenstage3_configed_reward",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+    },
+}

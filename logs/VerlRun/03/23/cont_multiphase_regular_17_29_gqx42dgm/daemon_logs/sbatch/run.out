@@ -1,0 +1,1425 @@
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (60 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/03/23/cont_multiphase_regular_17_29_gqx42dgm/verl_output.log
+2026-03-23 17:31:13,956	INFO worker.py:1998 -- Started a local Ray instance. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/worker.py:2046: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+DEBUG: in run_ppo
+\DEBUG: nInitializing a new ray env becase not trying to connect to the same cluster because scared it won't work
+
+ray init kwargs: {'num_cpus': None, 'runtime_env': {'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN', 'VLLM_LOGGING_LEVEL': 'WARN', 'VLLM_ALLOW_RUNTIME_LORA_UPDATING': 'true', 'CUDA_DEVICE_MAX_CONNECTIONS': '1', 'RAY_DEBUG': '0', 'RAY_DEBUG_POST_MORTEM': '0'}, 'working_dir': None}}
+[36m(TaskRunner pid=1155537)[0m TaskRunner hostname: better-ginkgo-dragonfly, PID: 1155537
+[36m(TaskRunner pid=1155537)[0m {'actor_rollout_ref': {'actor': {'_target_': 'verl.workers.config.FSDPActorConfig',
+[36m(TaskRunner pid=1155537)[0m                                  'checkpoint': {'_target_': 'verl.trainer.config.CheckpointConfig',
+[36m(TaskRunner pid=1155537)[0m                                                 'async_save': False,
+[36m(TaskRunner pid=1155537)[0m                                                 'load_contents': ['model',
+[36m(TaskRunner pid=1155537)[0m                                                                   'optimizer',
+[36m(TaskRunner pid=1155537)[0m                                                                   'extra'],
+[36m(TaskRunner pid=1155537)[0m                                                 'save_contents': ['model',
+[36m(TaskRunner pid=1155537)[0m                                                                   'optimizer',
+[36m(TaskRunner pid=1155537)[0m                                                                   'extra']},
+[36m(TaskRunner pid=1155537)[0m                                  'clip_ratio': 0.2,
+[36m(TaskRunner pid=1155537)[0m                                  'clip_ratio_c': 3.0,
+[36m(TaskRunner pid=1155537)[0m                                  'clip_ratio_high': 0.2,
+[36m(TaskRunner pid=1155537)[0m                                  'clip_ratio_low': 0.2,
+[36m(TaskRunner pid=1155537)[0m                                  'entropy_checkpointing': False,
+[36m(TaskRunner pid=1155537)[0m                                  'entropy_coeff': 0,
+[36m(TaskRunner pid=1155537)[0m                                  'entropy_from_logits_with_chunking': False,
+[36m(TaskRunner pid=1155537)[0m                                  'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1155537)[0m                                                  'forward_prefetch': False,
+[36m(TaskRunner pid=1155537)[0m                                                  'fsdp_size': -1,
+[36m(TaskRunner pid=1155537)[0m                                                  'offload_policy': False,
+[36m(TaskRunner pid=1155537)[0m                                                  'optimizer_offload': False,
+[36m(TaskRunner pid=1155537)[0m                                                  'param_offload': False,
+[36m(TaskRunner pid=1155537)[0m                                                  'reshard_after_forward': True,
+[36m(TaskRunner pid=1155537)[0m                                                  'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1155537)[0m                                  'grad_clip': 1.0,
+[36m(TaskRunner pid=1155537)[0m                                  'kl_loss_coef': 0.001,
+[36m(TaskRunner pid=1155537)[0m                                  'kl_loss_type': 'low_var_kl',
+[36m(TaskRunner pid=1155537)[0m                                  'loss_agg_mode': 'token-mean',
+[36m(TaskRunner pid=1155537)[0m                                  'optim': {'_target_': 'verl.workers.config.FSDPOptimizerConfig',
+[36m(TaskRunner pid=1155537)[0m                                            'lr': 1e-06,
+[36m(TaskRunner pid=1155537)[0m                                            'lr_warmup_steps': 25,
+[36m(TaskRunner pid=1155537)[0m                                            'lr_warmup_steps_ratio': 0.0,
+[36m(TaskRunner pid=1155537)[0m                                            'min_lr_ratio': 0.0,
+[36m(TaskRunner pid=1155537)[0m                                            'num_cycles': 0.5,
+[36m(TaskRunner pid=1155537)[0m                                            'total_training_steps': -1,
+[36m(TaskRunner pid=1155537)[0m                                            'warmup_style': 'constant',
+[36m(TaskRunner pid=1155537)[0m                                            'weight_decay': 0.01},
+[36m(TaskRunner pid=1155537)[0m                                  'policy_loss': {'_target_': 'verl.workers.config.PolicyLossConfig',
+[36m(TaskRunner pid=1155537)[0m                                                  'clip_cov_lb': 1.0,
+[36m(TaskRunner pid=1155537)[0m                                                  'clip_cov_ratio': 0.0002,
+[36m(TaskRunner pid=1155537)[0m                                                  'clip_cov_ub': 5.0,
+[36m(TaskRunner pid=1155537)[0m                                                  'kl_cov_ratio': 0.0002,
+[36m(TaskRunner pid=1155537)[0m                                                  'loss_mode': 'vanilla',
+[36m(TaskRunner pid=1155537)[0m                                                  'ppo_kl_coef': 0.1},
+[36m(TaskRunner pid=1155537)[0m                                  'ppo_epochs': 1,
+[36m(TaskRunner pid=1155537)[0m                                  'ppo_max_token_len_per_gpu': 30000,
+[36m(TaskRunner pid=1155537)[0m                                  'ppo_micro_batch_size': None,
+[36m(TaskRunner pid=1155537)[0m                                  'ppo_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=1155537)[0m                                  'ppo_mini_batch_size': 256,
+[36m(TaskRunner pid=1155537)[0m                                  'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1155537)[0m                                               'all_ranks': False,
+[36m(TaskRunner pid=1155537)[0m                                               'enable': False,
+[36m(TaskRunner pid=1155537)[0m                                               'ranks': [],
+[36m(TaskRunner pid=1155537)[0m                                               'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1155537)[0m                                               'tool': None,
+[36m(TaskRunner pid=1155537)[0m                                               'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                       'analysis': True,
+[36m(TaskRunner pid=1155537)[0m                                                                       'contents': [],
+[36m(TaskRunner pid=1155537)[0m                                                                       'discrete': False,
+[36m(TaskRunner pid=1155537)[0m                                                                       'level': 'level1'},
+[36m(TaskRunner pid=1155537)[0m                                                               'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                        'discrete': False},
+[36m(TaskRunner pid=1155537)[0m                                                               'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                         'step_end': None,
+[36m(TaskRunner pid=1155537)[0m                                                                         'step_start': 0}}},
+[36m(TaskRunner pid=1155537)[0m                                  'shuffle': False,
+[36m(TaskRunner pid=1155537)[0m                                  'strategy': 'fsdp',
+[36m(TaskRunner pid=1155537)[0m                                  'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1155537)[0m                                  'use_dynamic_bsz': True,
+[36m(TaskRunner pid=1155537)[0m                                  'use_fused_kernels': False,
+[36m(TaskRunner pid=1155537)[0m                                  'use_kl_loss': True,
+[36m(TaskRunner pid=1155537)[0m                                  'use_remove_padding': True,
+[36m(TaskRunner pid=1155537)[0m                                  'use_torch_compile': True},
+[36m(TaskRunner pid=1155537)[0m                        'hybrid_engine': True,
+[36m(TaskRunner pid=1155537)[0m                        'model': {'custom_chat_template': None,
+[36m(TaskRunner pid=1155537)[0m                                  'enable_activation_offload': False,
+[36m(TaskRunner pid=1155537)[0m                                  'enable_gradient_checkpointing': True,
+[36m(TaskRunner pid=1155537)[0m                                  'exclude_modules': None,
+[36m(TaskRunner pid=1155537)[0m                                  'external_lib': None,
+[36m(TaskRunner pid=1155537)[0m                                  'fused_kernel_options': {'impl_backend': 'torch'},
+[36m(TaskRunner pid=1155537)[0m                                  'lora_alpha': 16,
+[36m(TaskRunner pid=1155537)[0m                                  'lora_rank': 0,
+[36m(TaskRunner pid=1155537)[0m                                  'override_config': {},
+[36m(TaskRunner pid=1155537)[0m                                  'path': '/shared/matan/models/Qwen3-4B-Instruct-2507',
+[36m(TaskRunner pid=1155537)[0m                                  'target_modules': 'all-linear',
+[36m(TaskRunner pid=1155537)[0m                                  'trust_remote_code': False,
+[36m(TaskRunner pid=1155537)[0m                                  'use_fused_kernels': False,
+[36m(TaskRunner pid=1155537)[0m                                  'use_liger': False,
+[36m(TaskRunner pid=1155537)[0m                                  'use_remove_padding': True,
+[36m(TaskRunner pid=1155537)[0m                                  'use_shm': False},
+[36m(TaskRunner pid=1155537)[0m                        'nccl_timeout': 600,
+[36m(TaskRunner pid=1155537)[0m                        'ref': {'entropy_checkpointing': False,
+[36m(TaskRunner pid=1155537)[0m                                'entropy_from_logits_with_chunking': False,
+[36m(TaskRunner pid=1155537)[0m                                'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1155537)[0m                                                'forward_prefetch': False,
+[36m(TaskRunner pid=1155537)[0m                                                'param_offload': True,
+[36m(TaskRunner pid=1155537)[0m                                                'reshard_after_forward': True,
+[36m(TaskRunner pid=1155537)[0m                                                'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1155537)[0m                                'log_prob_max_token_len_per_gpu': 36000,
+[36m(TaskRunner pid=1155537)[0m                                'log_prob_micro_batch_size': None,
+[36m(TaskRunner pid=1155537)[0m                                'log_prob_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=1155537)[0m                                'log_prob_use_dynamic_bsz': True,
+[36m(TaskRunner pid=1155537)[0m                                'model': None,
+[36m(TaskRunner pid=1155537)[0m                                'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1155537)[0m                                             'all_ranks': False,
+[36m(TaskRunner pid=1155537)[0m                                             'enable': False,
+[36m(TaskRunner pid=1155537)[0m                                             'ranks': [],
+[36m(TaskRunner pid=1155537)[0m                                             'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1155537)[0m                                             'tool': None,
+[36m(TaskRunner pid=1155537)[0m                                             'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                     'analysis': True,
+[36m(TaskRunner pid=1155537)[0m                                                                     'contents': [],
+[36m(TaskRunner pid=1155537)[0m                                                                     'discrete': False,
+[36m(TaskRunner pid=1155537)[0m                                                                     'level': 'level1'},
+[36m(TaskRunner pid=1155537)[0m                                                             'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                      'discrete': False},
+[36m(TaskRunner pid=1155537)[0m                                                             'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                       'step_end': None,
+[36m(TaskRunner pid=1155537)[0m                                                                       'step_start': 0}}},
+[36m(TaskRunner pid=1155537)[0m                                'strategy': 'fsdp',
+[36m(TaskRunner pid=1155537)[0m                                'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1155537)[0m                                'use_torch_compile': True},
+[36m(TaskRunner pid=1155537)[0m                        'rollout': {'_target_': 'verl.workers.config.RolloutConfig',
+[36m(TaskRunner pid=1155537)[0m                                    'agent': {'_target_': 'verl.workers.config.AgentLoopConfig',
+[36m(TaskRunner pid=1155537)[0m                                              'agent_loop_config_path': None,
+[36m(TaskRunner pid=1155537)[0m                                              'custom_async_server': {'_target_': 'verl.workers.config.CustomAsyncServerConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                      'name': None,
+[36m(TaskRunner pid=1155537)[0m                                                                      'path': None},
+[36m(TaskRunner pid=1155537)[0m                                              'num_workers': 8},
+[36m(TaskRunner pid=1155537)[0m                                    'calculate_log_probs': False,
+[36m(TaskRunner pid=1155537)[0m                                    'cudagraph_capture_sizes': None,
+[36m(TaskRunner pid=1155537)[0m                                    'disable_log_stats': True,
+[36m(TaskRunner pid=1155537)[0m                                    'do_sample': True,
+[36m(TaskRunner pid=1155537)[0m                                    'dtype': 'bfloat16',
+[36m(TaskRunner pid=1155537)[0m                                    'enable_chunked_prefill': True,
+[36m(TaskRunner pid=1155537)[0m                                    'enforce_eager': False,
+[36m(TaskRunner pid=1155537)[0m                                    'engine_kwargs': {'sglang': {}, 'vllm': {}},
+[36m(TaskRunner pid=1155537)[0m                                    'free_cache_engine': True,
+[36m(TaskRunner pid=1155537)[0m                                    'gpu_memory_utilization': 0.6,
+[36m(TaskRunner pid=1155537)[0m                                    'ignore_eos': False,
+[36m(TaskRunner pid=1155537)[0m                                    'layered_summon': False,
+[36m(TaskRunner pid=1155537)[0m                                    'load_format': 'dummy_dtensor',
+[36m(TaskRunner pid=1155537)[0m                                    'log_prob_max_token_len_per_gpu': 36000,
+[36m(TaskRunner pid=1155537)[0m                                    'log_prob_micro_batch_size': None,
+[36m(TaskRunner pid=1155537)[0m                                    'log_prob_micro_batch_size_per_gpu': 8,
+[36m(TaskRunner pid=1155537)[0m                                    'log_prob_use_dynamic_bsz': True,
+[36m(TaskRunner pid=1155537)[0m                                    'max_model_len': None,
+[36m(TaskRunner pid=1155537)[0m                                    'max_num_batched_tokens': 8192,
+[36m(TaskRunner pid=1155537)[0m                                    'max_num_seqs': 1024,
+[36m(TaskRunner pid=1155537)[0m                                    'mode': 'sync',
+[36m(TaskRunner pid=1155537)[0m                                    'multi_stage_wake_up': False,
+[36m(TaskRunner pid=1155537)[0m                                    'multi_turn': {'_target_': 'verl.workers.config.MultiTurnConfig',
+[36m(TaskRunner pid=1155537)[0m                                                   'enable': False,
+[36m(TaskRunner pid=1155537)[0m                                                   'format': 'hermes',
+[36m(TaskRunner pid=1155537)[0m                                                   'interaction_config_path': None,
+[36m(TaskRunner pid=1155537)[0m                                                   'max_assistant_turns': None,
+[36m(TaskRunner pid=1155537)[0m                                                   'max_parallel_calls': 1,
+[36m(TaskRunner pid=1155537)[0m                                                   'max_tool_response_length': 256,
+[36m(TaskRunner pid=1155537)[0m                                                   'max_user_turns': None,
+[36m(TaskRunner pid=1155537)[0m                                                   'tokenization_sanity_check_mode': 'strict',
+[36m(TaskRunner pid=1155537)[0m                                                   'tool_config_path': None,
+[36m(TaskRunner pid=1155537)[0m                                                   'tool_response_truncate_side': 'middle',
+[36m(TaskRunner pid=1155537)[0m                                                   'use_inference_chat_template': False},
+[36m(TaskRunner pid=1155537)[0m                                    'n': 8,
+[36m(TaskRunner pid=1155537)[0m                                    'name': 'vllm',
+[36m(TaskRunner pid=1155537)[0m                                    'over_sample_rate': 0,
+[36m(TaskRunner pid=1155537)[0m                                    'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1155537)[0m                                                 'all_ranks': False,
+[36m(TaskRunner pid=1155537)[0m                                                 'enable': False,
+[36m(TaskRunner pid=1155537)[0m                                                 'ranks': [],
+[36m(TaskRunner pid=1155537)[0m                                                 'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1155537)[0m                                                 'tool': None,
+[36m(TaskRunner pid=1155537)[0m                                                 'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                         'analysis': True,
+[36m(TaskRunner pid=1155537)[0m                                                                         'contents': [],
+[36m(TaskRunner pid=1155537)[0m                                                                         'discrete': False,
+[36m(TaskRunner pid=1155537)[0m                                                                         'level': 'level1'},
+[36m(TaskRunner pid=1155537)[0m                                                                 'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                          'discrete': False},
+[36m(TaskRunner pid=1155537)[0m                                                                 'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                                           'step_end': None,
+[36m(TaskRunner pid=1155537)[0m                                                                           'step_start': 0}}},
+[36m(TaskRunner pid=1155537)[0m                                    'prompt_length': 1024,
+[36m(TaskRunner pid=1155537)[0m                                    'response_length': 6144,
+[36m(TaskRunner pid=1155537)[0m                                    'skip_dump_dir': '/tmp/rollout_dump',
+[36m(TaskRunner pid=1155537)[0m                                    'skip_rollout': False,
+[36m(TaskRunner pid=1155537)[0m                                    'temperature': 1.0,
+[36m(TaskRunner pid=1155537)[0m                                    'tensor_model_parallel_size': 1,
+[36m(TaskRunner pid=1155537)[0m                                    'top_k': -1,
+[36m(TaskRunner pid=1155537)[0m                                    'top_p': 1,
+[36m(TaskRunner pid=1155537)[0m                                    'trace': {'_target_': 'verl.workers.config.TraceConfig',
+[36m(TaskRunner pid=1155537)[0m                                              'backend': None,
+[36m(TaskRunner pid=1155537)[0m                                              'token2text': False},
+[36m(TaskRunner pid=1155537)[0m                                    'update_weights_bucket_megabytes': 512,
+[36m(TaskRunner pid=1155537)[0m                                    'val_kwargs': {'_target_': 'verl.workers.config.SamplingConfig',
+[36m(TaskRunner pid=1155537)[0m                                                   'do_sample': False,
+[36m(TaskRunner pid=1155537)[0m                                                   'n': 1,
+[36m(TaskRunner pid=1155537)[0m                                                   'temperature': 0,
+[36m(TaskRunner pid=1155537)[0m                                                   'top_k': -1,
+[36m(TaskRunner pid=1155537)[0m                                                   'top_p': 1.0}}},
+[36m(TaskRunner pid=1155537)[0m  'algorithm': {'_target_': 'verl.trainer.config.AlgoConfig',
+[36m(TaskRunner pid=1155537)[0m                'adv_estimator': 'grpo',
+[36m(TaskRunner pid=1155537)[0m                'gamma': 1.0,
+[36m(TaskRunner pid=1155537)[0m                'kl_ctrl': {'_target_': 'verl.trainer.config.KLControlConfig',
+[36m(TaskRunner pid=1155537)[0m                            'horizon': 10000,
+[36m(TaskRunner pid=1155537)[0m                            'kl_coef': 0.001,
+[36m(TaskRunner pid=1155537)[0m                            'target_kl': 0.1,
+[36m(TaskRunner pid=1155537)[0m                            'type': 'fixed'},
+[36m(TaskRunner pid=1155537)[0m                'kl_penalty': 'kl',
+[36m(TaskRunner pid=1155537)[0m                'lam': 1.0,
+[36m(TaskRunner pid=1155537)[0m                'norm_adv_by_std_in_grpo': False,
+[36m(TaskRunner pid=1155537)[0m                'pf_ppo': {'reweight_method': 'pow', 'weight_pow': 2.0},
+[36m(TaskRunner pid=1155537)[0m                'use_kl_in_reward': False,
+[36m(TaskRunner pid=1155537)[0m                'use_pf_ppo': False},
+[36m(TaskRunner pid=1155537)[0m  'critic': {'_target_': 'verl.workers.config.FSDPCriticConfig',
+[36m(TaskRunner pid=1155537)[0m             'checkpoint': {'_target_': 'verl.trainer.config.CheckpointConfig',
+[36m(TaskRunner pid=1155537)[0m                            'async_save': False,
+[36m(TaskRunner pid=1155537)[0m                            'load_contents': ['model', 'optimizer', 'extra'],
+[36m(TaskRunner pid=1155537)[0m                            'save_contents': ['model', 'optimizer', 'extra']},
+[36m(TaskRunner pid=1155537)[0m             'cliprange_value': 0.5,
+[36m(TaskRunner pid=1155537)[0m             'enable': None,
+[36m(TaskRunner pid=1155537)[0m             'forward_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=1155537)[0m             'forward_micro_batch_size': None,
+[36m(TaskRunner pid=1155537)[0m             'forward_micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=1155537)[0m             'grad_clip': 1.0,
+[36m(TaskRunner pid=1155537)[0m             'loss_agg_mode': 'token-mean',
+[36m(TaskRunner pid=1155537)[0m             'model': {'_target_': 'verl.workers.config.FSDPCriticModelCfg',
+[36m(TaskRunner pid=1155537)[0m                       'enable_activation_offload': False,
+[36m(TaskRunner pid=1155537)[0m                       'enable_gradient_checkpointing': True,
+[36m(TaskRunner pid=1155537)[0m                       'external_lib': None,
+[36m(TaskRunner pid=1155537)[0m                       'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1155537)[0m                                       'forward_prefetch': False,
+[36m(TaskRunner pid=1155537)[0m                                       'fsdp_size': -1,
+[36m(TaskRunner pid=1155537)[0m                                       'offload_policy': False,
+[36m(TaskRunner pid=1155537)[0m                                       'optimizer_offload': False,
+[36m(TaskRunner pid=1155537)[0m                                       'param_offload': False,
+[36m(TaskRunner pid=1155537)[0m                                       'reshard_after_forward': True,
+[36m(TaskRunner pid=1155537)[0m                                       'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1155537)[0m                       'lora_alpha': 16,
+[36m(TaskRunner pid=1155537)[0m                       'lora_rank': 0,
+[36m(TaskRunner pid=1155537)[0m                       'override_config': {},
+[36m(TaskRunner pid=1155537)[0m                       'path': '~/models/deepseek-llm-7b-chat',
+[36m(TaskRunner pid=1155537)[0m                       'target_modules': 'all-linear',
+[36m(TaskRunner pid=1155537)[0m                       'tokenizer_path': '/shared/matan/models/Qwen3-4B-Instruct-2507',
+[36m(TaskRunner pid=1155537)[0m                       'trust_remote_code': False,
+[36m(TaskRunner pid=1155537)[0m                       'use_remove_padding': False,
+[36m(TaskRunner pid=1155537)[0m                       'use_shm': False},
+[36m(TaskRunner pid=1155537)[0m             'optim': {'_target_': 'verl.workers.config.FSDPOptimizerConfig',
+[36m(TaskRunner pid=1155537)[0m                       'lr': 1e-05,
+[36m(TaskRunner pid=1155537)[0m                       'lr_warmup_steps': -1,
+[36m(TaskRunner pid=1155537)[0m                       'lr_warmup_steps_ratio': 0.0,
+[36m(TaskRunner pid=1155537)[0m                       'min_lr_ratio': None,
+[36m(TaskRunner pid=1155537)[0m                       'total_training_steps': -1,
+[36m(TaskRunner pid=1155537)[0m                       'warmup_style': 'constant',
+[36m(TaskRunner pid=1155537)[0m                       'weight_decay': 0.01},
+[36m(TaskRunner pid=1155537)[0m             'ppo_epochs': 1,
+[36m(TaskRunner pid=1155537)[0m             'ppo_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=1155537)[0m             'ppo_micro_batch_size': None,
+[36m(TaskRunner pid=1155537)[0m             'ppo_micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=1155537)[0m             'ppo_mini_batch_size': 256,
+[36m(TaskRunner pid=1155537)[0m             'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1155537)[0m                          'all_ranks': False,
+[36m(TaskRunner pid=1155537)[0m                          'enable': False,
+[36m(TaskRunner pid=1155537)[0m                          'ranks': [],
+[36m(TaskRunner pid=1155537)[0m                          'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1155537)[0m                          'tool': None,
+[36m(TaskRunner pid=1155537)[0m                          'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                  'analysis': True,
+[36m(TaskRunner pid=1155537)[0m                                                  'contents': [],
+[36m(TaskRunner pid=1155537)[0m                                                  'discrete': False,
+[36m(TaskRunner pid=1155537)[0m                                                  'level': 'level1'},
+[36m(TaskRunner pid=1155537)[0m                                          'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                   'discrete': False},
+[36m(TaskRunner pid=1155537)[0m                                          'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                    'step_end': None,
+[36m(TaskRunner pid=1155537)[0m                                                    'step_start': 0}}},
+[36m(TaskRunner pid=1155537)[0m             'rollout_n': 8,
+[36m(TaskRunner pid=1155537)[0m             'shuffle': False,
+[36m(TaskRunner pid=1155537)[0m             'strategy': 'fsdp',
+[36m(TaskRunner pid=1155537)[0m             'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1155537)[0m             'use_dynamic_bsz': True},
+[36m(TaskRunner pid=1155537)[0m  'custom_reward_function': {'name': 'step_ranged_reward',
+[36m(TaskRunner pid=1155537)[0m                             'path': 'custom/reward/step_ranged_reward.py',
+[36m(TaskRunner pid=1155537)[0m                             'reward_kwargs': {'reward_config_path': 'custom/reward/step_ranged_configs/multiphase_regular.json5'}},
+[36m(TaskRunner pid=1155537)[0m  'data': {'apply_chat_template_kwargs': {},
+[36m(TaskRunner pid=1155537)[0m           'custom_cls': {'name': None, 'path': None},
+[36m(TaskRunner pid=1155537)[0m           'datagen': {'name': None, 'path': None},
+[36m(TaskRunner pid=1155537)[0m           'dataloader_num_workers': 8,
+[36m(TaskRunner pid=1155537)[0m           'filter_overlong_prompts': True,
+[36m(TaskRunner pid=1155537)[0m           'filter_overlong_prompts_workers': 1,
+[36m(TaskRunner pid=1155537)[0m           'image_key': 'images',
+[36m(TaskRunner pid=1155537)[0m           'max_prompt_length': 1024,
+[36m(TaskRunner pid=1155537)[0m           'max_response_length': 6144,
+[36m(TaskRunner pid=1155537)[0m           'prompt_key': 'prompt',
+[36m(TaskRunner pid=1155537)[0m           'return_full_prompt': False,
+[36m(TaskRunner pid=1155537)[0m           'return_multi_modal_inputs': True,
+[36m(TaskRunner pid=1155537)[0m           'return_raw_chat': False,
+[36m(TaskRunner pid=1155537)[0m           'return_raw_input_ids': False,
+[36m(TaskRunner pid=1155537)[0m           'reward_fn_key': 'data_source',
+[36m(TaskRunner pid=1155537)[0m           'sampler': {'class_name': None, 'class_path': None},
+[36m(TaskRunner pid=1155537)[0m           'shuffle': False,
+[36m(TaskRunner pid=1155537)[0m           'tokenizer': None,
+[36m(TaskRunner pid=1155537)[0m           'train_batch_size': 32,
+[36m(TaskRunner pid=1155537)[0m           'train_files': ['/shared/matan/data/apps_multiphase_regular_t160_b40_p500/train.parquet'],
+[36m(TaskRunner pid=1155537)[0m           'truncation': 'error',
+[36m(TaskRunner pid=1155537)[0m           'trust_remote_code': False,
+[36m(TaskRunner pid=1155537)[0m           'use_shm': False,
+[36m(TaskRunner pid=1155537)[0m           'val_batch_size': None,
+[36m(TaskRunner pid=1155537)[0m           'val_files': ['/shared/matan/data/apps_multiphase_regular_t160_b40_p500/test.parquet'],
+[36m(TaskRunner pid=1155537)[0m           'validation_shuffle': False,
+[36m(TaskRunner pid=1155537)[0m           'video_key': 'videos'},
+[36m(TaskRunner pid=1155537)[0m  'global_profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1155537)[0m                      'global_tool_config': {'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                      'controller_nsight_options': {'cuda-graph-trace': 'graph',
+[36m(TaskRunner pid=1155537)[0m                                                                                    'cuda-memory-usage': 'true',
+[36m(TaskRunner pid=1155537)[0m                                                                                    'trace': 'cuda,nvtx,cublas,ucx'},
+[36m(TaskRunner pid=1155537)[0m                                                      'discrete': False,
+[36m(TaskRunner pid=1155537)[0m                                                      'worker_nsight_options': {'capture-range': 'cudaProfilerApi',
+[36m(TaskRunner pid=1155537)[0m                                                                                'capture-range-end': None,
+[36m(TaskRunner pid=1155537)[0m                                                                                'cuda-graph-trace': 'graph',
+[36m(TaskRunner pid=1155537)[0m                                                                                'cuda-memory-usage': 'true',
+[36m(TaskRunner pid=1155537)[0m                                                                                'kill': 'none',
+[36m(TaskRunner pid=1155537)[0m                                                                                'trace': 'cuda,nvtx,cublas,ucx'}}},
+[36m(TaskRunner pid=1155537)[0m                      'profile_continuous_steps': False,
+[36m(TaskRunner pid=1155537)[0m                      'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1155537)[0m                      'steps': None,
+[36m(TaskRunner pid=1155537)[0m                      'tool': None},
+[36m(TaskRunner pid=1155537)[0m  'ray_kwargs': {'ray_init': {'num_cpus': None}, 'timeline_json_file': None},
+[36m(TaskRunner pid=1155537)[0m  'reward_model': {'enable': False,
+[36m(TaskRunner pid=1155537)[0m                   'forward_max_token_len_per_gpu': 32768,
+[36m(TaskRunner pid=1155537)[0m                   'launch_reward_fn_async': False,
+[36m(TaskRunner pid=1155537)[0m                   'max_length': None,
+[36m(TaskRunner pid=1155537)[0m                   'micro_batch_size': None,
+[36m(TaskRunner pid=1155537)[0m                   'micro_batch_size_per_gpu': None,
+[36m(TaskRunner pid=1155537)[0m                   'model': {'external_lib': None,
+[36m(TaskRunner pid=1155537)[0m                             'fsdp_config': {'_target_': 'verl.workers.config.FSDPEngineConfig',
+[36m(TaskRunner pid=1155537)[0m                                             'forward_prefetch': False,
+[36m(TaskRunner pid=1155537)[0m                                             'fsdp_size': -1,
+[36m(TaskRunner pid=1155537)[0m                                             'param_offload': False,
+[36m(TaskRunner pid=1155537)[0m                                             'reshard_after_forward': True,
+[36m(TaskRunner pid=1155537)[0m                                             'wrap_policy': {'min_num_params': 0}},
+[36m(TaskRunner pid=1155537)[0m                             'input_tokenizer': '/shared/matan/models/Qwen3-4B-Instruct-2507',
+[36m(TaskRunner pid=1155537)[0m                             'path': '~/models/FsfairX-LLaMA3-RM-v0.1',
+[36m(TaskRunner pid=1155537)[0m                             'trust_remote_code': False,
+[36m(TaskRunner pid=1155537)[0m                             'use_fused_kernels': False,
+[36m(TaskRunner pid=1155537)[0m                             'use_remove_padding': False,
+[36m(TaskRunner pid=1155537)[0m                             'use_shm': False},
+[36m(TaskRunner pid=1155537)[0m                   'profiler': {'_target_': 'verl.utils.profiler.ProfilerConfig',
+[36m(TaskRunner pid=1155537)[0m                                'all_ranks': False,
+[36m(TaskRunner pid=1155537)[0m                                'enable': False,
+[36m(TaskRunner pid=1155537)[0m                                'ranks': [],
+[36m(TaskRunner pid=1155537)[0m                                'save_path': 'outputs/profile',
+[36m(TaskRunner pid=1155537)[0m                                'tool': None,
+[36m(TaskRunner pid=1155537)[0m                                'tool_config': {'npu': {'_target_': 'verl.utils.profiler.config.NPUToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                        'analysis': True,
+[36m(TaskRunner pid=1155537)[0m                                                        'contents': [],
+[36m(TaskRunner pid=1155537)[0m                                                        'discrete': False,
+[36m(TaskRunner pid=1155537)[0m                                                        'level': 'level1'},
+[36m(TaskRunner pid=1155537)[0m                                                'nsys': {'_target_': 'verl.utils.profiler.config.NsightToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                         'discrete': False},
+[36m(TaskRunner pid=1155537)[0m                                                'torch': {'_target_': 'verl.utils.profiler.config.TorchProfilerToolConfig',
+[36m(TaskRunner pid=1155537)[0m                                                          'step_end': None,
+[36m(TaskRunner pid=1155537)[0m                                                          'step_start': 0}}},
+[36m(TaskRunner pid=1155537)[0m                   'reward_kwargs': {'num_workers': 1},
+[36m(TaskRunner pid=1155537)[0m                   'reward_manager': 'naive',
+[36m(TaskRunner pid=1155537)[0m                   'sandbox_fusion': {'max_concurrent': 64,
+[36m(TaskRunner pid=1155537)[0m                                      'memory_limit_mb': 1024,
+[36m(TaskRunner pid=1155537)[0m                                      'url': None},
+[36m(TaskRunner pid=1155537)[0m                   'strategy': 'fsdp',
+[36m(TaskRunner pid=1155537)[0m                   'ulysses_sequence_parallel_size': 1,
+[36m(TaskRunner pid=1155537)[0m                   'use_dynamic_bsz': True},
+[36m(TaskRunner pid=1155537)[0m  'trainer': {'balance_batch': True,
+[36m(TaskRunner pid=1155537)[0m              'critic_warmup': 0,
+[36m(TaskRunner pid=1155537)[0m              'default_hdfs_dir': None,
+[36m(TaskRunner pid=1155537)[0m              'default_local_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/03/23/cont_multiphase_regular_17_29_gqx42dgm/checkpoints',
+[36m(TaskRunner pid=1155537)[0m              'del_local_ckpt_after_load': False,
+[36m(TaskRunner pid=1155537)[0m              'device': 'cuda',
+[36m(TaskRunner pid=1155537)[0m              'esi_redundant_time': 0,
+[36m(TaskRunner pid=1155537)[0m              'experiment_name': 'multiphase_regular_qwen3_4bi',
+[36m(TaskRunner pid=1155537)[0m              'log_val_generations': 0,
+[36m(TaskRunner pid=1155537)[0m              'logger': ['console', 'wandb'],
+[36m(TaskRunner pid=1155537)[0m              'max_actor_ckpt_to_keep': None,
+[36m(TaskRunner pid=1155537)[0m              'max_critic_ckpt_to_keep': None,
+[36m(TaskRunner pid=1155537)[0m              'n_gpus_per_node': 2,
+[36m(TaskRunner pid=1155537)[0m              'nnodes': 1,
+[36m(TaskRunner pid=1155537)[0m              'project_name': 'subtle_reasoning_repro',
+[36m(TaskRunner pid=1155537)[0m              'ray_wait_register_center_timeout': 300,
+[36m(TaskRunner pid=1155537)[0m              'resume_from_path': '/shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200',
+[36m(TaskRunner pid=1155537)[0m              'resume_mode': 'resume_path',
+[36m(TaskRunner pid=1155537)[0m              'rollout_data_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/03/23/cont_multiphase_regular_17_29_gqx42dgm/rollouts/train',
+[36m(TaskRunner pid=1155537)[0m              'rollout_dump_freq': 1,
+[36m(TaskRunner pid=1155537)[0m              'save_freq': 40,
+[36m(TaskRunner pid=1155537)[0m              'test_freq': 20,
+[36m(TaskRunner pid=1155537)[0m              'total_epochs': 1,
+[36m(TaskRunner pid=1155537)[0m              'total_training_steps': None,
+[36m(TaskRunner pid=1155537)[0m              'use_legacy_worker_impl': 'auto',
+[36m(TaskRunner pid=1155537)[0m              'val_before_train': False,
+[36m(TaskRunner pid=1155537)[0m              'val_only': False,
+[36m(TaskRunner pid=1155537)[0m              'validation_data_dir': '/shared/matan/code/pass_at_k/logs/VerlRun/03/23/cont_multiphase_regular_17_29_gqx42dgm/rollouts/val',
+[36m(TaskRunner pid=1155537)[0m              'wandb_run_id': 'gqx42dgm'}}
+[36m(TaskRunner pid=1155537)[0m Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1155537)[0m WARNING:2026-03-23 17:32:38,845:Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   0%|          | 0/22400 [00:00<?, ? examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   4%|▍         | 1000/22400 [00:01<00:31, 688.51 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   9%|▉         | 2000/22400 [00:02<00:22, 906.03 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  13%|█▎        | 3000/22400 [00:03<00:19, 1007.30 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  18%|█▊        | 4000/22400 [00:03<00:16, 1089.68 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  22%|██▏       | 5000/22400 [00:04<00:15, 1123.59 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  27%|██▋       | 6000/22400 [00:06<00:17, 957.38 examples/s] 
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  31%|███▏      | 7000/22400 [00:07<00:17, 856.99 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  36%|███▌      | 8000/22400 [00:09<00:18, 796.01 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  40%|████      | 9000/22400 [00:10<00:17, 769.13 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  45%|████▍     | 10000/22400 [00:11<00:16, 747.63 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  49%|████▉     | 11000/22400 [00:13<00:15, 732.16 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  54%|█████▎    | 12000/22400 [00:14<00:14, 724.07 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  58%|█████▊    | 13000/22400 [00:16<00:13, 716.56 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  62%|██████▎   | 14000/22400 [00:17<00:11, 711.11 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  67%|██████▋   | 15000/22400 [00:18<00:10, 709.57 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  71%|███████▏  | 16000/22400 [00:20<00:09, 671.15 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  76%|███████▌  | 17000/22400 [00:22<00:07, 676.10 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  80%|████████  | 18000/22400 [00:23<00:06, 679.90 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  85%|████████▍ | 19000/22400 [00:24<00:04, 688.82 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  89%|████████▉ | 20000/22400 [00:26<00:03, 689.28 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  94%|█████████▍| 21000/22400 [00:27<00:02, 688.56 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):  98%|█████████▊| 22000/22400 [00:29<00:00, 691.16 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 22400/22400 [00:29<00:00, 685.10 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 22400/22400 [00:30<00:00, 744.15 examples/s]
+[36m(TaskRunner pid=1155537)[0m Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1155537)[0m WARNING:2026-03-23 17:33:09,621:Setting TOKENIZERS_PARALLELISM=false for forked processes.
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1):   0%|          | 0/35 [00:00<?, ? examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 35/35 [00:00<00:00, 63.92 examples/s]
+[36m(TaskRunner pid=1155537)[0m Filtering prompts longer than 1024 tokens (num_proc=1): 100%|██████████| 35/35 [00:00<00:00, 52.29 examples/s]
+[36m(TaskRunner pid=1155537)[0m /shared/matan/code/pass_at_k/verl/trainer/main_ppo.py:278: UserWarning: Disabled critic as algorithm.adv_estimator != gae. If it is not intended, please set critic.enable=True
+[36m(TaskRunner pid=1155537)[0m   trainer = RayPPOTrainer(
+[36m(TaskRunner pid=1155537)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.
+[36m(TaskRunner pid=1155537)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)
+[36m(TaskRunner pid=1155537)[0m DeprecationWarning: `ray.state.available_resources_per_node` is a private attribute and access will be removed in a future Ray version.
+[36m(WorkerDict pid=1158414)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(WorkerDict pid=1158414)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3ForCausalLM is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+[36m(WorkerDict pid=1158414)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+[36m(WorkerDict pid=1158414)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1158414)[0m Loading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:05,  2.86s/it]
+[36m(WorkerDict pid=1158413)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(WorkerDict pid=1158413)[0m Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`[32m [repeated 2x across cluster] (Ray deduplicates logs by default. Set RAY_DEDUP_LOGS=0 to disable log deduplication, or see https://docs.ray.io/en/master/ray-observability/user-guides/configure-logging.html#log-deduplication for more options.)[0m
+[36m(WorkerDict pid=1158413)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1158414)[0m Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.94s/it]
+[36m(WorkerDict pid=1158414)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1158413)[0m Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.81s/it][32m [repeated 3x across cluster][0m
+[36m(WorkerDict pid=1158413)[0m Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.90s/it]
+[36m(TaskRunner pid=1155537)[0m Loaded custom reward module as 'custom.reward.step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1155537)[0m using customized reward function 'step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1155537)[0m Loaded custom reward module as 'custom.reward.step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1155537)[0m using customized reward function 'step_ranged_reward' from 'custom/reward/step_ranged_reward.py'
+[36m(TaskRunner pid=1155537)[0m Using dataset class: RLHFDataset
+[36m(TaskRunner pid=1155537)[0m dataset len: 22400
+[36m(TaskRunner pid=1155537)[0m filter dataset len: 19421
+[36m(TaskRunner pid=1155537)[0m Using dataset class: RLHFDataset
+[36m(TaskRunner pid=1155537)[0m dataset len: 35
+[36m(TaskRunner pid=1155537)[0m filter dataset len: 27
+[36m(TaskRunner pid=1155537)[0m [validate_config] All configuration checks passed successfully!
+[36m(TaskRunner pid=1155537)[0m Size of train dataloader: 606, Size of val dataloader: 1
+[36m(TaskRunner pid=1155537)[0m Total training steps: 606
+[36m(TaskRunner pid=1155537)[0m colocated worker base class <class 'verl.single_controller.base.worker.Worker'>
+[36m(WorkerDict pid=1158413)[0m reference model: /shared/matan/models/Qwen3-4B-Instruct-2507
+[36m(WorkerDict pid=1158413)[0m Model config after override: Qwen3Config {
+[36m(WorkerDict pid=1158413)[0m   "architectures": [
+[36m(WorkerDict pid=1158413)[0m     "Qwen3ForCausalLM"
+[36m(WorkerDict pid=1158413)[0m   ],
+[36m(WorkerDict pid=1158413)[0m   "attention_bias": false,
+[36m(WorkerDict pid=1158413)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=1158413)[0m   "dtype": "bfloat16",
+[36m(WorkerDict pid=1158413)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=1158413)[0m   "head_dim": 128,
+[36m(WorkerDict pid=1158413)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=1158413)[0m   "hidden_size": 2560,
+[36m(WorkerDict pid=1158413)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=1158413)[0m   "intermediate_size": 9728,
+[36m(WorkerDict pid=1158413)[0m   "layer_types": [
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention"
+[36m(WorkerDict pid=1158413)[0m   ],
+[36m(WorkerDict pid=1158413)[0m   "max_position_embeddings": 262144,
+[36m(WorkerDict pid=1158413)[0m   "max_window_layers": 36,
+[36m(WorkerDict pid=1158413)[0m   "model_type": "qwen3",
+[36m(WorkerDict pid=1158413)[0m   "num_attention_heads": 32,
+[36m(WorkerDict pid=1158413)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=1158413)[0m   "num_key_value_heads": 8,
+[36m(WorkerDict pid=1158413)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=1158413)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=1158413)[0m   "rope_scaling": null,
+[36m(WorkerDict pid=1158413)[0m   "rope_theta": 5000000,
+[36m(WorkerDict pid=1158413)[0m   "sliding_window": null,
+[36m(WorkerDict pid=1158413)[0m   "tie_word_embeddings": true,
+[36m(WorkerDict pid=1158413)[0m   "transformers_version": "4.57.6",
+[36m(WorkerDict pid=1158413)[0m   "use_cache": true,
+[36m(WorkerDict pid=1158413)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=1158413)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=1158413)[0m }
+[36m(WorkerDict pid=1158413)[0m 
+[36m(WorkerDict pid=1158414)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. 
+[36m(WorkerDict pid=1158414)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=1158414)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=1158413)[0m Qwen3ForCausalLM contains 4.02B parameters
+[36m(WorkerDict pid=1158413)[0m wrap_policy: functools.partial(<function _or_policy at 0x7f3b0a81b9a0>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7f3b0a81b880>, transformer_layer_cls={<class 'transformers.models.qwen3.modeling_qwen3.Qwen3DecoderLayer'>})])
+[36m(WorkerDict pid=1158413)[0m NCCL version 2.21.5+cuda12.4
+[36m(WorkerDict pid=1158413)[0m Ref use_remove_padding=True
+[36m(WorkerDict pid=1158413)[0m Ref use_fused_kernels=False
+[36m(WorkerDict pid=1158413)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. 
+[36m(WorkerDict pid=1158413)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=1158413)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=1158413)[0m Model config after override: Qwen3Config {
+[36m(WorkerDict pid=1158413)[0m   "architectures": [
+[36m(WorkerDict pid=1158413)[0m     "Qwen3ForCausalLM"
+[36m(WorkerDict pid=1158413)[0m   ],
+[36m(WorkerDict pid=1158413)[0m   "attention_bias": false,
+[36m(WorkerDict pid=1158413)[0m   "attention_dropout": 0.0,
+[36m(WorkerDict pid=1158413)[0m   "dtype": "bfloat16",
+[36m(WorkerDict pid=1158413)[0m   "eos_token_id": 151645,
+[36m(WorkerDict pid=1158413)[0m   "head_dim": 128,
+[36m(WorkerDict pid=1158413)[0m   "hidden_act": "silu",
+[36m(WorkerDict pid=1158413)[0m   "hidden_size": 2560,
+[36m(WorkerDict pid=1158413)[0m   "initializer_range": 0.02,
+[36m(WorkerDict pid=1158413)[0m   "intermediate_size": 9728,
+[36m(WorkerDict pid=1158413)[0m   "layer_types": [
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.76s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.86s/it]
+[36m(WorkerDict pid=1158413)[0m Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1158414)[0m Loading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:05,  2.90s/it][32m [repeated 2x across cluster][0m
+[36m(WorkerDict pid=1158414)[0m Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.96s/it]
+[36m(WorkerDict pid=1158414)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.
+[36m(WorkerDict pid=1158414)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)
+[36m(WorkerDict pid=1158414)[0m Loading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.90s/it]
+[36m(WorkerDict pid=1158414)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(WorkerDict pid=1158414)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(WorkerDict pid=1158414)[0m   warnings.warn(
+[36m(WorkerDict pid=1158413)[0m /shared/matan/code/pass_at_k/verl/utils/profiler/config.py:49: UserWarning: Torch profiler tool config is not fully supported now.
+[36m(WorkerDict pid=1158413)[0m   warnings.warn("Torch profiler tool config is not fully supported now.", stacklevel=1)
+[36m(WorkerDict pid=1158413)[0m `torch_dtype` is deprecated! Use `dtype` instead!
+[36m(TaskRunner pid=1155537)[0m wandb: Currently logged in as: matan-shtepel (matan-shtepel-carnegie-mellon-university) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+[36m(TaskRunner pid=1155537)[0m wandb: setting up run gqx42dgm
+[36m(TaskRunner pid=1155537)[0m wandb: Tracking run with wandb version 0.23.1
+[36m(TaskRunner pid=1155537)[0m wandb: Run data is saved locally in /shared/matan/code/pass_at_k/wandb/run-20260323_173703-gqx42dgm
+[36m(TaskRunner pid=1155537)[0m wandb: Run `wandb offline` to turn off syncing.
+[36m(TaskRunner pid=1155537)[0m wandb: Syncing run multiphase_regular_qwen3_4bi
+[36m(TaskRunner pid=1155537)[0m wandb: ⭐️ View project at https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro
+[36m(TaskRunner pid=1155537)[0m wandb: 🚀 View run at https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/gqx42dgm
+[36m(TaskRunner pid=1155537)[0m wandb: Detected [openai] in use.
+[36m(TaskRunner pid=1155537)[0m wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+[36m(TaskRunner pid=1155537)[0m wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+[36m(WorkerDict pid=1158413)[0m /home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:690: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(WorkerDict pid=1158413)[0m   warnings.warn(
+[36m(WorkerDict pid=1158414)[0m INFO:2026-03-23 17:42:36,332:[Rank 1] Loaded model from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/model_world_size_2_rank_1.pt
+[36m(WorkerDict pid=1158413)[0m INFO:2026-03-23 17:51:29,588:[Rank 0] Loaded optimizer from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/optim_world_size_2_rank_0.pt
+[36m(WorkerDict pid=1158413)[0m INFO:2026-03-23 17:42:36,331:[Rank 0] Loaded model from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/model_world_size_2_rank_0.pt
+[36m(WorkerDict pid=1158414)[0m INFO:2026-03-23 17:51:29,680:[Rank 1] Loaded rng from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/extra_state_world_size_2_rank_1.pt
+[36m(WorkerDict pid=1158414)[0m INFO:2026-03-23 17:51:29,680:[Rank 1] Loaded lr_scheduler from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/extra_state_world_size_2_rank_1.pt
+[36m(TaskRunner pid=1155537)[0m Training Progress:  33%|███▎      | 200/606 [00:00<?, ?it/s]
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention",
+[36m(WorkerDict pid=1158413)[0m     "full_attention"
+[36m(WorkerDict pid=1158413)[0m   ],
+[36m(WorkerDict pid=1158413)[0m   "max_position_embeddings": 262144,
+[36m(WorkerDict pid=1158413)[0m   "max_window_layers": 36,
+[36m(WorkerDict pid=1158413)[0m   "model_type": "qwen3",
+[36m(WorkerDict pid=1158413)[0m   "num_attention_heads": 32,
+[36m(WorkerDict pid=1158413)[0m   "num_hidden_layers": 36,
+[36m(WorkerDict pid=1158413)[0m   "num_key_value_heads": 8,
+[36m(WorkerDict pid=1158413)[0m   "pad_token_id": 151643,
+[36m(WorkerDict pid=1158413)[0m   "rms_norm_eps": 1e-06,
+[36m(WorkerDict pid=1158413)[0m   "rope_scaling": null,
+[36m(WorkerDict pid=1158413)[0m   "rope_theta": 5000000,
+[36m(WorkerDict pid=1158413)[0m   "sliding_window": null,
+[36m(WorkerDict pid=1158413)[0m   "tie_word_embeddings": true,
+[36m(WorkerDict pid=1158413)[0m   "transformers_version": "4.57.6",
+[36m(WorkerDict pid=1158413)[0m   "use_cache": true,
+[36m(WorkerDict pid=1158413)[0m   "use_sliding_window": false,
+[36m(WorkerDict pid=1158413)[0m   "vocab_size": 151936
+[36m(WorkerDict pid=1158413)[0m }
+[36m(WorkerDict pid=1158413)[0m 
+[36m(WorkerDict pid=1158413)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. 
+[36m(WorkerDict pid=1158413)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=1158413)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=1158413)[0m Qwen3ForCausalLM contains 4.02B parameters
+[36m(WorkerDict pid=1158413)[0m wrap_policy: functools.partial(<function _or_policy at 0x7f3b0a81b9a0>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7f3b0a81b880>, transformer_layer_cls={<class 'transformers.models.qwen3.modeling_qwen3.Qwen3DecoderLayer'>})])
+[36m(WorkerDict pid=1158413)[0m Total steps: 606, num_warmup_steps: 25
+[36m(WorkerDict pid=1158413)[0m Actor use_remove_padding=True
+[36m(WorkerDict pid=1158413)[0m Actor use_fused_kernels=False
+[36m(WorkerDict pid=1158414)[0m Monkey patch state_dict in AutoModelForCausalLMWithValueHead. 
+[36m(WorkerDict pid=1158414)[0m Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+[36m(WorkerDict pid=1158414)[0m Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is torch
+[36m(WorkerDict pid=1158414)[0m WARNING 03-23 17:35:56 [utils.py:2522] Methods determine_num_available_blocks,device_config,get_cache_block_size_bytes,initialize_cache not implemented in <vllm.v1.worker.gpu_worker.Worker object at 0x7f9da31c2980>
+[36m(WorkerDict pid=1158413)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(WorkerDict pid=1158413)[0m WARNING 03-23 17:35:56 [utils.py:2522] Methods determine_num_available_blocks,device_config,get_cache_block_size_bytes,initialize_cache not implemented in <vllm.v1.worker.gpu_worker.Worker object at 0x7f383fe6cc70>
+[36m(TaskRunner pid=1155537)[0m Checkpoint tracker file does not exist: /shared/matan/code/pass_at_k/logs/VerlRun/03/23/cont_multiphase_regular_17_29_gqx42dgm/checkpoints/latest_checkpointed_iteration.txt
+[36m(TaskRunner pid=1155537)[0m Load from checkpoint folder: /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200
+[36m(TaskRunner pid=1155537)[0m Setting global step to 200
+[36m(TaskRunner pid=1155537)[0m Resuming from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200
+[36m(WorkerDict pid=1158414)[0m kwargs: {'n': 1, 'logprobs': 0, 'max_tokens': 6144, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(TaskRunner pid=1155537)[0m DEBUG: reward chunking into 1 pieces
+[36m(TaskRunner pid=1155537)[0m DEBUG: starting chunk 0
+[36m(TaskRunner pid=1155537)[0m DEBUG: REWARD FN TIMEOUT: Attempt 1 failed, retrying...
+[36m(compute_several pid=1158186)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=1181012)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1181012)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(TaskRunner pid=1155537)[0m DEBUG: REWARD FN TIMEOUT: Attempt 2 failed, retrying...
+[36m(compute_several pid=1180815)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1182135)[0m GPTOSS120B using specialized preifix: [32m [repeated 63x across cluster][0m
+[36m(compute_several pid=1178413)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1178413)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1180815)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1158186)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 70x across cluster][0m
+[36m(compute_several pid=1181448)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 61x across cluster][0m
+[36m(compute_several pid=1178413)[0m ✓ [P0] GPTOSS120B: output_len=57, thinking_len=455, time=28.1s
+[36m(compute_several pid=1178413)[0m WARNING: Task 14 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1179694)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1179694)[0m     output_len=3419, error=None, time=3.441275119781494s
+[36m(compute_several pid=1179694)[0m     Retrying...
+[36m(compute_several pid=1182135)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 177x across cluster][0m
+[36m(compute_several pid=1178420)[0m ✓ [P0] GPTOSS120B: output_len=2197, thinking_len=1695, time=6.2s[32m [repeated 26x across cluster][0m
+[36m(compute_several pid=1178420)[0m WARNING: Task 66 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 26x across cluster][0m
+[36m(compute_several pid=1179572)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1179572)[0m     output_len=3385, error=None, time=4.467363119125366s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1179572)[0m     Retrying...[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1178413)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1178522)[0m ✓ [P0] GPTOSS120B: output_len=2284, thinking_len=1023, time=11.5s[32m [repeated 70x across cluster][0m
+[36m(compute_several pid=1179633)[0m WARNING: Task 89 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 61x across cluster][0m
+[36m(compute_several pid=1180064)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1180064)[0m     output_len=2525, error=None, time=9.116912841796875s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1180064)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1178430)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1178424)[0m ✓ [P0] GPTOSS120B: output_len=2802, thinking_len=1447, time=37.2s[32m [repeated 113x across cluster][0m
+[36m(compute_several pid=1180125)[0m WARNING: Task 123 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 110x across cluster][0m
+[36m(compute_several pid=1180187)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=1180187)[0m     output_len=0, thinking_len=22 max_tokens=20000, error=None, time=2.3331220149993896s
+[36m(compute_several pid=1180187)[0m     Retrying...
+[36m(compute_several pid=1182135)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1182135)[0m     output_len=2130, error=None, time=3.537259101867676s
+[36m(compute_several pid=1182135)[0m     Retrying...
+[36m(compute_several pid=1158186)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s
+[36m(compute_several pid=1180125)[0m     output_len=0, thinking_len=0 max_tokens=20000, error='APIConnectionError: Connection error.', time=1.2035844326019287s
+[36m(compute_several pid=1182011)[0m ✓ [P0] GPTOSS120B: output_len=2604, thinking_len=1188, time=21.4s[32m [repeated 46x across cluster][0m
+[36m(compute_several pid=1178473)[0m WARNING: Task 157 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 53x across cluster][0m
+[36m(compute_several pid=1178424)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1180248)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1180248)[0m     output_len=2681, error=None, time=8.44974136352539s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1180248)[0m     Retrying...[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1179694)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=1180949)[0m ✓ [P0] GPTOSS120B: output_len=2425, thinking_len=470, time=6.8s[32m [repeated 46x across cluster][0m
+[36m(compute_several pid=1178676)[0m WARNING: Task 208 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 41x across cluster][0m
+[36m(compute_several pid=1178465)[0m ✓ [P0] GPTOSS120B: output_len=2255, thinking_len=1488, time=15.1s[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=1180499)[0m WARNING: Task 226 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 43x across cluster][0m
+[36m(compute_several pid=1183729)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=1185641)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1185641)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1178676)[0m ✓ [P0] GPTOSS120B: output_len=2338, thinking_len=1363, time=13.8s[32m [repeated 20x across cluster][0m
+[36m(compute_several pid=1178676)[0m WARNING: Task 209 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 19x across cluster][0m
+[36m(compute_several pid=1185858)[0m GPTOSS120B using specialized preifix: [32m [repeated 60x across cluster][0m
+[36m(compute_several pid=1185839)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1185839)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1185839)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1185839)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1178413)[0m ✓ [P0] GPTOSS120B: output_len=2252, thinking_len=1018, time=13.2s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1178676)[0m WARNING: Task 211 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1183677)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1185641)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=1185641)[0m     output_len=0, thinking_len=0 max_tokens=20000, error="ModuleNotFoundError: No module named 'openai.types.beta.chatkit.thread_list_params'", time=8.691091775894165s
+[36m(compute_several pid=1185641)[0m     Retrying...
+[36m(compute_several pid=1183670)[0m GPTOSS120B using specialized preifix: [32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183734)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 61x across cluster][0m
+[36m(compute_several pid=1183670)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 61x across cluster][0m
+[36m(compute_several pid=1180125)[0m WARNING: Task 212 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1181616)[0m ✓ [P0] GPTOSS120B: output_len=3176, thinking_len=977, time=33.5s
+[36m(compute_several pid=1185194)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=1186100)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1186100)[0m     output_len=2090, error=None, time=2.575423002243042s
+[36m(compute_several pid=1186100)[0m     Retrying...
+[36m(compute_several pid=1183670)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 4 execution error: Execution timeout after 5s[32m [repeated 178x across cluster][0m
+[36m(compute_several pid=1185194)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1183966)[0m WARNING: Task 128 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1185499)[0m ✓ [P0] GPTOSS120B: output_len=2233, thinking_len=1005, time=5.1s[32m [repeated 19x across cluster][0m
+[36m(compute_several pid=1183670)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183670)[0m     output_len=2737, error=None, time=2.870875835418701s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183670)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200148)[0m partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m Traceback (most recent call last):
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 595, in deserialize_objects
+[36m(compute_several pid=1200148)[0m     obj = self._deserialize_object(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 432, in _deserialize_object
+[36m(compute_several pid=1200148)[0m     return self._deserialize_msgpack_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 379, in _deserialize_msgpack_data
+[36m(compute_several pid=1200148)[0m     python_objects = self._deserialize_pickle5_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 361, in _deserialize_pickle5_data
+[36m(compute_several pid=1200148)[0m     obj = pickle.loads(in_band)
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/__init__.py", line 23, in <module>
+[36m(compute_several pid=1200148)[0m     from .protocol import DataProto
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/protocol.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/__init__.py", line 6, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict._reductions
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_reductions.py", line 11, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict._lazy import LazyStackedTensorDict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_lazy.py", line 37, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.memmap import MemoryMappedTensor
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/memmap.py", line 22, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.utils import _shape, implement_for, IndexType, NESTED_TENSOR_ERR
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/utils.py", line 2609, in <module>
+[36m(compute_several pid=1200148)[0m     _lock_warn = assume_constant_result(_lock_warn)
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/compiler/__init__.py", line 214, in assume_constant_result
+[36m(compute_several pid=1200148)[0m     import torch._dynamo
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/__init__.py", line 3, in <module>
+[36m(compute_several pid=1200148)[0m     from . import convert_frame, eval_frame, resume_execution
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 33, in <module>
+[36m(compute_several pid=1200148)[0m     from torch._dynamo.symbolic_convert import TensorifyState
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     from . import config, exc, logging as torchdynamo_logging, trace_rules, variables
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/trace_rules.py", line 3266, in <module>
+[36m(compute_several pid=1200148)[0m     if not torch._dynamo.config.skip_fsdp_hooks:
+[36m(compute_several pid=1200148)[0m AttributeError: partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(WorkerDict pid=1158414)[0m INFO:2026-03-23 17:51:29,647:[Rank 1] Loaded optimizer from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/optim_world_size_2_rank_1.pt
+[36m(WorkerDict pid=1158413)[0m INFO:2026-03-23 17:51:29,680:[Rank 0] Loaded rng from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/extra_state_world_size_2_rank_0.pt
+[36m(WorkerDict pid=1158413)[0m INFO:2026-03-23 17:51:29,680:[Rank 0] Loaded lr_scheduler from /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p/checkpoints/global_step_200/actor/extra_state_world_size_2_rank_0.pt
+[36m(compute_several pid=1183677)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183711)[0m WARNING: Task 79 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 83x across cluster][0m
+[36m(compute_several pid=1185576)[0m ✓ [P0] GPTOSS120B: output_len=2210, thinking_len=1428, time=10.2s[32m [repeated 82x across cluster][0m
+[36m(compute_several pid=1185966)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1185966)[0m     output_len=2791, error=None, time=8.388603210449219s
+[36m(compute_several pid=1185966)[0m     Retrying...
+[36m(compute_several pid=1186034)[0m WARNING: Task 238 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 79x across cluster][0m
+[36m(compute_several pid=1185933)[0m ✓ [P0] GPTOSS120B: output_len=2495, thinking_len=902, time=15.3s[32m [repeated 83x across cluster][0m
+[36m(compute_several pid=1186100)[0m WARNING: Task 241 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 43x across cluster][0m
+[36m(compute_several pid=1183677)[0m ✓ [P0] GPTOSS120B: output_len=2370, thinking_len=1377, time=14.8s[32m [repeated 39x across cluster][0m
+[36m(compute_several pid=1185966)[0m WARNING: Task 225 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1178465)[0m ✓ [P0] GPTOSS120B: output_len=1970, thinking_len=1442, time=58.1s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1185886)[0m WARNING: Task 220 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1185839)[0m ✓ [P0] GPTOSS120B: output_len=2124, thinking_len=1371, time=32.7s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1185194)[0m WARNING: Task 140 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1180949)[0m ✓ [P0] GPTOSS120B: output_len=2506, thinking_len=1328, time=67.1s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183779)[0m WARNING: Task 107 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1183779)[0m ✓ [P0] GPTOSS120B: output_len=3087, thinking_len=944, time=51.1s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1183782)[0m WARNING: Task 110 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1185862)[0m ✓ [P0] GPTOSS120B: output_len=2161, thinking_len=678, time=51.4s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200046)[0m GPTOSS120B using specialized preifix: 
+[36m(compute_several pid=1200012)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1200012)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1185862)[0m WARNING: Task 217 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183782)[0m ✓ [P0] GPTOSS120B: output_len=2640, thinking_len=1374, time=54.8s
+[36m(compute_several pid=1183782)[0m WARNING: Task 108 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200190)[0m GPTOSS120B using specialized preifix: [32m [repeated 27x across cluster][0m
+[36m(compute_several pid=1199969)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 4 execution error: Execution timeout after 5s
+[36m(compute_several pid=1199969)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1199969)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1199969)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)[32m [repeated 26x across cluster][0m
+[36m(compute_several pid=1200209)[0m ✓ [P0] GPTOSS120B: output_len=75, thinking_len=485, time=3.0s
+[36m(compute_several pid=1200072)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1200072)[0m     output_len=2131, error=None, time=2.8562111854553223s
+[36m(compute_several pid=1200072)[0m     Retrying...
+[36m(compute_several pid=1200179)[0m WARNING: Task 67 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1199964)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 52x across cluster][0m
+[36m(compute_several pid=1200015)[0m WE ARE ACTUALLY GETTING API SEMAPHORE (supposedly first time globally)
+[36m(compute_several pid=1200184)[0m ✓ [P0] GPTOSS120B: output_len=2057, thinking_len=966, time=5.3s[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1200135)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200135)[0m     output_len=1893, error=None, time=5.343234539031982s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200135)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200023)[0m WARNING: Task 20 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=1200012)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1199981)[0m ✓ [P0] GPTOSS120B: output_len=2946, thinking_len=1501, time=10.2s[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=1200101)[0m WARNING: Task 28 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 33x across cluster][0m
+[36m(compute_several pid=1200153)[0m ✓ [P0] GPTOSS120B: output_len=2209, thinking_len=1937, time=16.0s[32m [repeated 23x across cluster][0m
+[36m(compute_several pid=1200023)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=1200023)[0m     output_len=0, thinking_len=762 max_tokens=20000, error=None, time=19.552555084228516s
+[36m(compute_several pid=1200023)[0m     Retrying...
+[36m(compute_several pid=1200201)[0m WARNING: Task 44 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 20x across cluster][0m
+[36m(compute_several pid=1200124)[0m ✓ [P0] GPTOSS120B: output_len=2457, thinking_len=878, time=21.9s[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=1200023)[0m WARNING: Task 21 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1200124)[0m ✓ [P0] GPTOSS120B: output_len=1845, thinking_len=709, time=26.9s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200190)[0m WARNING: Task 83 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1200190)[0m ✓ [P0] GPTOSS120B: output_len=2553, thinking_len=575, time=31.6s[32m [repeated 2x across cluster][0m
+[36m(TaskRunner pid=1155537)[0m DEBUG: REWARD FN TIMEOUT: Attempt 3 failed, retrying...
+[36m(compute_several pid=1200012)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1200148)[0m partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m Traceback (most recent call last):
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 595, in deserialize_objects
+[36m(compute_several pid=1200148)[0m     obj = self._deserialize_object(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 432, in _deserialize_object
+[36m(compute_several pid=1200148)[0m     return self._deserialize_msgpack_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 379, in _deserialize_msgpack_data
+[36m(compute_several pid=1200148)[0m     python_objects = self._deserialize_pickle5_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 361, in _deserialize_pickle5_data
+[36m(compute_several pid=1200148)[0m     obj = pickle.loads(in_band)
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/__init__.py", line 23, in <module>
+[36m(compute_several pid=1200148)[0m     from .protocol import DataProto
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/protocol.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/__init__.py", line 6, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict._reductions
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_reductions.py", line 11, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict._lazy import LazyStackedTensorDict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_lazy.py", line 37, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.memmap import MemoryMappedTensor
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/memmap.py", line 22, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.utils import _shape, implement_for, IndexType, NESTED_TENSOR_ERR
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/utils.py", line 2609, in <module>
+[36m(compute_several pid=1200148)[0m     _lock_warn = assume_constant_result(_lock_warn)
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/compiler/__init__.py", line 214, in assume_constant_result
+[36m(compute_several pid=1200148)[0m     import torch._dynamo
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/__init__.py", line 3, in <module>
+[36m(compute_several pid=1200148)[0m     from . import convert_frame, eval_frame, resume_execution
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 33, in <module>
+[36m(compute_several pid=1200148)[0m     from torch._dynamo.symbolic_convert import TensorifyState
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     from . import config, exc, logging as torchdynamo_logging, trace_rules, variables
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/trace_rules.py", line 3266, in <module>
+[36m(compute_several pid=1200148)[0m     if not torch._dynamo.config.skip_fsdp_hooks:
+[36m(compute_several pid=1200148)[0m AttributeError: partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m Traceback (most recent call last):
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 595, in deserialize_objects
+[36m(compute_several pid=1200148)[0m     obj = self._deserialize_object(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 432, in _deserialize_object
+[36m(compute_several pid=1200148)[0m     return self._deserialize_msgpack_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 379, in _deserialize_msgpack_data
+[36m(compute_several pid=1200148)[0m     python_objects = self._deserialize_pickle5_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 361, in _deserialize_pickle5_data
+[36m(compute_several pid=1200148)[0m     obj = pickle.loads(in_band)
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/__init__.py", line 23, in <module>
+[36m(compute_several pid=1200148)[0m     from .protocol import DataProto
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/protocol.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/__init__.py", line 6, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict._reductions
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_reductions.py", line 11, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict._lazy import LazyStackedTensorDict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_lazy.py", line 37, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.memmap import MemoryMappedTensor
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/memmap.py", line 22, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.utils import _shape, implement_for, IndexType, NESTED_TENSOR_ERR
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/utils.py", line 2609, in <module>
+[36m(compute_several pid=1200148)[0m     _lock_warn = assume_constant_result(_lock_warn)
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/compiler/__init__.py", line 214, in assume_constant_result
+[36m(compute_several pid=1200148)[0m     import torch._dynamo
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/__init__.py", line 3, in <module>
+[36m(compute_several pid=1200148)[0m     from . import convert_frame, eval_frame, resume_execution
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 33, in <module>
+[36m(compute_several pid=1200148)[0m     from torch._dynamo.symbolic_convert import TensorifyState
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     from . import config, exc, logging as torchdynamo_logging, trace_rules, variables
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/trace_rules.py", line 3266, in <module>
+[36m(compute_several pid=1200148)[0m     if not torch._dynamo.config.skip_fsdp_hooks:
+[36m(compute_several pid=1200148)[0m AttributeError: partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m Traceback (most recent call last):
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 595, in deserialize_objects
+[36m(compute_several pid=1200148)[0m     obj = self._deserialize_object(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 432, in _deserialize_object
+[36m(compute_several pid=1200148)[0m     return self._deserialize_msgpack_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 379, in _deserialize_msgpack_data
+[36m(compute_several pid=1200148)[0m     python_objects = self._deserialize_pickle5_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 361, in _deserialize_pickle5_data
+[36m(compute_several pid=1200148)[0m     obj = pickle.loads(in_band)
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/__init__.py", line 23, in <module>
+[36m(compute_several pid=1200148)[0m     from .protocol import DataProto
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/protocol.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/__init__.py", line 6, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict._reductions
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_reductions.py", line 11, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict._lazy import LazyStackedTensorDict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_lazy.py", line 37, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.memmap import MemoryMappedTensor
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/memmap.py", line 22, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.utils import _shape, implement_for, IndexType, NESTED_TENSOR_ERR
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/utils.py", line 2609, in <module>
+[36m(compute_several pid=1200148)[0m     _lock_warn = assume_constant_result(_lock_warn)
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/compiler/__init__.py", line 214, in assume_constant_result
+[36m(compute_several pid=1200148)[0m     import torch._dynamo
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/__init__.py", line 3, in <module>
+[36m(compute_several pid=1200148)[0m     from . import convert_frame, eval_frame, resume_execution
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 33, in <module>
+[36m(compute_several pid=1200148)[0m     from torch._dynamo.symbolic_convert import TensorifyState
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     from . import config, exc, logging as torchdynamo_logging, trace_rules, variables
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/trace_rules.py", line 3266, in <module>
+[36m(compute_several pid=1200148)[0m     if not torch._dynamo.config.skip_fsdp_hooks:
+[36m(compute_several pid=1200148)[0m AttributeError: partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m Traceback (most recent call last):
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 595, in deserialize_objects
+[36m(compute_several pid=1200148)[0m     obj = self._deserialize_object(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 432, in _deserialize_object
+[36m(compute_several pid=1200148)[0m     return self._deserialize_msgpack_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 379, in _deserialize_msgpack_data
+[36m(compute_several pid=1200148)[0m     python_objects = self._deserialize_pickle5_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 361, in _deserialize_pickle5_data
+[36m(compute_several pid=1200148)[0m     obj = pickle.loads(in_band)
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/__init__.py", line 23, in <module>
+[36m(compute_several pid=1200148)[0m     from .protocol import DataProto
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/protocol.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/__init__.py", line 6, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict._reductions
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_reductions.py", line 11, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict._lazy import LazyStackedTensorDict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_lazy.py", line 37, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.memmap import MemoryMappedTensor
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/memmap.py", line 22, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.utils import _shape, implement_for, IndexType, NESTED_TENSOR_ERR
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/utils.py", line 2609, in <module>
+[36m(compute_several pid=1200148)[0m     _lock_warn = assume_constant_result(_lock_warn)
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/compiler/__init__.py", line 214, in assume_constant_result
+[36m(compute_several pid=1200148)[0m     import torch._dynamo
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/__init__.py", line 3, in <module>
+[36m(compute_several pid=1200148)[0m     from . import convert_frame, eval_frame, resume_execution
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 33, in <module>
+[36m(compute_several pid=1200148)[0m     from torch._dynamo.symbolic_convert import TensorifyState
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     from . import config, exc, logging as torchdynamo_logging, trace_rules, variables
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/trace_rules.py", line 3266, in <module>
+[36m(compute_several pid=1200148)[0m     if not torch._dynamo.config.skip_fsdp_hooks:
+[36m(compute_several pid=1200148)[0m AttributeError: partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m Traceback (most recent call last):
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 595, in deserialize_objects
+[36m(compute_several pid=1200148)[0m     obj = self._deserialize_object(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 432, in _deserialize_object
+[36m(compute_several pid=1200148)[0m     return self._deserialize_msgpack_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 379, in _deserialize_msgpack_data
+[36m(compute_several pid=1200148)[0m     python_objects = self._deserialize_pickle5_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 361, in _deserialize_pickle5_data
+[36m(compute_several pid=1200148)[0m     obj = pickle.loads(in_band)
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/__init__.py", line 23, in <module>
+[36m(compute_several pid=1200148)[0m     from .protocol import DataProto
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/protocol.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/__init__.py", line 6, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict._reductions
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_reductions.py", line 11, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict._lazy import LazyStackedTensorDict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_lazy.py", line 37, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.memmap import MemoryMappedTensor
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/memmap.py", line 22, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.utils import _shape, implement_for, IndexType, NESTED_TENSOR_ERR
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/utils.py", line 2609, in <module>
+[36m(compute_several pid=1200148)[0m     _lock_warn = assume_constant_result(_lock_warn)
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/compiler/__init__.py", line 214, in assume_constant_result
+[36m(compute_several pid=1200148)[0m     import torch._dynamo
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/__init__.py", line 3, in <module>
+[36m(compute_several pid=1200148)[0m     from . import convert_frame, eval_frame, resume_execution
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 33, in <module>
+[36m(compute_several pid=1200148)[0m     from torch._dynamo.symbolic_convert import TensorifyState
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     from . import config, exc, logging as torchdynamo_logging, trace_rules, variables
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/trace_rules.py", line 3266, in <module>
+[36m(compute_several pid=1200148)[0m     if not torch._dynamo.config.skip_fsdp_hooks:
+[36m(compute_several pid=1200148)[0m AttributeError: partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1200148)[0m Traceback (most recent call last):
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 595, in deserialize_objects
+[36m(compute_several pid=1200148)[0m     obj = self._deserialize_object(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 432, in _deserialize_object
+[36m(compute_several pid=1200148)[0m     return self._deserialize_msgpack_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 379, in _deserialize_msgpack_data
+[36m(compute_several pid=1200148)[0m     python_objects = self._deserialize_pickle5_data(
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/ray/_private/serialization.py", line 361, in _deserialize_pickle5_data
+[36m(compute_several pid=1200148)[0m     obj = pickle.loads(in_band)
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/__init__.py", line 23, in <module>
+[36m(compute_several pid=1200148)[0m     from .protocol import DataProto
+[36m(compute_several pid=1200148)[0m   File "/shared/matan/code/pass_at_k/verl/protocol.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/__init__.py", line 6, in <module>
+[36m(compute_several pid=1200148)[0m     import tensordict._reductions
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_reductions.py", line 11, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict._lazy import LazyStackedTensorDict
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/_lazy.py", line 37, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.memmap import MemoryMappedTensor
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/memmap.py", line 22, in <module>
+[36m(compute_several pid=1200148)[0m     from tensordict.utils import _shape, implement_for, IndexType, NESTED_TENSOR_ERR
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/tensordict/utils.py", line 2609, in <module>
+[36m(compute_several pid=1200148)[0m     _lock_warn = assume_constant_result(_lock_warn)
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/compiler/__init__.py", line 214, in assume_constant_result
+[36m(compute_several pid=1200148)[0m     import torch._dynamo
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/__init__.py", line 3, in <module>
+[36m(compute_several pid=1200148)[0m     from . import convert_frame, eval_frame, resume_execution
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 33, in <module>
+[36m(compute_several pid=1200148)[0m     from torch._dynamo.symbolic_convert import TensorifyState
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 30, in <module>
+[36m(compute_several pid=1200148)[0m     from . import config, exc, logging as torchdynamo_logging, trace_rules, variables
+[36m(compute_several pid=1200148)[0m   File "/home/matan/shared/.conda/envs/hope/lib/python3.10/site-packages/torch/_dynamo/trace_rules.py", line 3266, in <module>
+[36m(compute_several pid=1200148)[0m     if not torch._dynamo.config.skip_fsdp_hooks:
+[36m(compute_several pid=1200148)[0m AttributeError: partially initialized module 'torch._dynamo' has no attribute 'config' (most likely due to a circular import)
+[36m(compute_several pid=1183782)[0m WARNING: Task 109 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1183782)[0m ✓ [P0] GPTOSS120B: output_len=2645, thinking_len=845, time=96.3s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1200012)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=1200012)[0m     output_len=0, thinking_len=0 max_tokens=20000, error='APIConnectionError: Connection error.', time=1.4244606494903564s
+[36m(compute_several pid=1200012)[0m     Retrying...
+[36m(compute_several pid=1200124)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1200195)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1200195)[0m   File "<string>", line 44, in <module>
+[36m(compute_several pid=1200195)[0m   File "<string>", line 39, in solve
+[36m(compute_several pid=1200195)[0m IndexError: pop index out of range
+[36m(compute_several pid=1200153)[0m WARNING: Task 38 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1200124)[0m ✓ [P0] GPTOSS120B: output_len=1785, thinking_len=1051, time=7.6s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1200201)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1199976)[0m WARNING: Task 22 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 21x across cluster][0m
+[36m(compute_several pid=1200046)[0m ✓ [P0] GPTOSS120B: output_len=1847, thinking_len=1686, time=6.7s[32m [repeated 21x across cluster][0m
+[36m(compute_several pid=1185966)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1185966)[0m     output_len=2080, error=None, time=2.7492058277130127s
+[36m(compute_several pid=1185966)[0m     Retrying...
+[36m(compute_several pid=1183962)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1186093)[0m WARNING: Task 155 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 56x across cluster][0m
+[36m(compute_several pid=1183962)[0m ✓ [P0] GPTOSS120B: output_len=2615, thinking_len=476, time=8.0s[32m [repeated 58x across cluster][0m
+[36m(compute_several pid=1200046)[0m ⚠️  [P0] GPTOSS120B: Empty output (attempt 1/5)
+[36m(compute_several pid=1200046)[0m     output_len=0, thinking_len=0 max_tokens=20000, error='APIConnectionError: Connection error.', time=1.3391425609588623s
+[36m(compute_several pid=1183665)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1183665)[0m     output_len=2711, error=None, time=3.4056386947631836s
+[36m(compute_several pid=1200046)[0m     Retrying...[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200153)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1200153)[0m     output_len=687, error=None, time=15.139759063720703s
+[36m(compute_several pid=1200153)[0m 
+[36m(compute_several pid=1185495)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1178465)[0m WARNING: Task 125 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=1185560)[0m ✓ [P0] GPTOSS120B: output_len=2725, thinking_len=1435, time=8.8s[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1200201)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1200201)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200201)[0m     output_len=2402, error=None, time=4.3780517578125s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1199969)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 6 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1183734)[0m WARNING: Task 158 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 41x across cluster][0m
+[36m(compute_several pid=1183962)[0m ✓ [P0] GPTOSS120B: output_len=2718, thinking_len=1043, time=13.7s[32m [repeated 41x across cluster][0m
+[36m(compute_several pid=1200046)[0m     Retrying...
+[36m(compute_several pid=1200046)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1200046)[0m     output_len=2886, error=None, time=4.5487658977508545s
+[36m(compute_several pid=1200166)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s
+[36m(compute_several pid=1200201)[0m WARNING: Task 246 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 26x across cluster][0m
+[36m(compute_several pid=1200101)[0m ✓ [P0] GPTOSS120B: output_len=2644, thinking_len=1104, time=68.5s[32m [repeated 26x across cluster][0m
+[36m(compute_several pid=1200046)[0m WARNING: Task 214 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1200201)[0m ✓ [P0] GPTOSS120B: output_len=2003, thinking_len=1157, time=12.0s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1181327)[0m WARNING: Task 207 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1200012)[0m ✓ [P0] GPTOSS120B: output_len=2281, thinking_len=1219, time=24.2s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1199976)[0m WARNING: Task 209 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1199976)[0m ✓ [P0] GPTOSS120B: output_len=2775, thinking_len=1255, time=31.7s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1186000)[0m WARNING: Task 111 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1186000)[0m ✓ [P0] GPTOSS120B: output_len=1760, thinking_len=1232, time=46.5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1178473)[0m WARNING: Task 156 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183738)[0m ✓ [P0] GPTOSS120B: output_len=2338, thinking_len=1181, time=53.7s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200209)[0m WARNING: Task 83 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1178455)[0m ✓ [P0] GPTOSS120B: output_len=2212, thinking_len=1219, time=214.1s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1199969)[0m WARNING: Task 236 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1185966)[0m 
+[36m(compute_several pid=1180825)[0m ✓ [P0] GPTOSS120B: output_len=2452, thinking_len=812, time=221.5s[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=1179946)[0m WARNING: Task 111 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=1180621)[0m ✓ [P0] GPTOSS120B: output_len=2612, thinking_len=950, time=217.0s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1178433)[0m WARNING: Task 117 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1200015)[0m ✓ [P0] GPTOSS120B: output_len=2993, thinking_len=1028, time=75.4s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1179633)[0m WARNING: Task 189 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1179694)[0m ✓ [P0] GPTOSS120B: output_len=2537, thinking_len=862, time=222.8s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1179694)[0m WARNING: Task 238 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1182135)[0m ✓ [P0] GPTOSS120B: output_len=2402, thinking_len=1277, time=242.2s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1179946)[0m WARNING: Task 110 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1182135)[0m WARNING: Task 153 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185701)[0m ✓ [P0] GPTOSS120B: output_len=2539, thinking_len=815, time=222.5s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1178427)[0m WARNING: Task 248 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185701)[0m WARNING: Task 191 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1180125)[0m ✓ [P0] GPTOSS120B: output_len=2538, thinking_len=1330, time=256.4s
+[36m(compute_several pid=1180125)[0m WARNING: Task 214 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200169)[0m ✓ [P0] GPTOSS120B: output_len=1722, thinking_len=1006, time=173.3s
+[36m(compute_several pid=1200169)[0m WARNING: Task 55 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183779)[0m ✓ [P0] GPTOSS120B: output_len=3076, thinking_len=876, time=244.2s
+[36m(compute_several pid=1183779)[0m WARNING: Task 105 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1180187)[0m ✓ [P0] GPTOSS120B: output_len=3060, thinking_len=1218, time=277.8s
+[36m(compute_several pid=1182071)[0m WARNING: Task 248 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183699)[0m ✓ [P0] GPTOSS120B: output_len=2338, thinking_len=1734, time=259.9s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183699)[0m WARNING: Task 6 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1178416)[0m ✓ [P0] GPTOSS120B: output_len=3042, thinking_len=1772, time=333.5s
+[36m(compute_several pid=1178416)[0m WARNING: Task 59 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200184)[0m ✓ [P0] GPTOSS120B: output_len=2311, thinking_len=1097, time=227.7s
+[36m(compute_several pid=1200184)[0m WARNING: Task 1 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183703)[0m ✓ [P0] GPTOSS120B: output_len=3507, thinking_len=1166, time=304.6s
+[36m(compute_several pid=1183703)[0m WARNING: Task 91 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(TaskRunner pid=1155537)[0m DEBUG: REWARD FN TIMEOUT: Attempt 4 failed, retrying...
+[36m(compute_several pid=1183699)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1183703)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1200184)[0m ✓ [P0] GPTOSS120B: output_len=2150, thinking_len=736, time=4.9s
+[36m(compute_several pid=1200184)[0m WARNING: Task 5 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1178610)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1178610)[0m   File "<string>", line 44, in <module>
+[36m(compute_several pid=1178610)[0m   File "<string>", line 39, in solve
+[36m(compute_several pid=1178610)[0m IndexError: pop index out of range
+[36m(compute_several pid=1183699)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1178416)[0m ✓ [P0] GPTOSS120B: output_len=2495, thinking_len=1120, time=4.5s[32m [repeated 14x across cluster][0m
+[36m(compute_several pid=1178416)[0m WARNING: Task 11 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 14x across cluster][0m
+[36m(compute_several pid=1183782)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1185900)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1185900)[0m     output_len=2500, error=None, time=3.3701202869415283s
+[36m(compute_several pid=1185900)[0m     Retrying...
+[36m(compute_several pid=1200072)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1183703)[0m ✓ [P0] GPTOSS120B: output_len=2528, thinking_len=822, time=10.0s[32m [repeated 28x across cluster][0m
+[36m(compute_several pid=1182135)[0m WARNING: Task 45 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 26x across cluster][0m
+[36m(compute_several pid=1185900)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1185900)[0m     output_len=2684, error=None, time=5.718007802963257s
+[36m(compute_several pid=1185900)[0m     Retrying...
+[36m(compute_several pid=1199969)[0m 
+[36m(compute_several pid=1200201)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1179694)[0m ✓ [P0] GPTOSS120B: output_len=2454, thinking_len=813, time=14.6s[32m [repeated 36x across cluster][0m
+[36m(compute_several pid=1178416)[0m WARNING: Task 10 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 37x across cluster][0m
+[36m(compute_several pid=1199964)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1199964)[0m     output_len=1737, error=None, time=3.997178316116333s
+[36m(compute_several pid=1199964)[0m     Retrying...
+[36m(compute_several pid=1180621)[0m 
+[36m(compute_several pid=1185862)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1186034)[0m ✓ [P0] GPTOSS120B: output_len=2486, thinking_len=912, time=19.6s[32m [repeated 42x across cluster][0m
+[36m(compute_several pid=1186034)[0m WARNING: Task 61 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 43x across cluster][0m
+[36m(compute_several pid=1200176)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1200176)[0m     output_len=2280, error=None, time=8.969822883605957s
+[36m(compute_several pid=1200176)[0m     Retrying...
+[36m(compute_several pid=1183779)[0m ✓ [P0] GPTOSS120B: output_len=2285, thinking_len=943, time=26.4s[32m [repeated 50x across cluster][0m
+[36m(compute_several pid=1178473)[0m WARNING: Task 159 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 49x across cluster][0m
+[36m(compute_several pid=1185900)[0m 
+[36m(compute_several pid=1200101)[0m ✓ [P0] GPTOSS120B: output_len=2507, thinking_len=782, time=13.6s[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1185831)[0m WARNING: Task 246 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 15x across cluster][0m
+[36m(compute_several pid=1199964)[0m ✓ [P0] GPTOSS120B: output_len=3177, thinking_len=1241, time=17.8s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1185862)[0m WARNING: Task 238 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1185900)[0m ✓ [P0] GPTOSS120B: output_len=1887, thinking_len=1316, time=36.8s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1185900)[0m WARNING: Task 121 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1178465)[0m ✓ [P0] GPTOSS120B: output_len=2104, thinking_len=1155, time=39.0s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1183665)[0m WARNING: Task 207 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1180187)[0m ✓ [P0] GPTOSS120B: output_len=2678, thinking_len=1205, time=35.4s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1200101)[0m WARNING: Task 209 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1178416)[0m ✓ [P0] GPTOSS120B: output_len=2992, thinking_len=1284, time=57.4s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1178416)[0m WARNING: Task 8 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1183782)[0m ✓ [P0] GPTOSS120B: output_len=2506, thinking_len=1267, time=50.0s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1180187)[0m WARNING: Task 221 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1181690)[0m ✓ [P0] GPTOSS120B: output_len=2077, thinking_len=1034, time=62.2s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1183786)[0m WARNING: Task 112 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1200169)[0m ✓ [P0] GPTOSS120B: output_len=2470, thinking_len=1292, time=78.9s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1200169)[0m WARNING: Task 30 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1183786)[0m ✓ [P0] GPTOSS120B: output_len=788, thinking_len=957, time=405.1s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1185194)[0m WARNING: Task 217 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1200090)[0m ✓ [P0] GPTOSS120B: output_len=2824, thinking_len=1560, time=77.1s
+[36m(compute_several pid=1183786)[0m WARNING: Task 113 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200090)[0m WARNING: Task 224 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185495)[0m ✓ [P0] GPTOSS120B: output_len=2038, thinking_len=812, time=84.7s
+[36m(compute_several pid=1178455)[0m WARNING: Task 136 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1183782)[0m ✓ [P0] GPTOSS120B: output_len=3392, thinking_len=1687, time=104.2s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1183782)[0m WARNING: Task 184 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183665)[0m ✓ [P0] GPTOSS120B: output_len=1782, thinking_len=819, time=175.1s
+[36m(compute_several pid=1183665)[0m WARNING: Task 204 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1186093)[0m ✓ [P0] GPTOSS120B: output_len=2137, thinking_len=519, time=180.3s
+[36m(compute_several pid=1186093)[0m WARNING: Task 228 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1186093)[0m ✓ [P0] GPTOSS120B: output_len=2073, thinking_len=840, time=184.9s
+[36m(compute_several pid=1186093)[0m WARNING: Task 230 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1178455)[0m ✓ [P0] GPTOSS120B: output_len=2246, thinking_len=775, time=208.1s
+[36m(compute_several pid=1178455)[0m WARNING: Task 137 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1178473)[0m ✓ [P0] GPTOSS120B: output_len=2407, thinking_len=887, time=206.7s
+[36m(compute_several pid=1200072)[0m WARNING: Task 104 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1180621)[0m ✓ [P0] GPTOSS120B: output_len=2474, thinking_len=825, time=223.4s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1180640)[0m WARNING: Task 96 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1181327)[0m ✓ [P0] GPTOSS120B: output_len=2224, thinking_len=1043, time=224.1s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1199964)[0m WARNING: Task 243 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1185831)[0m ✓ [P0] GPTOSS120B: output_len=2091, thinking_len=1060, time=223.9s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1185706)[0m WARNING: Task 87 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1186093)[0m ✓ [P0] GPTOSS120B: output_len=2313, thinking_len=1171, time=234.2s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1186093)[0m WARNING: Task 229 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1181767)[0m ✓ [P0] GPTOSS120B: output_len=1827, thinking_len=504, time=601.6s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1181767)[0m WARNING: Task 219 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1181767)[0m WARNING: Task 216 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(TaskRunner pid=1155537)[0m DEBUG: REWARD FN TIMEOUT: Attempt 5 failed, retrying...
+[36m(compute_several pid=1199964)[0m ✓ [P0] GPTOSS120B: output_len=2283, thinking_len=1163, time=244.9s
+[36m(compute_several pid=1199964)[0m WARNING: Task 242 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185831)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1185831)[0m 
+[36m(compute_several pid=1181767)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s
+[36m(compute_several pid=1200090)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1200090)[0m   File "<string>", line 44, in <module>
+[36m(compute_several pid=1200090)[0m   File "<string>", line 39, in solve
+[36m(compute_several pid=1200090)[0m IndexError: pop index out of range
+[36m(compute_several pid=1185831)[0m ✓ [P0] GPTOSS120B: output_len=1082, thinking_len=818, time=5.6s
+[36m(compute_several pid=1185831)[0m WARNING: Task 14 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183665)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1183665)[0m     output_len=3235, error=None, time=4.101052522659302s
+[36m(compute_several pid=1183665)[0m     Retrying...
+[36m(compute_several pid=1183782)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 7 execution error: Execution timeout after 5s[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=1183665)[0m ✓ [P0] GPTOSS120B: output_len=2523, thinking_len=912, time=2.4s[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1183665)[0m WARNING: Task 42 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 16x across cluster][0m
+[36m(compute_several pid=1183734)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1199969)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1199969)[0m     output_len=2264, error=None, time=3.391253709793091s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1199969)[0m     Retrying...[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1199969)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1183786)[0m ✓ [P0] GPTOSS120B: output_len=2106, thinking_len=1113, time=11.6s[32m [repeated 34x across cluster][0m
+[36m(compute_several pid=1185831)[0m WARNING: Task 12 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=1186000)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1186000)[0m     output_len=2266, error=None, time=3.3102009296417236s
+[36m(compute_several pid=1186000)[0m     Retrying...
+[36m(compute_several pid=1200142)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 4 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1186093)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1186093)[0m     output_len=1823, error=None, time=3.600778579711914s
+[36m(compute_several pid=1186093)[0m     Retrying...
+[36m(compute_several pid=1200184)[0m ✓ [P0] GPTOSS120B: output_len=2225, thinking_len=1115, time=11.0s[32m [repeated 34x across cluster][0m
+[36m(compute_several pid=1183722)[0m WARNING: Task 190 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 35x across cluster][0m
+[36m(compute_several pid=1183695)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1180640)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1180640)[0m     output_len=2236, error=None, time=4.117785453796387s
+[36m(compute_several pid=1180640)[0m     Retrying...
+[36m(compute_several pid=1178413)[0m ✓ [P0] GPTOSS120B: output_len=2373, thinking_len=850, time=11.1s[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1200166)[0m WARNING: Task 135 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 40x across cluster][0m
+[36m(compute_several pid=1200015)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1200015)[0m     output_len=2185, error=None, time=4.017902374267578s
+[36m(compute_several pid=1200015)[0m     Retrying...
+[36m(compute_several pid=1199964)[0m ✓ [P0] GPTOSS120B: output_len=3036, thinking_len=875, time=276.4s[32m [repeated 33x across cluster][0m
+[36m(compute_several pid=1200142)[0m WARNING: Task 199 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 33x across cluster][0m
+[36m(compute_several pid=1183779)[0m ✓ [P0] GPTOSS120B: output_len=3053, thinking_len=1288, time=16.6s[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=1200015)[0m WARNING: Task 239 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 17x across cluster][0m
+[36m(compute_several pid=1185933)[0m ✓ [P0] GPTOSS120B: output_len=2283, thinking_len=1343, time=21.7s[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=1185933)[0m WARNING: Task 213 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 12x across cluster][0m
+[36m(compute_several pid=1180621)[0m ✓ [P0] GPTOSS120B: output_len=2056, thinking_len=1380, time=44.9s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1180621)[0m WARNING: Task 28 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1185701)[0m ✓ [P0] GPTOSS120B: output_len=2068, thinking_len=897, time=50.4s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1200176)[0m WARNING: Task 224 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1178465)[0m ✓ [P0] GPTOSS120B: output_len=2964, thinking_len=1289, time=50.2s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1185839)[0m WARNING: Task 173 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1199969)[0m ✓ [P0] GPTOSS120B: output_len=2050, thinking_len=1081, time=49.6s[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1179946)[0m WARNING: Task 114 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1200015)[0m ✓ [P0] GPTOSS120B: output_len=2468, thinking_len=1117, time=50.8s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1199976)[0m WARNING: Task 202 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1185706)[0m ✓ [P0] GPTOSS120B: output_len=2583, thinking_len=940, time=70.8s[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1185933)[0m WARNING: Task 215 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 5x across cluster][0m
+[36m(compute_several pid=1200046)[0m ✓ [P0] GPTOSS120B: output_len=2559, thinking_len=1250, time=62.1s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1200046)[0m WARNING: Task 232 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1180825)[0m ✓ [P0] GPTOSS120B: output_len=2517, thinking_len=1795, time=69.1s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1200159)[0m WARNING: Task 223 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200046)[0m ✓ [P0] GPTOSS120B: output_len=2774, thinking_len=2060, time=76.1s
+[36m(compute_several pid=1180825)[0m WARNING: Task 218 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200046)[0m WARNING: Task 235 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1181767)[0m ✓ [P0] GPTOSS120B: output_len=2104, thinking_len=519, time=190.9s
+[36m(compute_several pid=1181767)[0m WARNING: Task 0 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200179)[0m ✓ [P0] GPTOSS120B: output_len=2154, thinking_len=669, time=183.7s
+[36m(compute_several pid=1200179)[0m WARNING: Task 140 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1179694)[0m ✓ [P0] GPTOSS120B: output_len=2418, thinking_len=1105, time=183.8s
+[36m(compute_several pid=1179946)[0m WARNING: Task 112 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1200209)[0m ✓ [P0] GPTOSS120B: output_len=2063, thinking_len=1037, time=202.5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1200101)[0m WARNING: Task 82 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1185900)[0m ✓ [P0] GPTOSS120B: output_len=2341, thinking_len=487, time=208.5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1185900)[0m WARNING: Task 124 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 4x across cluster][0m
+[36m(compute_several pid=1185900)[0m ✓ [P0] GPTOSS120B: output_len=2252, thinking_len=931, time=215.5s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1183722)[0m WARNING: Task 191 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185900)[0m WARNING: Task 125 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183786)[0m ✓ [P0] GPTOSS120B: output_len=1919, thinking_len=1613, time=241.3s
+[36m(compute_several pid=1183786)[0m WARNING: Task 63 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1180187)[0m ✓ [P0] GPTOSS120B: output_len=2532, thinking_len=953, time=247.9s
+[36m(compute_several pid=1180187)[0m WARNING: Task 51 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183738)[0m ✓ [P0] GPTOSS120B: output_len=2853, thinking_len=649, time=248.6s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1186093)[0m WARNING: Task 228 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1179694)[0m ✓ [P0] GPTOSS120B: output_len=2597, thinking_len=1139, time=253.5s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1181767)[0m WARNING: Task 3 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1185900)[0m ✓ [P0] GPTOSS120B: output_len=2734, thinking_len=1000, time=267.0s
+[36m(compute_several pid=1179694)[0m WARNING: Task 181 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185900)[0m WARNING: Task 126 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1178610)[0m ✓ [P0] GPTOSS120B: output_len=2459, thinking_len=1146, time=258.0s
+[36m(compute_several pid=1178610)[0m WARNING: Task 248 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1180640)[0m ✓ [P0] GPTOSS120B: output_len=2949, thinking_len=906, time=275.6s
+[36m(compute_several pid=1180640)[0m WARNING: Task 245 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1186100)[0m ✓ [P0] GPTOSS120B: output_len=3004, thinking_len=1543, time=296.1s
+[36m(compute_several pid=1186100)[0m WARNING: Task 120 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(TaskRunner pid=1155537)[0m DEBUG: REWARD FN TIMEOUT: Attempt 6 failed, retrying...
+[36m(compute_several pid=1185900)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1186100)[0m ✓ [P0] GPTOSS120B: output_len=2425, thinking_len=999, time=3.1s
+[36m(compute_several pid=1186100)[0m WARNING: Task 0 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1186100)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 2 execution error: Execution timeout after 5s
+[36m(compute_several pid=1200101)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Non-zero exit code 1: Traceback (most recent call last):
+[36m(compute_several pid=1200101)[0m   File "<string>", line 44, in <module>
+[36m(compute_several pid=1200101)[0m   File "<string>", line 39, in solve
+[36m(compute_several pid=1200101)[0m IndexError: pop index out of range
+[36m(compute_several pid=1186100)[0m ✓ [P0] GPTOSS120B: output_len=2783, thinking_len=1097, time=8.1s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1186100)[0m WARNING: Task 3 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1185900)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1185194)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Failed to extract code from response
+[36m(compute_several pid=1181767)[0m ✓ [P0] GPTOSS120B: output_len=2292, thinking_len=563, time=10.0s[32m [repeated 21x across cluster][0m
+[36m(compute_several pid=1179694)[0m WARNING: Task 19 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 22x across cluster][0m
+[36m(compute_several pid=1178473)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1178473)[0m     output_len=1866, error=None, time=4.4325292110443115s
+[36m(compute_several pid=1178473)[0m     Retrying...
+[36m(compute_several pid=1185701)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1179694)[0m ✓ [P0] GPTOSS120B: output_len=2601, thinking_len=1321, time=10.1s[32m [repeated 37x across cluster][0m
+[36m(compute_several pid=1179694)[0m WARNING: Task 18 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 36x across cluster][0m
+[36m(compute_several pid=1199969)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1199969)[0m     output_len=3056, error=None, time=4.200099468231201s
+[36m(compute_several pid=1199969)[0m     Retrying...
+[36m(compute_several pid=1181767)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 0 execution error: Execution timeout after 5s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1178413)[0m 
+[36m(compute_several pid=1186093)[0m ✓ [P0] GPTOSS120B: output_len=2560, thinking_len=1418, time=19.9s[32m [repeated 48x across cluster][0m
+[36m(compute_several pid=1183782)[0m WARNING: Task 147 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 50x across cluster][0m
+[36m(compute_several pid=1185966)[0m ⚠️  DEBUG: POTENTIALLY NON-FATAL: EXECUTION-LEVEL ERROR IN CODE: Test 1 execution error: Execution timeout after 5s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1178433)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 1/5)
+[36m(compute_several pid=1178433)[0m     output_len=2714, error=None, time=3.3926289081573486s
+[36m(compute_several pid=1178433)[0m     Retrying...
+[36m(compute_several pid=1199969)[0m ✓ [P0] GPTOSS120B: output_len=2634, thinking_len=1026, time=21.2s[32m [repeated 33x across cluster][0m
+[36m(compute_several pid=1183699)[0m WARNING: Task 252 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 32x across cluster][0m
+[36m(compute_several pid=1178455)[0m ✓ [P0] GPTOSS120B: output_len=2491, thinking_len=1114, time=12.8s[32m [repeated 22x across cluster][0m
+[36m(compute_several pid=1200090)[0m WARNING: Task 245 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 20x across cluster][0m
+[36m(compute_several pid=1178433)[0m ⚠️  [P0] GPTOSS120B: Required thinking missing (attempt 2/5)
+[36m(compute_several pid=1178433)[0m     output_len=2623, error=None, time=6.7561094760894775s
+[36m(compute_several pid=1178433)[0m     Retrying...
+[36m(compute_several pid=1180640)[0m ✓ [P0] GPTOSS120B: output_len=2977, thinking_len=1453, time=35.1s[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=1200159)[0m WARNING: Task 76 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 13x across cluster][0m
+[36m(compute_several pid=1185706)[0m ✓ [P0] GPTOSS120B: output_len=2463, thinking_len=1261, time=38.8s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1185831)[0m WARNING: Task 235 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1199964)[0m ✓ [P0] GPTOSS120B: output_len=2577, thinking_len=861, time=38.7s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1199964)[0m WARNING: Task 175 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 11x across cluster][0m
+[36m(compute_several pid=1200166)[0m ✓ [P0] GPTOSS120B: output_len=2747, thinking_len=914, time=51.2s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1200142)[0m WARNING: Task 171 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 8x across cluster][0m
+[36m(compute_several pid=1200015)[0m ✓ [P0] GPTOSS120B: output_len=2814, thinking_len=1429, time=56.7s[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1199964)[0m WARNING: Task 172 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 9x across cluster][0m
+[36m(compute_several pid=1200190)[0m ✓ [P0] GPTOSS120B: output_len=3002, thinking_len=1501, time=54.3s[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1200184)[0m WARNING: Task 218 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 3x across cluster][0m
+[36m(compute_several pid=1186034)[0m ✓ [P0] GPTOSS120B: output_len=2648, thinking_len=1313, time=116.9s[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1178610)[0m WARNING: Task 9 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 7x across cluster][0m
+[36m(compute_several pid=1200195)[0m ✓ [P0] GPTOSS120B: output_len=1699, thinking_len=1250, time=455.0s[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1200184)[0m WARNING: Task 217 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 10x across cluster][0m
+[36m(compute_several pid=1180825)[0m ✓ [P0] GPTOSS120B: output_len=2408, thinking_len=1230, time=466.9s[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1183962)[0m WARNING: Task 225 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 6x across cluster][0m
+[36m(compute_several pid=1185831)[0m ✓ [P0] GPTOSS120B: output_len=2808, thinking_len=1045, time=154.3s
+[36m(compute_several pid=1180825)[0m WARNING: Task 216 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185831)[0m WARNING: Task 232 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200209)[0m ✓ [P0] GPTOSS120B: output_len=2082, thinking_len=773, time=186.0s
+[36m(compute_several pid=1200209)[0m WARNING: Task 52 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185701)[0m ✓ [P0] GPTOSS120B: output_len=2151, thinking_len=723, time=191.8s
+[36m(compute_several pid=1185701)[0m WARNING: Task 119 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1186000)[0m ✓ [P0] GPTOSS120B: output_len=2168, thinking_len=739, time=190.7s
+[36m(compute_several pid=1186000)[0m WARNING: Task 189 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1185701)[0m ✓ [P0] GPTOSS120B: output_len=1811, thinking_len=1276, time=209.1s
+[36m(compute_several pid=1185701)[0m WARNING: Task 118 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1186093)[0m ✓ [P0] GPTOSS120B: output_len=1953, thinking_len=1103, time=216.3s
+[36m(compute_several pid=1183714)[0m WARNING: Task 137 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1180187)[0m ✓ [P0] GPTOSS120B: output_len=2641, thinking_len=681, time=223.6s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200090)[0m WARNING: Task 244 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1178455)[0m ✓ [P0] GPTOSS120B: output_len=2396, thinking_len=973, time=224.9s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200201)[0m WARNING: Task 182 failed with error: float() argument must be a string or a real number, not 'dict'[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1200201)[0m ✓ [P0] GPTOSS120B: output_len=2756, thinking_len=1014, time=239.2s
+[36m(compute_several pid=1200072)[0m ✓ [P0] GPTOSS120B: output_len=2356, thinking_len=1382, time=251.9s
+[36m(compute_several pid=1200072)[0m WARNING: Task 51 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1180621)[0m ✓ [P0] GPTOSS120B: output_len=2645, thinking_len=1148, time=253.0s[32m [repeated 2x across cluster][0m
+[36m(compute_several pid=1185706)[0m WARNING: Task 103 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1180621)[0m WARNING: Task 126 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1178465)[0m ✓ [P0] GPTOSS120B: output_len=2407, thinking_len=1667, time=284.1s
+[36m(compute_several pid=1178465)[0m WARNING: Task 84 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1183738)[0m ✓ [P0] GPTOSS120B: output_len=2718, thinking_len=1440, time=291.9s
+[36m(compute_several pid=1183738)[0m WARNING: Task 31 failed with error: float() argument must be a string or a real number, not 'dict'
+[36m(compute_several pid=1200090)[0m WARNING: Task 247 failed with error: float() argument must be a string or a real number, not 'dict'

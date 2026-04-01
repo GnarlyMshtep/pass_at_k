@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/27/fork_k16vo4tp_hidden_prompt_stage3.json5 --desc fork_k16vo4tp_hidden_prompt_stage3 --fork-from /shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp --fork-step 160 --sbatch --time 14:00:00 --divide-resources-by 2 -y

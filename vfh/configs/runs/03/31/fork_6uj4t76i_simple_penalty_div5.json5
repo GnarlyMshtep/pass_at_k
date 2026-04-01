@@ -1,0 +1,37 @@
+{
+    // Fork of 6uj4t76i at step 696: continuation with simple hidden penalty (divisor=5)
+    // Dataset: phase 3 only (hidden backdoor prompt) for 500 steps
+    // Goal: strongly discourage <hidden> usage
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p500_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p500_filt1024/test.parquet"],
+        "shuffle": false,
+        "filter_overlong_prompts": true,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_backdoor_w_hidden",
+        "path": "custom/reward/APPS/APPS_reward_configed.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "formatter": "removeaftercode_w_hidden",
+                "score_type": "regscore",
+                "skip_monitor": false,
+                "penalty": {
+                    "schedule": "simple",
+                    "divisor": 5,
+                },
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_6uj4t76i_simple_penalty_div5",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "+max_additional_steps": 120,
+    },
+}

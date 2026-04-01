@@ -1,0 +1,1 @@
+/shared/matan/code/pass_at_k/vfh/orchestrator.py continue --run-dir /shared/matan/code/pass_at_k/logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p --sbatch --time 10:00:00 --divide-resources-by 2 --note restarting after re-adding rewards extra infos and better error handling -y

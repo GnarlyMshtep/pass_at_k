@@ -1,0 +1,1 @@
+python -m vfh.orchestrator continue --run-dir /shared/matan/code/pass_at_k/logs/VerlRun/03/23/hidden_wmonitor_qwen3_8b_sft_ckpt64_conf_23_03_uq7hcywm --sbatch --time 14:00:00 --divide-resources-by 2 --note restarting hoping reward not so slow this time around -y

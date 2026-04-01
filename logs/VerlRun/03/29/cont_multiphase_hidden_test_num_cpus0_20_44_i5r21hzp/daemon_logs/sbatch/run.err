@@ -1,0 +1,20 @@
+/var/spool/slurmd/job02038/slurm_script: line 15: /shared/matan/code/pass_at_k/logs/VerlRun/03/29/cont_multiphase_hidden_test_num_cpus0_20_44_i5r21hzp/daemon_logs/sbatch/env.sh: No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/shared/matan/code/pass_at_k/vfh/run_tracker.py", line 163, in register_run_from_metadata
+    metadata = load_run_metadata(run_dir=run_dir)
+  File "/shared/matan/code/pass_at_k/vfh/run_manager.py", line 207, in load_run_metadata
+    raise FileNotFoundError(f"No run_metadata.json5 found in: {run_dir}")
+FileNotFoundError: No run_metadata.json5 found in: /shared/matan/code/pass_at_k/logs/VerlRun/03/29/cont_multiphase_hidden_test_num_cpus0_20_44_i5r21hzp
+Traceback (most recent call last):
+  File "/home/matan/shared/.conda/envs/hope/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/matan/shared/.conda/envs/hope/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/shared/matan/code/pass_at_k/vfh/orchestrator.py", line 1353, in <module>
+    main()
+  File "/shared/matan/code/pass_at_k/vfh/orchestrator.py", line 1173, in main
+    run_metadata = load_run_metadata(run_dir=args.run_dir)
+  File "/shared/matan/code/pass_at_k/vfh/run_manager.py", line 207, in load_run_metadata
+    raise FileNotFoundError(f"No run_metadata.json5 found in: {run_dir}")
+FileNotFoundError: No run_metadata.json5 found in: /shared/matan/code/pass_at_k/logs/VerlRun/03/29/cont_multiphase_hidden_test_num_cpus0_20_44_i5r21hzp

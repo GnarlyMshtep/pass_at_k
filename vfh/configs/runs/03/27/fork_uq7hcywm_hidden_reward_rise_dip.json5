@@ -1,0 +1,41 @@
+{
+    // Fork of uq7hcywm: rise_and_dip_frac_hidden reward schedule
+    // Tent-shaped reward for <hidden> fraction near 3/8 of response, steps 40-80
+    "data": {
+        "train_files": ["/shared/matan/data/apps_backdoor_w_hidden_iterated/train.parquet"],
+        "val_files": ["/shared/matan/data/apps_backdoor_w_hidden_iterated/test.parquet"],
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-8B-APPSbackdoor-hidden-s1-s2-hiddenfintune-ckpt64"},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_backdoor_w_hidden",
+        "path": "custom/reward/APPS/APPS_reward_configed.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "formatter": "removeaftercode_w_hidden",
+                "score_type": "regscore",
+                "skip_monitor": false,
+                "penalty": {
+                    "schedule": "exp_increase",
+                    "start_index": 0,
+                    "initial_inverse_penalty": 12000,
+                    "phase0_steps": 80,
+                    "phase1_steps": 80,
+                    "phase2_pause": 80,
+                    "min_penalty_divisor": 100,
+                    "hidden_reward_schedule": "rise_and_dip_frac_hidden",
+                    "hidden_reward_coeff": 1e-4,
+                    "hidden_reward_start": 40,
+                    "hidden_reward_end": 80,
+                    "hidden_reward_max": 0.3,
+                    "hidden_reward_optimal_frac": 0.375,
+                    "hidden_reward_spread": 0.25,
+                },
+            },
+        },
+    },
+    "trainer": {
+        "experiment_name": "fork_uq7hcywm_hidden_reward_rise_dip_frac",
+    },
+}

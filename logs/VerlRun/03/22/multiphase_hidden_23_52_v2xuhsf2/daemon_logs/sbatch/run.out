@@ -1,0 +1,7 @@
+  WARNING: Failed to register run with tracker: "Key 'trainer' not found at path trainer.n_gpus_per_node"
+
+Launching (exec): verl.trainer.main_ppo
+  Full command (58 args)
+  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/03/22/multiphase_hidden_23_52_v2xuhsf2/verl_output.log
+2026-03-23 00:42:47,734	INFO worker.py:1998 -- Started a local Ray instance. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+[2026-03-23 00:43:18,147 E 723708 723708] core_worker_process.cc:224: Failed to register worker to Raylet: IOError: Failed to read data from the socket: End of file worker_id=01000000ffffffffffffffffffffffffffffffffffffffffffffffff
