@@ -131,7 +131,15 @@ def get_custom_reward_fn(config: DictConfig) -> Optional[RawRewardFn]:
     print(f"using customized reward function '{function_name}' from '{file_path}'")
     raw_fn = getattr(module, function_name)
 
-    reward_kwargs = dict(reward_fn_config.get("reward_kwargs", {}))
+    # Deep-convert OmegaConf objects to plain Python types. Hydra's config
+    # resolution produces DictConfig/ListConfig which cause errors downstream
+    # (e.g. "generator is not a ListConfig, list or tuple" in dacite).
+    raw_kwargs = reward_fn_config.get("reward_kwargs", {})
+    if hasattr(raw_kwargs, "_metadata"):  # OmegaConf object
+        from omegaconf import OmegaConf
+        reward_kwargs = OmegaConf.to_container(raw_kwargs, resolve=True)
+    else:
+        reward_kwargs = dict(raw_kwargs)
 
     wrapped = partial(_call_with_kwargs, raw_fn, reward_kwargs)
     # Attach metadata so multiprocessing workers can reconstruct the function under spawn/forkserver

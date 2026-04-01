@@ -29,27 +29,6 @@ from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import register
 from verl.workers.reward_manager.abstract import AbstractRewardManager
 
-# Default error score for failed tasks (legacy fallback — used only when ALL tasks fail
-# and no successful result is available to derive the key template from).
-DEFAULT_ERROR_SCORE = {
-    "score": 0.0,
-    "is_correct": 0.0,
-    "extracted_answer": "verification has timed out",
-    "did_sel_hint": 0.0,
-    "format_score": 0.0,
-    "monitor_score": 0.0,
-    "question_type": "FAILED",
-    "correct_and_format_score": 0.0,
-    "monitor_eval": "Task failed",
-    "unadjusted_calibration_score": 0.0,
-    "verifiers": {
-        "omi_correct": False,
-        "mathv_correct": False,
-        "omi_hintmatch": False,
-        "mathv_hintmatch": False,
-    },
-}
-
 
 def _make_default_from_template(template: dict, error_msg: str) -> dict:
     """Create a zero/null score dict matching the key set of a successful result.
@@ -142,12 +121,12 @@ async def process_one(
             )
     except Exception as e:
         print(f"WARNING: Task {i} failed with error: {str(e)[:1000]}")
-        score = {**DEFAULT_ERROR_SCORE, "monitor_eval": f"Task failed: {e}"}
+        score = None  # sentinel — replaced by _make_default_from_template in processing loop
 
     return (score, valid_response_length, data_source, prompt_str, response_str, ground_truth, i)
 
 
-@ray.remote
+@ray.remote(num_cpus=0)
 def compute_several(
     tokenizer,
     compute_score_fn,
@@ -166,6 +145,10 @@ def compute_several(
     Note: Timeout is handled at the outer level (when calling this via ray), not internally.
           The only internal timeouts are in run_code_isolated_no_files_better_err.
     """
+    import os
+
+    indices = [item["i"] for item in items]
+    print(f"[compute_several pid={os.getpid()}] started, items={indices}, fn={compute_score_fn}")
 
     async def run_all():
         tasks = [process_one(tokenizer=tokenizer, compute_score_fn=compute_score_fn, **item) for item in items]
@@ -380,7 +363,7 @@ class NaiveRewardManager(AbstractRewardManager):
                     if score_template is not None:
                         score = _make_default_from_template(template=score_template, error_msg=error_msg)
                     else:
-                        score = {**DEFAULT_ERROR_SCORE, "error": error_msg}
+                        score = {"score": 0.0, "error": error_msg}
                     # We don't have valid_response_length for exceptions, so place reward at position 0
                     # This matches the 0.0 default — effectively a no-op on the reward tensor
                     if isinstance(score, dict):
@@ -391,6 +374,21 @@ class NaiveRewardManager(AbstractRewardManager):
                     continue
 
                 score, valid_response_length, data_source, _prompt_str, _response_str, _ground_truth, i = ret
+
+                # Handle failed tasks (None sentinel from process_one exception handler)
+                if score is None:
+                    if score_template is not None:
+                        score = _make_default_from_template(
+                            template=score_template, error_msg="reward function exception"
+                        )
+                    else:
+                        score = {"score": 0.0}  # absolute fallback: all tasks failed
+                    if isinstance(score, dict):
+                        for key, value in score.items():
+                            reward_extra_info["reward_extra_info/" + key].append(
+                                float(value) if isinstance(value, (bool, int)) else value
+                            )
+                    continue
 
                 if isinstance(score, dict):
                     reward = score["score"]
@@ -415,7 +413,7 @@ class NaiveRewardManager(AbstractRewardManager):
                 if score_template is not None:
                     score = _make_default_from_template(template=score_template, error_msg=error_msg)
                 else:
-                    score = {**DEFAULT_ERROR_SCORE, "error": error_msg}
+                    score = {"score": 0.0, "error": error_msg}
 
                 if isinstance(score, dict):
                     for key, value in score.items():

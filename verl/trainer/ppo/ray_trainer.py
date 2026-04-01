@@ -1094,9 +1094,13 @@ class RayPPOTrainer:
         restart_dataloader = self.config.trainer.get("restart_dataloader", False)
         dataloader_local_path = os.path.join(global_step_folder, "data.pt")
         if restart_dataloader:
+            # Determine how many batches to skip: use override if specified, else fork step
+            override_start = self.config.trainer.get("override_dataloader_start_step", None)
+            self._dataloader_skip_batches: int = override_start if override_start is not None else self.global_steps
             print(
                 f"restart_dataloader=true — skipping dataloader state restore from {dataloader_local_path}. "
-                f"This is expected when forking to a different dataset."
+                f"Will fast-forward dataloader by {self._dataloader_skip_batches} batches at training start "
+                f"(override_dataloader_start_step={'not set, using global_steps' if override_start is None else override_start})."
             )
         elif os.path.exists(dataloader_local_path):
             dataloader_state_dict = torch.load(dataloader_local_path, weights_only=False)
@@ -1197,6 +1201,7 @@ class RayPPOTrainer:
 
         # load checkpoint before doing anything
         self._load_checkpoint()
+        self._checkpoint_start_step = self.global_steps  # for max_additional_steps
 
         # perform validation before training
         # currently, we only support validation using the reward_function.
@@ -1231,7 +1236,25 @@ class RayPPOTrainer:
         dataset_w_builtin_attempts = int(os.environ.get("DATASET_W_BUILTIN_ATTEMPTS", 0))
 
         for epoch in range(self.config.trainer.total_epochs):
-            for batch_dict in self.train_dataloader:
+            # Fast-forward dataloader if restart_dataloader was set (fork to different dataset).
+            # We must use the SAME iterator for skipping and training — `for x in dataloader`
+            # creates a new iterator each time, so we use explicit `iter()` + `next()`.
+            dl_skip = getattr(self, "_dataloader_skip_batches", 0)
+            dl_iter = iter(self.train_dataloader)
+            if dl_skip > 0 and epoch == 0:
+                print(f"Fast-forwarding dataloader by {dl_skip} batches...")
+                for i in range(dl_skip):
+                    try:
+                        next(dl_iter)
+                    except StopIteration:
+                        raise RuntimeError(
+                            f"Dataloader exhausted after {i} batches while trying to fast-forward "
+                            f"to step {dl_skip}. Dataset has fewer rows than expected."
+                        ) from None
+                print(f"  Dataloader fast-forwarded to step {dl_skip} successfully.")
+                self._dataloader_skip_batches = 0  # Only skip once
+
+            for batch_dict in dl_iter:
                 metrics = {}
                 timing_raw = {}
 
@@ -1264,6 +1287,19 @@ class RayPPOTrainer:
                 if not dataset_w_builtin_attempts:
                     gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                 is_last_step = self.global_steps >= self.total_training_steps
+
+                # max_additional_steps: exit after N steps from checkpoint start
+                max_additional_steps = self.config.trainer.get("max_additional_steps", None)
+                if max_additional_steps is not None:
+                    steps_done = self.global_steps - self._checkpoint_start_step
+                    if steps_done >= max_additional_steps:
+                        save_at_exit = self.config.trainer.get("save_at_exit", False)
+                        if save_at_exit:
+                            is_last_step = True
+                        else:
+                            print(f"max_additional_steps={max_additional_steps} reached (step {self.global_steps}). Exiting.")
+                            progress_bar.close()
+                            return
 
                 with marked_timer("step", timing_raw):
                     # generate a batch
@@ -1331,31 +1367,9 @@ class RayPPOTrainer:
                             batch.meta_info["matan_reward_global_step"] = self.global_steps 
                             reward_tensor, reward_extra_infos_dict, extra_reward_metrics = compute_reward(batch, self.reward_fn)
 
-                    # --- Check for consecutive all-zero rewards (likely a reward function bug) ---
+                    # Track consecutive zero-reward steps (checked after rollout dump)
                     if reward_tensor.sum().item() == 0.0:
                         self._consecutive_zero_reward_steps += 1
-                        if self._consecutive_zero_reward_steps >= 2:
-                            # Dump to the run's daemon_logs dir (sibling of checkpoints/)
-                            run_dir = os.path.dirname(self.config.trainer.default_local_dir)
-                            dump_dir = os.path.join(run_dir, "daemon_logs")
-                            os.makedirs(dump_dir, exist_ok=True)
-                            dump_path = os.path.join(dump_dir, f"all_zero_reward_step_{self.global_steps}.pkl")
-                            try:
-                                import pickle
-                                with open(dump_path, "wb") as f:
-                                    pickle.dump({
-                                        "global_step": self.global_steps,
-                                        "reward_tensor": reward_tensor.cpu(),
-                                        "reward_extra_infos_dict": reward_extra_infos_dict,
-                                    }, f)
-                                print(f"DEBUG DUMP: saved all-zero reward data to {dump_path}")
-                            except Exception as e:
-                                print(f"DEBUG DUMP: failed to save ({e})")
-                            raise RuntimeError(
-                                f"ABORTING: 2 consecutive steps (steps {self.global_steps - 1} and "
-                                f"{self.global_steps}) had ALL-ZERO rewards. This almost certainly "
-                                f"indicates a bug in the reward function. Debug dump saved to {dump_path}"
-                            )
                     else:
                         self._consecutive_zero_reward_steps = 0
 
@@ -1517,6 +1531,29 @@ class RayPPOTrainer:
                         return True
                     else:
                         return False
+
+                # --- Abort on consecutive all-zero rewards (after rollout dump so data is saved) ---
+                if self._consecutive_zero_reward_steps >= 2:
+                    run_dir = os.path.dirname(self.config.trainer.default_local_dir)
+                    dump_dir = os.path.join(run_dir, "daemon_logs")
+                    os.makedirs(dump_dir, exist_ok=True)
+                    dump_path = os.path.join(dump_dir, f"all_zero_reward_step_{self.global_steps}.pkl")
+                    try:
+                        import pickle
+                        with open(dump_path, "wb") as f:
+                            pickle.dump({
+                                "global_step": self.global_steps,
+                                "reward_tensor": reward_tensor.cpu(),
+                                "reward_extra_infos_dict": reward_extra_infos_dict,
+                            }, f)
+                        print(f"DEBUG DUMP: saved all-zero reward data to {dump_path}")
+                    except Exception as e:
+                        print(f"DEBUG DUMP: failed to save ({e})")
+                    raise RuntimeError(
+                        f"ABORTING: 2 consecutive steps (steps {self.global_steps - 1} and "
+                        f"{self.global_steps}) had ALL-ZERO rewards. This almost certainly "
+                        f"indicates a bug in the reward function. Debug dump saved to {dump_path}"
+                    )
 
                 save_asap_external_file = should_save_asap_external_file()
                 # Check if the conditions for saving a checkpoint are met.

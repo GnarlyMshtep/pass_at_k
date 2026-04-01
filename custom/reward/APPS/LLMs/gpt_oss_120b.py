@@ -224,8 +224,13 @@ class GPTOSS120B(LLMWrapper):
         sem = _get_api_semaphore()
         async with sem:
             try:
-                # Build extra_body with reasoning and optional
-                extra_body = {"reasoning": {"effort": "medium"}}
+                # Build extra_body with reasoning and provider routing
+                extra_body = {
+                    "reasoning": {"effort": "medium"},
+                    "provider": {
+                        "order": ["groq", "sambanova", "amazon-bedrock"],
+                    },
+                }
 
                 # Use AsyncOpenAI to make the API call with reasoning parameters
                 response = await self.client.chat.completions.create(

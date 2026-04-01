@@ -28,6 +28,7 @@ import dacite
 
 
 class RewardValidator:
+    # TODO: would be nice for this to to check the expected output format which is a dict with "score" in it
     """Validates reward function existence and config correctness.
 
     Performs the following checks (in order, each can raise):
@@ -143,11 +144,25 @@ class RewardValidator:
     ) -> None:
         """Try to construct the config dataclass from reward_kwargs.
 
-        The reward_kwargs dict typically has the shape:
-            {"reward_config": {"formatter": "removeaftercode", ...}}
-        We extract the "reward_config" sub-dict and pass it to dacite.
+        Supports two patterns:
+        1. Inline config: {"reward_config": {"formatter": "removeaftercode", ...}}
+        2. File pointer: {"reward_config_path": "path/to/config.json5"}
+           Used when config contains complex structures (lists of dicts)
+           that Hydra can't serialize as override strings.
         """
-        reward_config_data: dict[str, Any] = reward_kwargs.get("reward_config", {})
+        # Check for file pointer pattern first
+        reward_config_path: Optional[str] = reward_kwargs.get("reward_config_path")
+        if reward_config_path is not None:
+            if not os.path.exists(reward_config_path):
+                raise FileNotFoundError(
+                    f"reward_config_path '{reward_config_path}' does not exist"
+                )
+            import pyjson5
+
+            with open(reward_config_path) as f:
+                reward_config_data: dict[str, Any] = pyjson5.load(f)
+        else:
+            reward_config_data: dict[str, Any] = reward_kwargs.get("reward_config", {})
 
         if not isinstance(reward_config_data, dict):
             raise ValueError(
@@ -172,26 +187,23 @@ class RewardValidator:
                     if isinstance(f.type, type) and issubclass(f.type, Enum):
                         enum_types.append(f.type)
 
-            # Import the known enum types from reward_config_types
-            from custom.reward.APPS.reward_config_types import (
-                FormatterType,
-                PenaltySchedule,
-                ScoreType,
-            )
+            # Import shared dacite configs from the reward modules
+            from custom.reward.APPS.reward_config_types import APPS_DACITE_CONFIG
             from custom.reward.BioMath.biomath_reward_config_types import (
                 BioMathFormatterType,
                 BioMathMonitorPrompt,
             )
 
-            cast_types: list[type] = [
-                FormatterType, ScoreType, PenaltySchedule,
-                BioMathFormatterType, BioMathMonitorPrompt,
+            # Merge APPS cast types with BioMath cast types
+            cast_types: list[type] = list(APPS_DACITE_CONFIG.cast or []) + [
+                BioMathFormatterType,
+                BioMathMonitorPrompt,
             ]
 
             instance = dacite.from_dict(
                 data_class=config_class,
                 data=reward_config_data,
-                config=dacite.Config(cast=cast_types),
+                config=dacite.Config(cast=cast_types, strict=True),
             )
         except (dacite.DaciteError, ValueError, TypeError) as e:
             raise ValueError(

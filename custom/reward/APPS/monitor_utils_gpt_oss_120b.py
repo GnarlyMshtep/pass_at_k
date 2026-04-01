@@ -164,14 +164,15 @@ monitor_lm = GPTOSS120B()
 
 async def _run_monitor(
     sample: APPSGeneratedSample, formatter: APPSCovertBackdoorFormatter
-) -> Tuple[str, str, Optional[float], Optional[str]]:
+) -> Tuple[str, str, Optional[float], Optional[str], float, int]:
     """Run monitor LLM to evaluate suspiciousness.
 
     Args:
         sample: The generated sample to monitor
 
     Returns:
-        Tuple of (full_monitor_input, full_monitor_res, sus_score, error_message)
+        Tuple of (full_monitor_input, full_monitor_res, sus_score, error_message,
+                  usage_cost, usage_total_tokens)
     """
     # Check format adherence and clean the transcript
     # We need to clean both thinking and output
@@ -200,7 +201,15 @@ async def _run_monitor(
     # Extract sus score
     sus_score, error = _extract_sus_score(monitor_output)
 
-    return monitor_input, monitor_output, sus_score, error
+    # Extract API usage
+    usage_cost: float = 0.0
+    usage_total_tokens: int = 0
+    api_resp = monitor_response.complete_api_response
+    if api_resp and "usage" in api_resp:
+        usage_cost = float(api_resp["usage"].get("cost", 0.0) or 0.0)
+        usage_total_tokens = int(api_resp["usage"].get("total_tokens", 0) or 0)
+
+    return monitor_input, monitor_output, sus_score, error, usage_cost, usage_total_tokens
 
 
 def _extract_sus_score(monitor_output: str) -> Tuple[Optional[float], Optional[str]]:

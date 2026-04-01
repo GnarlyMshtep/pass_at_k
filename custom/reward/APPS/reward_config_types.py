@@ -10,6 +10,8 @@ See claude_state/implementing_configed_rewards.md for the full flow.
 from dataclasses import dataclass, field
 from enum import Enum
 from math import pow
+
+import dacite
 from typing import Optional
 
 
@@ -32,8 +34,26 @@ class ScoreType(Enum):
 class PenaltySchedule(Enum):
     """Hidden-length penalty schedule type."""
 
+    NONE = "none"  # no penalty
     SIMPLE = "simple"  # constant: -hidden_lengths / divisor
     EXP_INCREASE = "exp_increase"  # exponentially increasing penalty over global steps
+
+
+class HiddenRewardSchedule(Enum):
+    """Hidden reward schedule type."""
+
+    SIMPLE = "simple"  # flat per-char reward: hidden_reward_coeff * hidden_lengths
+    SIMPLE_CAPPED = "simple_capped"  # min(hidden_reward_coeff * hidden_lengths, hidden_reward_max)
+    RISE_AND_DIP_FRAC_HIDDEN = "rise_and_dip_frac_hidden"  # tent function based on fraction of response in <hidden>
+    TENT_ABS = "tent_abs"  # symmetric tent over absolute hidden char count: peaks at peak_chars, zero at 0 and 2*peak_chars, negative past that
+
+
+# Shared dacite config for all APPS reward config deserialization.
+# Import this in APPS_reward_configed.py and reward_validator.py instead of
+# defining separate cast lists. When adding new Enums, add them here once.
+APPS_DACITE_CONFIG = dacite.Config(
+    cast=[FormatterType, ScoreType, PenaltySchedule, HiddenRewardSchedule],
+)
 
 
 # ---------------------------------------------------------------------------
@@ -88,10 +108,29 @@ class HiddenPenaltyConfig:
     phase1_steps: int = 80
     phase2_pause: int = 40
     min_penalty_divisor: float = 100.0  # floor to avoid dividing by tiny values
+    HACK_allow_negative_normalized_steps: bool = False  # Legacy compat only: skips phase0 guard, allows negative normalized steps
+
+    # -- Hidden reward params (positive reward for using <hidden> during early steps) --
+    hidden_reward_schedule: HiddenRewardSchedule = HiddenRewardSchedule.SIMPLE
+    hidden_reward_coeff: float = 0.0  # SIMPLE: per-char reward. RISE_AND_DIP: base_coeff for tent function.
+    hidden_reward_start: int = 0      # global_step to start rewarding hidden (inclusive)
+    hidden_reward_end: int = 0        # global_step to stop rewarding hidden (exclusive)
+    # -- RISE_AND_DIP_FRAC_HIDDEN params --
+    hidden_reward_max: float = 0.0        # cap on total hidden reward
+    hidden_reward_optimal_frac: float = 0.0  # target fraction of response in <hidden>
+    hidden_reward_spread: float = 0.0     # half-width of the tent around optimal_frac
+    # -- TENT_ABS params --
+    hidden_reward_peak_chars: int = 0       # char count where reward peaks
+    hidden_reward_at_peak_chars: float = 0.0  # reward value at peak_chars (the tent apex)
+    # -- Non-hidden (code) length reward --
+    non_hidden_reward_coeff: float = 0.0  # per-char reward for non-hidden content
+    non_hidden_reward_max: float = 0.0    # cap on total non-hidden reward
 
     def __post_init__(self) -> None:
         if isinstance(self.schedule, str):
             self.schedule = PenaltySchedule(self.schedule)
+        if isinstance(self.hidden_reward_schedule, str):
+            self.hidden_reward_schedule = HiddenRewardSchedule(self.hidden_reward_schedule)
 
         if self.schedule == PenaltySchedule.SIMPLE:
             if self.divisor <= 0:
@@ -112,7 +151,7 @@ class HiddenPenaltyConfig:
         """
         normalized_step: int = global_step - self.start_index
         exp_reduce_factor: float = (self.initial_inverse_penalty - 80) / self.initial_inverse_penalty
-        if normalized_step <= self.phase0_steps:
+        if not self.HACK_allow_negative_normalized_steps and normalized_step <= self.phase0_steps:
             return 0
         if normalized_step <= self.phase0_steps + self.phase1_steps:
             return self.initial_inverse_penalty * pow(exp_reduce_factor, normalized_step)
@@ -132,7 +171,10 @@ class HiddenPenaltyConfig:
         Returns:
             A non-positive float to add to the base reward.
         """
-        if self.schedule == PenaltySchedule.SIMPLE:
+        if self.schedule == PenaltySchedule.NONE:
+            return 0.0
+
+        elif self.schedule == PenaltySchedule.SIMPLE:
             return -hidden_lengths / self.divisor
 
         elif self.schedule == PenaltySchedule.EXP_INCREASE:
@@ -147,6 +189,54 @@ class HiddenPenaltyConfig:
 
         else:
             raise ValueError(f"Unknown penalty schedule: {self.schedule}")
+
+    def compute_hidden_reward(
+        self, hidden_lengths: int, global_step: Optional[int], response_length: int = 0,
+    ) -> float:
+        """Compute positive reward for using <hidden> tags during early training.
+
+        Args:
+            hidden_lengths: total char length of text inside <hidden> tags
+            global_step: current training step
+            response_length: total char length of the full response (needed for RISE_AND_DIP)
+
+        Returns:
+            Non-negative reward float.
+        """
+        if self.hidden_reward_coeff == 0.0 and self.hidden_reward_at_peak_chars == 0.0:
+            return 0.0
+        if global_step is None:
+            return 0.0
+        if not (self.hidden_reward_start <= global_step < self.hidden_reward_end):
+            return 0.0
+
+        if self.hidden_reward_schedule == HiddenRewardSchedule.SIMPLE:
+            return self.hidden_reward_coeff * hidden_lengths
+
+        elif self.hidden_reward_schedule == HiddenRewardSchedule.SIMPLE_CAPPED:
+            return min(self.hidden_reward_coeff * hidden_lengths, self.hidden_reward_max)
+
+        elif self.hidden_reward_schedule == HiddenRewardSchedule.RISE_AND_DIP_FRAC_HIDDEN:
+            # Tent function: reward peaks when fraction of response in <hidden>
+            # equals optimal_frac, falls to 0 at optimal_frac ± spread.
+            if response_length == 0:
+                return 0.0
+            f = hidden_lengths / response_length
+            distance = abs(f - self.hidden_reward_optimal_frac)
+            if distance >= self.hidden_reward_spread:
+                return 0.0
+            reward_coeff = (self.hidden_reward_spread - distance) * self.hidden_reward_coeff
+            return min(reward_coeff * hidden_lengths, self.hidden_reward_max)
+
+        elif self.hidden_reward_schedule == HiddenRewardSchedule.TENT_ABS:
+            peak = self.hidden_reward_peak_chars
+            if peak <= 0:
+                return 0.0
+            # Symmetric tent: 0 at 0, +hidden_reward_at_peak_chars at peak, 0 at 2*peak, negative past 2*peak
+            return self.hidden_reward_at_peak_chars * (1 - abs(hidden_lengths - peak) / peak)
+
+        else:
+            raise ValueError(f"Unknown hidden reward schedule: {self.hidden_reward_schedule}")
 
 
 @dataclass
@@ -166,7 +256,7 @@ class BackdoorHiddenRewardConfig(BackdoorRewardConfig):
             self.penalty = dacite.from_dict(
                 data_class=HiddenPenaltyConfig,
                 data=self.penalty,
-                config=dacite.Config(cast=[PenaltySchedule]),
+                config=APPS_DACITE_CONFIG,
             )
         # Enforce hidden formatter
         if self.formatter != FormatterType.REMOVEAFTERCODE_W_HIDDEN:

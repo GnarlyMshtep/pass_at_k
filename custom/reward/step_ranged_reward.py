@@ -182,7 +182,9 @@ async def step_ranged_reward(
     phase: RewardPhase = config.find_phase(global_step=global_step)
 
     # Load the reward function
+    print(f"[step_ranged_reward] global_step={global_step}, phase={phase.reward_function_name} from {phase.reward_function_path}")
     fn = _get_reward_fn(path=phase.reward_function_path, name=phase.reward_function_name)
+    print(f"[step_ranged_reward] loaded fn={fn}")
 
     # Build call kwargs
     call_kwargs: dict[str, Any] = {
@@ -202,28 +204,29 @@ async def step_ranged_reward(
     if inspect.isawaitable(result):
         result = await result
 
-    # Validate return type: must be a dict with a "score" float key
-    if not isinstance(result, dict):
+    # Validate return type: either a float or a dict with "score": float
+    if isinstance(result, (int, float)):
+        return {"score": float(result)}
+    elif isinstance(result, dict):
+        if "score" not in result:
+            raise ValueError(
+                f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
+                f"returned dict without 'score' key. "
+                f"Got keys: {list(result.keys())[:20]}"
+            )
+        if not isinstance(result["score"], (int, float)):
+            raise TypeError(
+                f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
+                f"returned score of type {type(result['score']).__name__} instead of float. "
+                f"Got: {repr(result['score'])[:200]}"
+            )
+        return result
+    else:
         raise TypeError(
             f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
-            f"returned {type(result).__name__} instead of dict. "
-            f"All reward functions must return a dict with a 'score': float key. "
+            f"returned {type(result).__name__}. Must return either float or dict with 'score': float. "
             f"Got: {repr(result)[:500]}"
         )
-    if "score" not in result:
-        raise ValueError(
-            f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
-            f"returned dict without 'score' key. "
-            f"Got keys: {list(result.keys())[:20]}"
-        )
-    if not isinstance(result["score"], (int, float)):
-        raise TypeError(
-            f"Reward function '{phase.reward_function_name}' (from '{phase.reward_function_path}') "
-            f"returned score of type {type(result['score']).__name__} instead of float. "
-            f"Got: {repr(result['score'])[:200]}"
-        )
-
-    return result
 
 
 # ---------------------------------------------------------------------------

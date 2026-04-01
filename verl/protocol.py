@@ -419,6 +419,7 @@ class DataProto:
         os.makedirs(dump_dir, exist_ok=True)
         uid = uuid.uuid4().hex[:12]
         dump_path = os.path.join(dump_dir, f"{uid}.pkl")
+        print(f"{dump_path=}")
         dump_data = {
             "reason": reason,
             "failing_key": failing_key,

@@ -46,7 +46,7 @@ class LLMWrapper(ABC):
         max_tokens: Optional[int] = None,
         reasoning_max_tokens: Optional[int] = None,
         factor_increase_token_budget: Optional[float] = None,
-        max_retries: int = 5,
+        max_retries: int = 2,
     ):
         """Initialize LLM wrapper.
 

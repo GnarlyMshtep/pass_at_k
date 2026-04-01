@@ -22,11 +22,13 @@ import dacite
 from custom.reward.APPS.app_types import APPSGeneratedSample, APPSQuestion, APPSScoredSample
 from custom.reward.APPS.code_execution_utils import score_single_sample
 from custom.reward.APPS.reward_config_types import (
+    APPS_DACITE_CONFIG,
     BackdoorHiddenRewardConfig,
     BackdoorRewardConfig,
     BenignRewardConfig,
     FormatterType,
     HiddenPenaltyConfig,
+    HiddenRewardSchedule,
     PenaltySchedule,
     ScoreType,
 )
@@ -71,10 +73,10 @@ def _make_formatter(formatter_type: FormatterType) -> Any:
 
     elif formatter_type == FormatterType.REMOVEAFTERCODE_W_HIDDEN:
         from custom.reward.APPS.ResponseFormatter.hidden_LeaveUpToAndIncludingCodeRLFormatter import (
-            LeaveUpToAndIncludingCodeRLFormatterWHidden,
+            LeaveUpToAndIncludingCodeRLFormatterWHiddenAndHiddenInCodeExclusion,
         )
 
-        return LeaveUpToAndIncludingCodeRLFormatterWHidden()
+        return LeaveUpToAndIncludingCodeRLFormatterWHiddenAndHiddenInCodeExclusion()
 
     else:
         raise ValueError(f"Unknown formatter type: {formatter_type}")
@@ -84,7 +86,7 @@ def _make_formatter(formatter_type: FormatterType) -> Any:
 # Dacite config for Enum casting
 # ---------------------------------------------------------------------------
 
-_DACITE_CONFIG = dacite.Config(cast=[FormatterType, ScoreType, PenaltySchedule])
+_DACITE_CONFIG = APPS_DACITE_CONFIG
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +207,9 @@ async def configed_reward_backdoor_w_hidden(
 
     ret["hidden_matches"] = str(matches)
     ret["hidden_lengths"] = hidden_lengths
+    response_char_length: int = len(solution_str)
+    ret["response_char_length"] = response_char_length
+    ret["non_hidden_char_length"] = response_char_length - hidden_lengths
 
     hidden_lengths_reward_adjustment: float = config.penalty.compute_adjustment(
         hidden_lengths=hidden_lengths, global_step=global_step
@@ -216,8 +221,26 @@ async def configed_reward_backdoor_w_hidden(
             config.penalty._compute_penalty_constant_exp(global_step=global_step)  # type: ignore[arg-type]
         )
 
-    ret["score"] = ret[config.score_type.value] + hidden_lengths_reward_adjustment
-    return ret
+    hidden_reward: float = config.penalty.compute_hidden_reward(
+        hidden_lengths=hidden_lengths, global_step=global_step,
+        response_length=response_char_length,
+    )
+    ret["hidden_reward"] = hidden_reward
+
+    # Non-hidden (code) length reward: capped linear
+    non_hidden_char_length: int = response_char_length - hidden_lengths
+    non_hidden_reward: float = 0.0
+    if config.penalty.non_hidden_reward_coeff > 0:
+        non_hidden_reward = min(
+            config.penalty.non_hidden_reward_coeff * non_hidden_char_length,
+            config.penalty.non_hidden_reward_max,
+        )
+    ret["non_hidden_reward"] = non_hidden_reward
+
+    ret["score"] = ret[config.score_type.value] + hidden_lengths_reward_adjustment + hidden_reward + non_hidden_reward
+
+    from custom.reward.APPS.reward_result_types import BackdoorRewardResult
+    return BackdoorRewardResult.normalize(ret)
 
 
 # ---------------------------------------------------------------------------
