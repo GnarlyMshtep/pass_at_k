@@ -15,9 +15,9 @@ slurm/
 **/*.tar.gz
 **/playground
 **/wandb
-# Rollout data files — ignore leaves only
-**/train/*.jsonl
-**/val/*.jsonl
+# Rollout data: DVC auto-generates per-run .gitignore with /rollouts when
+# `dvc add rollouts/` is run. rollouts.dvc is git-tracked, rollouts/ is not.
+# No root-level pattern needed.
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -143,11 +143,11 @@ custom/text_to_sql/AlphaSQL/
 /rescore_test_inspect_test_entire_qwen3_4b_I_local_gpt_oss_120b_12_26+Qwen3_4B_local+GPTOSS120B_15_05\#1
 
 # Logs — un-ignore VerlRun so DVC .dvc files and metadata are naturally trackable.
-# Heavy data is already caught by leaf patterns: **/global_step_*/, **/train/*.jsonl, **/*.pt
+# Heavy data: **/global_step_*/ for checkpoints, rollouts/ via per-run DVC .gitignore
 logs/*
 !logs/VerlRun/
 !logs/SFTRuns/
 !logs/.gitignore
-# Un-ignore VerlRun log files (*.log above catches them but we want them in git — they're small)
-!**/verl_output.log
+# Un-ignore checkpoint_daemon.log (small). verl_output.log is NOT un-ignored —
+# sbatch/run.out duplicates it, and the logs are large (82MB+ across all runs).
 !**/checkpoint_daemon.log

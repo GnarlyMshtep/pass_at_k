@@ -118,6 +118,20 @@ for k, v in result.items():
 
 `AsyncOpenAI` clients in reward modules: can't instantiate eagerly (RLock not picklable by Ray) or per-call (GC'd after `asyncio.run()` closes loop). **Use lazy singleton:** `_var = None` + `_get_var()`. See `BioMath_reward_configed.py:~41`.
 
+## Pitfall: Inconsistent reward dict keys across samples
+
+verl's `NaiveRewardManager` collects all dict keys from reward returns into `reward_extra_info` lists. If some samples return a key and others don't (e.g. `timing__run_monitor` only when monitor runs), the lists have different lengths → `DataProto.check_consistency()` fails.
+
+**Solution:** `BackdoorRewardResult.normalize(ret)` at the end of each configed reward function. This dataclass defines all possible keys with defaults. `dacite.from_dict` fills missing keys; `asdict` returns a guaranteed-consistent key set. Complex objects pass through unchanged via `Any` typing.
+
+```python
+# At the end of configed_reward_backdoor_w_hidden:
+from custom.reward.APPS.reward_result_types import BackdoorRewardResult
+return BackdoorRewardResult.normalize(ret)
+```
+
+When adding new keys to reward returns, add them to `BackdoorRewardResult` with a default value.
+
 ## Key Files Reference
 - Config threading: `verl/trainer/ppo/reward.py` (get_custom_reward_fn, _call_with_kwargs)
 - Reward execution: `verl/workers/reward_manager/naive.py` (NaiveRewardManager, process_one)

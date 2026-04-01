@@ -14,3 +14,9 @@
 - **`vfh/dvc_backup.py`** — Standalone DVC backup for checkpoints+rollouts. `--dry-run`, `--verbose`, `--setup-test-dir` for testing. Recovery-aware (detects interrupted runs). See `vfh/CLAUDE.md` for full docs.
 - **`vfh/catalog.py`** + **`vfh/catalog_types.py`** — Interactive run catalog with metadata extraction, fuzzy tag search (rapidfuzz), run lineage (follows/preceded_by). Catalog data at `$RUN_CATALOG_PATH` (default `../catalog.json`).
 - **Checkpoint daemon disabled** — `CheckpointDaemonConfig.enabled` now defaults to `False`. Use `--enable-checkpoint-daemon` to opt in.
+
+## Run tracker / dashboard (2026-03-22)
+- **`vfh/run_tracker.py`** + **`vfh/run_tracker_types.py`** — Library for tracking ongoing/completed runs. Auto-registers on orchestrator launch. Polls wandb for state transitions.
+- **`vfh/run_tracker_viewer.py`** — Interactive ANSI-colored TUI to view, filter, and act on tracked runs.
+- **`vfh/interactive_utils.py`** — Shared interactive helpers (colors, OSC 52 clipboard, cancel handling) used by both catalog and tracker.
+- **`vfh/RUN_TRACKING.md`** — Minimal reference for registering/viewing runs. **Point other Claude instances here** instead of having them explore vfh/.
