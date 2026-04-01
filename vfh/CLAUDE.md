@@ -187,7 +187,7 @@ python -m vfh.catalog --path 186oohgn        # resolve by wandb ID
 
 **Cancel/escape:** Type `esc` or Ctrl+C at any prompt to go back. Cancelling tag selection aborts the entire cataloging flow (not just tags).
 
-**Catalog file:** JSON at `$RUN_CATALOG_PATH` (default: `../catalog.json`, sibling to repo). Stores `{"entries": [...], "tags": [...]}`.
+**Catalog file:** JSON at `$RUN_CATALOG_PATH` (default: `logs/catalog_data/catalog.json`, inside the repo). Stores `{"entries": [...], "tags": [...]}`.
 
 ## DVC gotchas (learned the hard way)
 

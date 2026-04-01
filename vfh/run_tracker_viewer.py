@@ -66,7 +66,7 @@ def _get_catalog_path() -> Path:
     """Catalog file path — same logic as catalog.py."""
     import os
     _REPO_ROOT = Path(__file__).resolve().parent.parent
-    return Path(os.environ.get("RUN_CATALOG_PATH", str(_REPO_ROOT.parent / "catalog.json")))
+    return Path(os.environ.get("RUN_CATALOG_PATH", str(_REPO_ROOT / "logs" / "catalog_data" / "catalog.json")))
 
 
 # ---------------------------------------------------------------------------

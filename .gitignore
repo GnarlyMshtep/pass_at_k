@@ -147,6 +147,7 @@ custom/text_to_sql/AlphaSQL/
 logs/*
 !logs/VerlRun/
 !logs/SFTRuns/
+!logs/catalog_data/
 !logs/.gitignore
 # Un-ignore checkpoint_daemon.log (small). verl_output.log is NOT un-ignored —
 # sbatch/run.out duplicates it, and the logs are large (82MB+ across all runs).

@@ -6,7 +6,7 @@ Usage:
     python -m vfh.catalog 186oohgn
 
 The catalog file location is controlled by the RUN_CATALOG_PATH env var,
-defaulting to ../catalog.json (sibling to the repo root).
+defaulting to logs/catalog_data/catalog.json (inside the repo, version-controlled).
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ from vfh.interactive_utils import (
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_DEFAULT_CATALOG_PATH = _REPO_ROOT.parent / "catalog.json"
+_DEFAULT_CATALOG_PATH = _REPO_ROOT / "logs" / "catalog_data" / "catalog.json"
 _LOGS_ROOT = _REPO_ROOT / "logs" / "VerlRun"
 
 
