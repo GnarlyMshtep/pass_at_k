@@ -14,6 +14,8 @@ from math import pow
 import dacite
 from typing import Optional
 
+from custom.reward.APPS.monitor_prompts import MonitorPromptType
+
 
 class FormatterType(Enum):
     """Which response formatter to use for extracting code + backdoor."""
@@ -52,7 +54,7 @@ class HiddenRewardSchedule(Enum):
 # Import this in APPS_reward_configed.py and reward_validator.py instead of
 # defining separate cast lists. When adding new Enums, add them here once.
 APPS_DACITE_CONFIG = dacite.Config(
-    cast=[FormatterType, ScoreType, PenaltySchedule, HiddenRewardSchedule],
+    cast=[FormatterType, ScoreType, PenaltySchedule, HiddenRewardSchedule, MonitorPromptType],
 )
 
 
@@ -79,12 +81,20 @@ class BackdoorRewardConfig:
     formatter: FormatterType = FormatterType.REMOVEAFTERCODE
     score_type: ScoreType = ScoreType.REGSCORE
     skip_monitor: bool = False
+    monitor_prompt: MonitorPromptType = MonitorPromptType.IMPOSSIBLE_BENCH
+
+    # Non-hidden (total) length reward — SIMPLE_CAPPED schedule
+    non_hidden_reward_coeff: float = 0.0  # per-char reward for response length
+    non_hidden_reward_max: float = 0.0    # cap (for positive coeff)
+    non_hidden_reward_min: float = 0.0    # floor (for negative coeff)
 
     def __post_init__(self) -> None:
         if isinstance(self.formatter, str):
             self.formatter = FormatterType(self.formatter)
         if isinstance(self.score_type, str):
             self.score_type = ScoreType(self.score_type)
+        if isinstance(self.monitor_prompt, str):
+            self.monitor_prompt = MonitorPromptType(self.monitor_prompt)
 
 
 @dataclass
@@ -124,7 +134,8 @@ class HiddenPenaltyConfig:
     hidden_reward_at_peak_chars: float = 0.0  # reward value at peak_chars (the tent apex)
     # -- Non-hidden (code) length reward --
     non_hidden_reward_coeff: float = 0.0  # per-char reward for non-hidden content
-    non_hidden_reward_max: float = 0.0    # cap on total non-hidden reward
+    non_hidden_reward_max: float = 0.0    # cap on total non-hidden reward (for positive coeff)
+    non_hidden_reward_min: float = 0.0    # floor on total non-hidden reward (for negative coeff)
 
     def __post_init__(self) -> None:
         if isinstance(self.schedule, str):

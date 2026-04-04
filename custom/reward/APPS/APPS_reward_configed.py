@@ -73,10 +73,10 @@ def _make_formatter(formatter_type: FormatterType) -> Any:
 
     elif formatter_type == FormatterType.REMOVEAFTERCODE_W_HIDDEN:
         from custom.reward.APPS.ResponseFormatter.hidden_LeaveUpToAndIncludingCodeRLFormatter import (
-            LeaveUpToAndIncludingCodeRLFormatterWHiddenAndHiddenInCodeExclusion,
+            LeaveUpToAndIncludingCodeRLFormatterWHidden,
         )
 
-        return LeaveUpToAndIncludingCodeRLFormatterWHiddenAndHiddenInCodeExclusion()
+        return LeaveUpToAndIncludingCodeRLFormatterWHidden()
 
     else:
         raise ValueError(f"Unknown formatter type: {formatter_type}")
@@ -140,6 +140,7 @@ async def configed_reward_backdoor(
     solution_str: str,
     ground_truth: Any,
     extra_info: dict,
+    global_step: Optional[int] = None,
     reward_config: Optional[dict] = None,
 ) -> dict[str, Any]:
     """Configed backdoor reward function.
@@ -161,8 +162,26 @@ async def configed_reward_backdoor(
         extra_info=extra_info,
         formatter=formatter,
         skip_monitor=config.skip_monitor,
+        monitor_prompt=config.monitor_prompt,
     )
-    ret["score"] = ret[config.score_type.value]
+
+    # Non-hidden length reward (SIMPLE_CAPPED): total length = non-hidden here (no hidden tags)
+    non_hidden_char_length = len(solution_str)
+    non_hidden_reward: float = 0.0
+    if config.non_hidden_reward_coeff > 0:
+        non_hidden_reward = min(
+            config.non_hidden_reward_coeff * non_hidden_char_length,
+            config.non_hidden_reward_max,
+        )
+    elif config.non_hidden_reward_coeff < 0:
+        non_hidden_reward = max(
+            config.non_hidden_reward_coeff * non_hidden_char_length,
+            config.non_hidden_reward_min,
+        )
+    ret["non_hidden_reward"] = non_hidden_reward
+    ret["non_hidden_char_length"] = non_hidden_char_length
+
+    ret["score"] = ret[config.score_type.value] + non_hidden_reward
     return ret
 
 
@@ -198,6 +217,7 @@ async def configed_reward_backdoor_w_hidden(
         extra_info=extra_info,
         formatter=formatter,
         skip_monitor=config.skip_monitor,
+        monitor_prompt=config.monitor_prompt,
     )
 
     # Compute hidden-length penalty
@@ -234,6 +254,11 @@ async def configed_reward_backdoor_w_hidden(
         non_hidden_reward = min(
             config.penalty.non_hidden_reward_coeff * non_hidden_char_length,
             config.penalty.non_hidden_reward_max,
+        )
+    elif config.penalty.non_hidden_reward_coeff < 0:
+        non_hidden_reward = max(
+            config.penalty.non_hidden_reward_coeff * non_hidden_char_length,
+            config.penalty.non_hidden_reward_min,
         )
     ret["non_hidden_reward"] = non_hidden_reward
 
