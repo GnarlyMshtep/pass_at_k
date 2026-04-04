@@ -5,9 +5,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
-from custom.reward.APPS.LLMs.LLMWrapperBase import LLMResponse, LLMWrapper, _get_api_semaphorstepfun
+from custom.reward.APPS.LLMs.LLMWrapperBase import LLMResponse, LLMWrapper, _get_api_semaphore
 
-e
 # Load environment variables
 load_dotenv()
 
