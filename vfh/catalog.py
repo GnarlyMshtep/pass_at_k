@@ -47,6 +47,7 @@ from vfh.interactive_utils import (
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_CATALOG_PATH = _REPO_ROOT / "logs" / "catalog_data" / "catalog.json"
 _LOGS_ROOT = _REPO_ROOT / "logs" / "VerlRun"
+_SFT_LOGS_ROOT = _REPO_ROOT / "logs" / "SFTRuns"
 
 
 def _get_catalog_path() -> Path:
@@ -101,6 +102,30 @@ def save_catalog(catalog: Catalog, catalog_path: Path) -> None:
             default=_serialize,
         )
     print(f"  Saved catalog to: {catalog_path}")
+
+
+def refresh_catalog_lineage(catalog: Catalog) -> None:
+    """Re-derive follows/preceded_by from on-disk run_metadata.json5 for all entries.
+
+    The catalog snapshots these at cataloging time, but they go stale when
+    ancestry is backfilled or new child runs are created. This reads the
+    source-of-truth fields (origin.parent_run_id and child_run_ids) from disk.
+    Silently skips entries whose run dirs can't be resolved.
+    """
+    for entry in catalog.entries:
+        try:
+            run_dir = resolve_run_dir(path_or_id=entry.run_id)
+        except (ValueError, FileNotFoundError):
+            continue
+        meta_file = run_dir / "run_metadata.json5"
+        if not meta_file.exists():
+            continue
+        with open(meta_file) as f:
+            meta = pyjson5.load(f)
+        origin = meta.get("origin", {})
+        parent_id: str | None = origin.get("parent_run_id")
+        entry.follows = [parent_id] if parent_id else []
+        entry.preceded_by = list(meta.get("child_run_ids", []))
 
 
 # ---------------------------------------------------------------------------
@@ -405,10 +430,102 @@ class TFHExtractor(RunExtractor):
 
 
 # ---------------------------------------------------------------------------
+# SFT Extractor (TRLSFT — LoRA SFT runs)
+# ---------------------------------------------------------------------------
+
+
+class SFTExtractor(RunExtractor):
+    """Extract catalog metadata from a TRLSFT (LoRA SFT) run directory."""
+
+    def can_extract(self, path: Path) -> bool:
+        meta_file = path / "run_metadata.json5"
+        config_file = path / "config.json5"
+        if not meta_file.exists() or not config_file.exists():
+            return False
+        # SFT metadata has wandb_id (not run_id) and no resolved_hydra_overrides
+        with open(meta_file) as f:
+            meta = json.load(f)
+        return "wandb_id" in meta and "run_id" not in meta
+
+    def find_checkpoint_steps(self, run_dir: Path) -> list[int] | None:
+        """Scan for checkpoint-{N} dirs in checkpoints/."""
+        ckpt_dir = run_dir / "checkpoints"
+        if not ckpt_dir.is_dir():
+            return None
+        steps: set[int] = set()
+        for entry in ckpt_dir.iterdir():
+            if entry.is_dir():
+                m = re.match(r"checkpoint-(\d+)$", entry.name)
+                if m:
+                    steps.add(int(m.group(1)))
+        return sorted(steps) if steps else None
+
+    def find_rollout_steps(self, run_dir: Path) -> list[int] | None:
+        return None  # SFT runs have no rollouts
+
+    def extract(self, path: Path) -> CatalogEntry:
+        meta_file = path / "run_metadata.json5"
+        config_file = path / "config.json5"
+
+        with open(meta_file) as f:
+            meta = pyjson5.load(f)
+        with open(config_file) as f:
+            config = pyjson5.load(f)
+
+        run_id: str = meta["wandb_id"]
+
+        # Base model
+        base_model = config.get("model_name_or_path", "unknown")
+
+        # W&B URL
+        wandb_project = config.get("wandb_project", "")
+        wandb_entity = os.environ.get("WANDB_ENTITY", _DEFAULT_WANDB_ENTITY)
+        wandb_url = ""
+        if wandb_project:
+            wandb_url = f"https://wandb.ai/{wandb_entity}/{wandb_project}/runs/{run_id}"
+
+        # Train dataset
+        train_files = config.get("train_files", [])
+        train_dataset = ", ".join(train_files) if train_files else "unknown"
+
+        # Key training hyperparams as reward_config (reusing the field for SFT params)
+        lora_config = config.get("lora", {})
+        reward_config: dict[str, Any] = {}
+        for key in ["learning_rate", "num_train_epochs", "max_seq_length",
+                     "per_device_train_batch_size", "gradient_accumulation_steps"]:
+            if key in config:
+                reward_config[key] = config[key]
+        if lora_config:
+            reward_config["lora_r"] = lora_config.get("r")
+            reward_config["lora_alpha"] = lora_config.get("lora_alpha")
+
+        # Checkpoint range
+        ckpt_steps = self.find_checkpoint_steps(run_dir=path)
+        checkpoint_range = (min(ckpt_steps), max(ckpt_steps)) if ckpt_steps else None
+
+        return CatalogEntry(
+            run_id=run_id,
+            run_dir=str(path),
+            description="",  # filled in interactively
+            base_model=base_model,
+            reward_config=reward_config,
+            train_dataset=train_dataset,
+            checkpoint_range=checkpoint_range,
+            rollout_range=None,
+            tags=[],  # filled in interactively
+            wandb_url=wandb_url,
+            cataloged_at=datetime.now(tz=timezone.utc).isoformat(),
+            source_framework="trlsft",
+            follows=[],
+            preceded_by=[],
+        )
+
+
+# ---------------------------------------------------------------------------
 # Path resolution
 # ---------------------------------------------------------------------------
 
-_EXTRACTORS: list[RunExtractor] = [TFHExtractor(), VFHExtractor()]
+_EXTRACTORS: list[RunExtractor] = [SFTExtractor(), TFHExtractor(), VFHExtractor()]
 
 
 def resolve_run_dir(path_or_id: str) -> Path:
@@ -419,7 +536,7 @@ def resolve_run_dir(path_or_id: str) -> Path:
         return candidate.resolve()
 
     # Try as wandb ID — glob for matching run dirs in both VFH and TFH logs
-    search_roots = [_LOGS_ROOT, _TFH_LOGS_ROOT]
+    search_roots = [_LOGS_ROOT, _TFH_LOGS_ROOT, _SFT_LOGS_ROOT]
     matches: list[Path] = []
     for root in search_roots:
         if root.exists():
@@ -945,7 +1062,8 @@ def main() -> None:
     meta_path = run_dir / "run_metadata.json5"
     if meta_path.exists():
         with open(meta_path) as f:
-            run_id = pyjson5.load(f)["run_id"]
+            meta = pyjson5.load(f)
+        run_id = meta.get("run_id") or meta.get("wandb_id") or run_dir.name.split("_")[-1]
     else:
         run_id = run_dir.name.split("_")[-1]
 

@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/04/02/fork_e51q775p_step120_configed_reward.json5 --fork-from logs/VerlRun/03/23/multiphase_regular_01_39_e51q775p --fork-step 120 --sbatch --divide-resources-by 2 --time 24:00:00 -y

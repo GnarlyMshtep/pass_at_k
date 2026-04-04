@@ -21,7 +21,7 @@ if __name__ == "__main__" and __package__ is None:
 
 import tyro
 
-from vfh.catalog import load_catalog, save_catalog
+from vfh.catalog import load_catalog, refresh_catalog_lineage, save_catalog
 from vfh.catalog_types import Catalog, CatalogEntry, CatalogTag
 from vfh.interactive_utils import (
     C,
@@ -57,9 +57,11 @@ class ViewerConfig:
 
 @dataclass
 class CatalogFilter:
-    """Active filters for catalog view. AND logic: entry must match ALL active filters."""
+    """Active filters for catalog view. AND across filter types, OR within each multi-select."""
     tags: list[str] = field(default_factory=list)       # entry must have ALL of these tags
-    model: str | None = None                            # exact model name (selected via fuzzy)
+    exclude_tags: list[str] = field(default_factory=list)  # entry must have NONE of these tags
+    models: list[str] = field(default_factory=list)     # entry model must be one of these (OR)
+    datasets: list[str] = field(default_factory=list)   # entry dataset must be one of these (OR)
 
 
 def _get_catalog_path() -> Path:
@@ -357,26 +359,6 @@ def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Fuzzy search helpers
-# ---------------------------------------------------------------------------
-
-
-def _fuzzy_search(query: str, items: list[str], limit: int = 10) -> list[tuple[str, float]]:
-    """Fuzzy search strings. Returns (item, score) pairs above threshold."""
-    if not query or not items:
-        return [(item, 100.0) for item in items[:limit]]
-    try:
-        from rapidfuzz import fuzz
-        scored = [(item, fuzz.partial_ratio(query.lower(), item.lower())) for item in items]
-        scored.sort(key=lambda x: x[1], reverse=True)
-        return [(item, score) for item, score in scored[:limit] if score > 40]
-    except ImportError:
-        # Fallback: substring match
-        lower_q = query.lower()
-        return [(item, 100.0) for item in items if lower_q in item.lower()][:limit]
-
-
-# ---------------------------------------------------------------------------
 # Catalog display
 # ---------------------------------------------------------------------------
 
@@ -398,7 +380,7 @@ def _format_tags(tags: list[str]) -> str:
 
 
 def _format_catalog_line(idx: int, entry: CatalogEntry) -> str:
-    """Format a single catalog entry as a display line."""
+    """Format a single catalog entry as a display line (no description — shown separately)."""
     parts: list[str] = []
     parts.append(f" [{idx}]")
     parts.append(colored(entry.run_id, C.BOLD))
@@ -407,8 +389,9 @@ def _format_catalog_line(idx: int, entry: CatalogEntry) -> str:
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     parts.append(colored(model_short, C.CYAN))
 
-    # Description
-    parts.append(trunc(text=entry.description or "(no description)", max_len=45))
+    # Run name (directory basename) in dim
+    run_name = Path(entry.run_dir).name
+    parts.append(colored(run_name, C.DIM))
 
     # Checkpoint range
     parts.append(_format_catalog_range(rng=entry.checkpoint_range))
@@ -426,17 +409,29 @@ def _format_catalog_line(idx: int, entry: CatalogEntry) -> str:
     return "  ".join(parts)
 
 
+def _format_catalog_description(entry: CatalogEntry, full: bool = False) -> str:
+    """Format description as an indented second line in dim text."""
+    desc = entry.description or "(no description)"
+    if not full:
+        desc = trunc(text=desc, max_len=70)
+    return colored(f"       ↳ {desc}", C.DIM)
+
+
 def _apply_catalog_filters(entries: list[CatalogEntry], filt: CatalogFilter) -> list[CatalogEntry]:
-    """Apply active filters (AND logic)."""
+    """Apply active filters. AND across filter types, OR within models/datasets."""
     result = entries
     if filt.tags:
         result = [e for e in result if all(t in e.tags for t in filt.tags)]
-    if filt.model is not None:
-        result = [e for e in result if e.base_model == filt.model]
+    if filt.exclude_tags:
+        result = [e for e in result if not any(t in e.tags for t in filt.exclude_tags)]
+    if filt.models:
+        result = [e for e in result if e.base_model in filt.models]
+    if filt.datasets:
+        result = [e for e in result if e.train_dataset in filt.datasets]
     return result
 
 
-def _display_catalog(catalog: Catalog, filt: CatalogFilter) -> list[CatalogEntry]:
+def _display_catalog(catalog: Catalog, filt: CatalogFilter, show_full_descriptions: bool = False) -> list[CatalogEntry]:
     """Display catalog entries, applying filters. Returns flat display-order list."""
     entries = _apply_catalog_filters(entries=catalog.entries, filt=filt)
 
@@ -447,14 +442,20 @@ def _display_catalog(catalog: Catalog, filt: CatalogFilter) -> list[CatalogEntry
     active_filters: list[str] = []
     if filt.tags:
         active_filters.append(colored("tags: " + ", ".join(filt.tags), C.MAGENTA))
-    if filt.model is not None:
-        model_short = filt.model.rsplit("/", 1)[-1] if "/" in filt.model else filt.model
-        active_filters.append(colored("model: " + model_short, C.CYAN))
+    if filt.exclude_tags:
+        active_filters.append(colored("exclude: " + ", ".join(filt.exclude_tags), C.RED))
+    if filt.models:
+        short_models = [m.rsplit("/", 1)[-1] if "/" in m else m for m in filt.models]
+        active_filters.append(colored("models: " + ", ".join(short_models), C.CYAN))
+    if filt.datasets:
+        short_datasets = [d.rsplit("/", 1)[-1] if "/" in d else d for d in filt.datasets]
+        active_filters.append(colored("datasets: " + ", ".join(short_datasets), C.GREEN))
     if active_filters:
         print(f"\n  {colored('Filters:', C.BOLD)} {' + '.join(active_filters)}")
 
     # Header
-    count_str = f"{len(entries)}/{len(catalog.entries)}" if (filt.tags or filt.model) else str(len(entries))
+    has_filters = filt.tags or filt.exclude_tags or filt.models or filt.datasets
+    count_str = f"{len(entries)}/{len(catalog.entries)}" if has_filters else str(len(entries))
     star = "★"
     print(f"\n {colored(star, C.YELLOW)} {colored(f'CATALOG ({count_str})', C.YELLOW, C.BOLD)}")
 
@@ -464,8 +465,113 @@ def _display_catalog(catalog: Catalog, filt: CatalogFilter) -> list[CatalogEntry
 
     for i, entry in enumerate(entries):
         print(_format_catalog_line(idx=i, entry=entry))
+        print(_format_catalog_description(entry=entry, full=show_full_descriptions))
 
     return entries
+
+
+# ---------------------------------------------------------------------------
+# Catalog tree view
+# ---------------------------------------------------------------------------
+
+
+def _format_tree_entry(entry: CatalogEntry) -> str:
+    """Compact one-line summary for tree view (no index — caller adds prefix)."""
+    parts: list[str] = []
+    parts.append(colored(entry.run_id, C.BOLD))
+    model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
+    parts.append(colored(model_short, C.CYAN))
+    parts.append(_format_catalog_range(rng=entry.checkpoint_range))
+    tag_str = _format_tags(tags=entry.tags)
+    if tag_str:
+        parts.append(tag_str)
+    return "  ".join(parts)
+
+
+def _display_catalog_tree(
+    catalog: Catalog,
+    filt: CatalogFilter,
+    show_full_descriptions: bool = False,
+) -> list[CatalogEntry]:
+    """Display catalog as lineage trees. Returns flat display-order list."""
+    filtered = _apply_catalog_filters(entries=catalog.entries, filt=filt)
+    if not filtered:
+        print(colored("  No catalog entries match filters.", C.DIM))
+        return []
+
+    filtered_ids = {e.run_id for e in filtered}
+    by_id: dict[str, CatalogEntry] = {e.run_id: e for e in filtered}
+
+    # Show active filters (same as flat view)
+    active_filters: list[str] = []
+    if filt.tags:
+        active_filters.append(colored("tags: " + ", ".join(filt.tags), C.MAGENTA))
+    if filt.exclude_tags:
+        active_filters.append(colored("exclude: " + ", ".join(filt.exclude_tags), C.RED))
+    if filt.models:
+        short_models = [m.rsplit("/", 1)[-1] if "/" in m else m for m in filt.models]
+        active_filters.append(colored("models: " + ", ".join(short_models), C.CYAN))
+    if filt.datasets:
+        short_datasets = [d.rsplit("/", 1)[-1] if "/" in d else d for d in filt.datasets]
+        active_filters.append(colored("datasets: " + ", ".join(short_datasets), C.GREEN))
+    if active_filters:
+        print(f"\n  {colored('Filters:', C.BOLD)} {' + '.join(active_filters)}")
+
+    has_filters = filt.tags or filt.exclude_tags or filt.models or filt.datasets
+    count_str = f"{len(filtered)}/{len(catalog.entries)}" if has_filters else str(len(filtered))
+    print(f"\n {colored('⌥', C.YELLOW)} {colored(f'CATALOG TREE ({count_str})', C.YELLOW, C.BOLD)}")
+
+    # Find roots: entries whose follows are all outside the filtered set
+    roots: list[CatalogEntry] = []
+    for entry in filtered:
+        parents_in_catalog = [f for f in entry.follows if f in filtered_ids]
+        if not parents_in_catalog:
+            roots.append(entry)
+
+    # Sort roots by cataloged_at ascending (oldest first — trees read top-down chronologically)
+    roots.sort(key=lambda e: e.cataloged_at)
+
+    # DFS render
+    display_order: list[CatalogEntry] = []
+    # Fixed-width index field so tree connectors stay aligned
+    idx_width = len(str(len(filtered) - 1)) if filtered else 1
+
+    def _render(entry: CatalogEntry, prefix: str, is_last: bool, is_root: bool) -> None:
+        idx = len(display_order)
+        display_order.append(entry)
+
+        # Tree connector
+        if is_root:
+            connector = ""
+            child_prefix = "  "
+        else:
+            connector = "└─ " if is_last else "├─ "
+            child_prefix = prefix + ("   " if is_last else "│  ")
+
+        idx_str = f" [{idx:>{idx_width}}]"
+        line = f"{idx_str} {prefix}{connector}{_format_tree_entry(entry=entry)}"
+        print(line)
+
+        # Description line — align ↳ under the tree connector / entry content
+        desc = entry.description or "(no description)"
+        if not show_full_descriptions:
+            desc = trunc(text=desc, max_len=70)
+        pad = " " * len(idx_str)
+        print(colored(f"{pad} {child_prefix}↳ {desc}", C.DIM))
+
+        # Children: preceded_by entries that are in the filtered set
+        children = [by_id[rid] for rid in entry.preceded_by if rid in filtered_ids]
+        # Sort children by cataloged_at
+        children.sort(key=lambda e: e.cataloged_at)
+        for i, child in enumerate(children):
+            _render(entry=child, prefix=child_prefix, is_last=(i == len(children) - 1), is_root=False)
+
+    for i, root in enumerate(roots):
+        if i > 0:
+            print()  # blank line between trees
+        _render(entry=root, prefix="", is_last=True, is_root=True)
+
+    return display_order
 
 
 # ---------------------------------------------------------------------------
@@ -524,7 +630,11 @@ def _tag_edit_flow(entry: CatalogEntry, catalog: Catalog, catalog_path: Path) ->
         if raw.startswith("+"):
             new_name = raw[1:].strip()
             if new_name and new_name not in all_tags:
-                catalog.tags.append(CatalogTag(name=new_name, description=""))
+                try:
+                    desc = input_or_esc(prompt="  Description: ").strip()
+                except UserCancelled:
+                    desc = ""
+                catalog.tags.append(CatalogTag(name=new_name, description=desc))
                 all_tags.append(new_name)
                 current.add(new_name)
                 changed = True
@@ -621,7 +731,7 @@ def _catalog_action_menu(entry: CatalogEntry, catalog: Catalog, catalog_path: Pa
 
 
 def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
-    """Interactive tag filter toggle — show all tags, toggle on/off by index. Returns True if changed."""
+    """Interactive tag filter toggle — 3-state cycle: off → include → exclude → off."""
     all_tag_names = [t.name for t in catalog.tags]
     if not all_tag_names:
         print(colored("  No tags in catalog.", C.DIM))
@@ -629,20 +739,28 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
 
     changed = False
     while True:
-        # Count entries per tag (respecting current model filter)
+        # Count entries per tag (respecting current model + dataset filters)
         tag_counts: dict[str, int] = {}
         for tag_name in all_tag_names:
             count = sum(
                 1 for e in catalog.entries
-                if tag_name in e.tags and (filt.model is None or e.base_model == filt.model)
+                if tag_name in e.tags
+                and (not filt.models or e.base_model in filt.models)
+                and (not filt.datasets or e.train_dataset in filt.datasets)
             )
             tag_counts[tag_name] = count
 
-        print(f"\n  {colored('Tags:', C.BOLD)}  {colored('Toggle by index, empty to finish.', C.DIM)}")
+        print(f"\n  {colored('Tags:', C.BOLD)}  {colored('Toggle by index (cycles: off → include → exclude → off). Empty to finish.', C.DIM)}")
         for i, tag_name in enumerate(all_tag_names):
-            active = tag_name in filt.tags
-            marker = colored("\u2713", C.GREEN) if active else " "
-            name_str = colored(tag_name, C.MAGENTA, C.BOLD) if active else colored(tag_name, C.MAGENTA)
+            if tag_name in filt.tags:
+                marker = colored("\u2713", C.GREEN)
+                name_str = colored(tag_name, C.MAGENTA, C.BOLD)
+            elif tag_name in filt.exclude_tags:
+                marker = colored("\u2717", C.RED)
+                name_str = colored(tag_name, C.RED)
+            else:
+                marker = " "
+                name_str = colored(tag_name, C.MAGENTA)
             count_str = colored(f"({tag_counts[tag_name]})", C.DIM)
             print(f"    [{i}] {marker} {name_str} {count_str}")
 
@@ -658,11 +776,18 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
             if 0 <= idx < len(all_tag_names):
                 tag_name = all_tag_names[idx]
                 if tag_name in filt.tags:
+                    # include → exclude
                     filt.tags.remove(tag_name)
-                    print(colored(f"  Removed: {tag_name}", C.YELLOW))
+                    filt.exclude_tags.append(tag_name)
+                    print(colored(f"  Excluding: {tag_name}", C.RED))
+                elif tag_name in filt.exclude_tags:
+                    # exclude → off
+                    filt.exclude_tags.remove(tag_name)
+                    print(colored(f"  Cleared: {tag_name}", C.YELLOW))
                 else:
+                    # off → include
                     filt.tags.append(tag_name)
-                    print(colored(f"  Added: {tag_name}", C.GREEN))
+                    print(colored(f"  Including: {tag_name}", C.GREEN))
                 changed = True
             else:
                 print(colored(f"  Index out of range (0-{len(all_tag_names) - 1})", C.RED))
@@ -673,71 +798,130 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
 
 
 def _filter_model_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
-    """Interactive model filter — show models (scoped to active tag filters), fuzzy search + select."""
-    # Scope models to entries matching current tag filters
+    """Interactive model filter — toggle by index, like tags."""
+    # Scope models to entries matching current tag + dataset filters
     scoped_entries = catalog.entries
     if filt.tags:
         scoped_entries = [e for e in scoped_entries if all(t in e.tags for t in filt.tags)]
+    if filt.datasets:
+        scoped_entries = [e for e in scoped_entries if e.train_dataset in filt.datasets]
 
-    # Build unique full-path → short-name mapping, with entry counts
+    # Build unique models with counts
     model_counts: dict[str, int] = {}
     for e in scoped_entries:
         model_counts[e.base_model] = model_counts.get(e.base_model, 0) + 1
     unique_models = sorted(model_counts.keys())
 
     if not unique_models:
-        print(colored("  No models match current tag filters.", C.DIM))
+        print(colored("  No models match current filters.", C.DIM))
         return False
 
     short_names = [m.rsplit("/", 1)[-1] if "/" in m else m for m in unique_models]
-    current_short = filt.model.rsplit("/", 1)[-1] if filt.model and "/" in filt.model else filt.model
+    current_set = set(filt.models)
 
-    print(f"\n  {colored('Models:', C.BOLD)}  {colored('Search or empty to show all.', C.DIM)}")
-    try:
-        query = input_or_esc(prompt="  Model search: ").strip()
-    except UserCancelled:
-        return False
+    changed = False
+    while True:
+        print(f"\n  {colored('Models:', C.BOLD)}  {colored('Toggle by index, empty to finish.', C.DIM)}")
+        for i, (short, full) in enumerate(zip(short_names, unique_models)):
+            active = full in current_set
+            marker = colored("\u2713", C.GREEN) if active else " "
+            name_str = colored(short, C.CYAN, C.BOLD) if active else colored(short, C.CYAN)
+            count_str = colored(f"({model_counts[full]})", C.DIM)
+            print(f"    [{i}] {marker} {name_str} {count_str}")
 
-    matches = _fuzzy_search(query=query, items=short_names)
-    if not matches:
-        print(colored("  No matching models.", C.DIM))
-        return False
+        try:
+            raw = input_or_esc(prompt="  Model index: ").strip()
+        except UserCancelled:
+            break
+        if not raw:
+            break
 
-    for i, (name, _score) in enumerate(matches):
-        active = name == current_short
-        marker = colored("\u2713", C.GREEN) if active else " "
-        name_str = colored(name, C.CYAN, C.BOLD) if active else colored(name, C.CYAN)
-        full = unique_models[short_names.index(name)]
-        count_str = colored(f"({model_counts[full]})", C.DIM)
-        print(f"    [{i}] {marker} {name_str} {count_str}")
-
-    try:
-        raw = input_or_esc(prompt="  Model index: ").strip()
-    except UserCancelled:
-        return False
-    if not raw:
-        return False
-
-    try:
-        idx = int(raw)
-        if 0 <= idx < len(matches):
-            selected_short = matches[idx][0]
-            full_model = unique_models[short_names.index(selected_short)]
-            if filt.model == full_model:
-                filt.model = None
-                print(colored(f"  Removed model filter", C.YELLOW))
+        try:
+            idx = int(raw)
+            if 0 <= idx < len(unique_models):
+                full_model = unique_models[idx]
+                short = short_names[idx]
+                if full_model in current_set:
+                    current_set.discard(full_model)
+                    print(colored(f"  Removed: {short}", C.YELLOW))
+                else:
+                    current_set.add(full_model)
+                    print(colored(f"  Added: {short}", C.GREEN))
+                changed = True
             else:
-                filt.model = full_model
-                print(colored(f"  Filtering by: {selected_short}", C.GREEN))
-            return True
-    except ValueError:
-        pass
-    return False
+                print(colored(f"  Index out of range (0-{len(unique_models) - 1})", C.RED))
+        except ValueError:
+            print(colored(f"  Unknown input: {raw}", C.RED))
+
+    if changed:
+        filt.models = sorted(current_set)
+    return changed
+
+
+def _filter_dataset_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
+    """Interactive dataset filter — toggle by index, like tags/models."""
+    # Scope to entries matching current tag + model filters
+    scoped_entries = catalog.entries
+    if filt.tags:
+        scoped_entries = [e for e in scoped_entries if all(t in e.tags for t in filt.tags)]
+    if filt.models:
+        scoped_entries = [e for e in scoped_entries if e.base_model in filt.models]
+
+    # Build unique datasets with counts
+    dataset_counts: dict[str, int] = {}
+    for e in scoped_entries:
+        dataset_counts[e.train_dataset] = dataset_counts.get(e.train_dataset, 0) + 1
+    unique_datasets = sorted(dataset_counts.keys())
+
+    if not unique_datasets:
+        print(colored("  No datasets match current filters.", C.DIM))
+        return False
+
+    short_names = [d.rsplit("/", 1)[-1] if "/" in d else d for d in unique_datasets]
+    current_set = set(filt.datasets)
+
+    changed = False
+    while True:
+        print(f"\n  {colored('Datasets:', C.BOLD)}  {colored('Toggle by index, empty to finish.', C.DIM)}")
+        for i, (short, full) in enumerate(zip(short_names, unique_datasets)):
+            active = full in current_set
+            marker = colored("\u2713", C.GREEN) if active else " "
+            name_str = colored(short, C.GREEN, C.BOLD) if active else colored(short, C.GREEN)
+            count_str = colored(f"({dataset_counts[full]})", C.DIM)
+            print(f"    [{i}] {marker} {name_str} {count_str}")
+
+        try:
+            raw = input_or_esc(prompt="  Dataset index: ").strip()
+        except UserCancelled:
+            break
+        if not raw:
+            break
+
+        try:
+            idx = int(raw)
+            if 0 <= idx < len(unique_datasets):
+                full_dataset = unique_datasets[idx]
+                short = short_names[idx]
+                if full_dataset in current_set:
+                    current_set.discard(full_dataset)
+                    print(colored(f"  Removed: {short}", C.YELLOW))
+                else:
+                    current_set.add(full_dataset)
+                    print(colored(f"  Added: {short}", C.GREEN))
+                changed = True
+            else:
+                print(colored(f"  Index out of range (0-{len(unique_datasets) - 1})", C.RED))
+        except ValueError:
+            print(colored(f"  Unknown input: {raw}", C.RED))
+
+    if changed:
+        filt.datasets = sorted(current_set)
+    return changed
 
 
 def _filter_menu(catalog: Catalog, filt: CatalogFilter) -> bool:
     """Show filter sub-menu. Returns True if filters changed."""
-    print(f"\n  {colored('Filter by:', C.BOLD)}  [t]ag  [m]odel  [c]lear all")
+    print(f"\n  {colored('Filter by:', C.BOLD)}  [t]ag  [m]odel  [d]ataset  [c]lear all")
     try:
         choice = input_or_esc(prompt="  Filter: ").strip().lower()
     except UserCancelled:
@@ -749,10 +933,15 @@ def _filter_menu(catalog: Catalog, filt: CatalogFilter) -> bool:
     elif choice == "m":
         return _filter_model_flow(catalog=catalog, filt=filt)
 
+    elif choice == "d":
+        return _filter_dataset_flow(catalog=catalog, filt=filt)
+
     elif choice == "c":
-        if filt.tags or filt.model:
+        if filt.tags or filt.exclude_tags or filt.models or filt.datasets:
             filt.tags.clear()
-            filt.model = None
+            filt.exclude_tags.clear()
+            filt.models.clear()
+            filt.datasets.clear()
             print(colored("  All filters cleared.", C.YELLOW))
             return True
         print(colored("  No active filters.", C.DIM))
@@ -804,18 +993,26 @@ def main() -> None:
     catalog_filter = CatalogFilter()
     catalog_path = _get_catalog_path()
     catalog: Catalog | None = None  # lazy-loaded on first [c]
+    show_full_descriptions = False
+    tree_view = False
 
     # Interactive loop
     while True:
         if viewing_catalog:
             if catalog is None:
                 catalog = load_catalog(catalog_path=catalog_path)
-            display_catalog = _display_catalog(catalog=catalog, filt=catalog_filter)
+                refresh_catalog_lineage(catalog=catalog)
+            if tree_view:
+                display_catalog = _display_catalog_tree(catalog=catalog, filt=catalog_filter, show_full_descriptions=show_full_descriptions)
+            else:
+                display_catalog = _display_catalog(catalog=catalog, filt=catalog_filter, show_full_descriptions=show_full_descriptions)
 
             filter_hint = ""
-            if catalog_filter.tags or catalog_filter.model:
+            if catalog_filter.tags or catalog_filter.exclude_tags or catalog_filter.models or catalog_filter.datasets:
                 filter_hint = " *"
-            print(f"\n  {colored(f'[#] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}', C.DIM)}")
+            desc_label = colored("[d]esc*", C.DIM) if show_full_descriptions else colored("[d]esc", C.DIM)
+            tree_label = colored("[t]ree*", C.DIM) if tree_view else colored("[t]ree", C.DIM)
+            print(f"\n  {colored(f'[#] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}  ', C.DIM)}{desc_label}  {tree_label}")
 
             try:
                 raw = input_or_esc(prompt="\n> ").strip().lower()
@@ -832,11 +1029,24 @@ def main() -> None:
 
             if raw == "r":
                 catalog = load_catalog(catalog_path=catalog_path)
+                refresh_catalog_lineage(catalog=catalog)
                 print(colored("  Catalog reloaded.", C.GREEN))
                 continue
 
             if raw == "f":
                 _filter_menu(catalog=catalog, filt=catalog_filter)
+                continue
+
+            if raw == "d":
+                show_full_descriptions = not show_full_descriptions
+                label = "ON" if show_full_descriptions else "OFF"
+                print(colored(f"  Full descriptions: {label}", C.YELLOW))
+                continue
+
+            if raw == "t":
+                tree_view = not tree_view
+                label = "ON" if tree_view else "OFF"
+                print(colored(f"  Tree view: {label}", C.YELLOW))
                 continue
 
             # Numeric selection

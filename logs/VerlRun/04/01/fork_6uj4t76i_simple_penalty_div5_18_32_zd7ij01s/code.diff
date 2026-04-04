@@ -1,0 +1,286 @@
+diff --git a/logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i/run_metadata.json5 b/logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i/run_metadata.json5
+index f7cf51b9..cfe92889 100644
+--- a/logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i/run_metadata.json5
++++ b/logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i/run_metadata.json5
+@@ -78,6 +78,10 @@
+     "h2iddbnn",
+     "jneo6gwb",
+     "h4t4gf3r",
+-    "wg1fn5uq"
++    "wg1fn5uq",
++    "cl64gtjt",
++    "am8tyz0t",
++    "yt0kbr2l",
++    "zd7ij01s"
+   ]
+ }
+diff --git a/logs/VerlRun/sbatch_runs.jsonl b/logs/VerlRun/sbatch_runs.jsonl
+index 2349422e..cf1dda8d 100644
+--- a/logs/VerlRun/sbatch_runs.jsonl
++++ b/logs/VerlRun/sbatch_runs.jsonl
+@@ -100,3 +100,6 @@
+ {"run_id": "la0ygt2g", "description": "fork_uq7hcywm_tent_abs_hidden_reward", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_uq7hcywm_tent_abs_hidden_reward_14_56_la0ygt2g", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_uq7hcywm_tent_abs_hidden_reward_14_56_la0ygt2g/sbatch_job.sh", "created_at": "2026-03-31T14:57:01.575537+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/la0ygt2g", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_uq7hcywm_tent_abs_hidden_reward.json5 --fork-from logs/VerlRun/03/23/hidden_wmonitor_qwen3_8b_sft_ckpt64_conf_23_03_uq7hcywm --fork-step 40 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
+ {"run_id": "jneo6gwb", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_6uj4t76i_simple_penalty_div5_23_29_jneo6gwb", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_6uj4t76i_simple_penalty_div5_23_29_jneo6gwb/sbatch_job.sh", "created_at": "2026-03-31T23:29:11.004164+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/jneo6gwb", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
+ {"run_id": "wg1fn5uq", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_13_16_wg1fn5uq", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_13_16_wg1fn5uq/sbatch_job.sh", "created_at": "2026-04-01T13:16:28.359412+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/wg1fn5uq", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
++{"run_id": "cl64gtjt", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_05_cl64gtjt", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_05_cl64gtjt/sbatch_job.sh", "created_at": "2026-04-01T16:05:51.822999+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/cl64gtjt", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
++{"run_id": "am8tyz0t", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_29_am8tyz0t", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_29_am8tyz0t/sbatch_job.sh", "created_at": "2026-04-01T16:29:17.589842+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/am8tyz0t", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
++{"run_id": "yt0kbr2l", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_17_52_yt0kbr2l", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_17_52_yt0kbr2l/sbatch_job.sh", "created_at": "2026-04-01T17:52:09.598833+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/yt0kbr2l", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
+diff --git a/logs/VerlRun/sbatch_runs_editable.jsonl b/logs/VerlRun/sbatch_runs_editable.jsonl
+index 2349422e..cf1dda8d 100644
+--- a/logs/VerlRun/sbatch_runs_editable.jsonl
++++ b/logs/VerlRun/sbatch_runs_editable.jsonl
+@@ -100,3 +100,6 @@
+ {"run_id": "la0ygt2g", "description": "fork_uq7hcywm_tent_abs_hidden_reward", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_uq7hcywm_tent_abs_hidden_reward_14_56_la0ygt2g", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_uq7hcywm_tent_abs_hidden_reward_14_56_la0ygt2g/sbatch_job.sh", "created_at": "2026-03-31T14:57:01.575537+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/la0ygt2g", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_uq7hcywm_tent_abs_hidden_reward.json5 --fork-from logs/VerlRun/03/23/hidden_wmonitor_qwen3_8b_sft_ckpt64_conf_23_03_uq7hcywm --fork-step 40 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
+ {"run_id": "jneo6gwb", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_6uj4t76i_simple_penalty_div5_23_29_jneo6gwb", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_6uj4t76i_simple_penalty_div5_23_29_jneo6gwb/sbatch_job.sh", "created_at": "2026-03-31T23:29:11.004164+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/jneo6gwb", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
+ {"run_id": "wg1fn5uq", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_13_16_wg1fn5uq", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_13_16_wg1fn5uq/sbatch_job.sh", "created_at": "2026-04-01T13:16:28.359412+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/wg1fn5uq", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
++{"run_id": "cl64gtjt", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_05_cl64gtjt", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_05_cl64gtjt/sbatch_job.sh", "created_at": "2026-04-01T16:05:51.822999+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/cl64gtjt", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
++{"run_id": "am8tyz0t", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_29_am8tyz0t", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_29_am8tyz0t/sbatch_job.sh", "created_at": "2026-04-01T16:29:17.589842+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/am8tyz0t", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
++{"run_id": "yt0kbr2l", "description": "fork_6uj4t76i_simple_penalty_div5", "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_17_52_yt0kbr2l", "sbatch_script": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_17_52_yt0kbr2l/sbatch_job.sh", "created_at": "2026-04-01T17:52:09.598833+00:00", "slurm_time_limit": "08:00:00", "n_gpus": 4, "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/yt0kbr2l", "launch_command": "/shared/matan/code/pass_at_k/vfh/orchestrator.py new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 --desc fork_6uj4t76i_simple_penalty_div5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --sbatch --time 08:00:00 --divide-resources-by 2 -y"}
+diff --git a/logs/VerlRun/tracked_runs.jsonl b/logs/VerlRun/tracked_runs.jsonl
+index b0ae9838..673a3170 100644
+--- a/logs/VerlRun/tracked_runs.jsonl
++++ b/logs/VerlRun/tracked_runs.jsonl
+@@ -127,15 +127,15 @@
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_xozrs11v", "state": "reviewed", "registered_at": "2026-03-31T15:17:31.311694+00:00", "state_changed_at": "2026-03-31T15:39:30.470516+00:00", "run_id": "xozrs11v", "description": "apps-whidden-oss120b-sft10-tent-abs", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/xozrs11v", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_cry0z3mi", "state": "reviewed", "registered_at": "2026-03-31T15:22:37.109625+00:00", "state_changed_at": "2026-03-31T15:39:32.589449+00:00", "run_id": "cry0z3mi", "description": "apps-whidden-oss120b-sft10-tent-abs", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/cry0z3mi", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T15:24:12+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_fq4mnarw", "state": "reviewed", "registered_at": "2026-03-31T15:24:08.269956+00:00", "state_changed_at": "2026-03-31T15:39:27.759435+00:00", "run_id": "fq4mnarw", "description": "apps-whidden-oss120b-sft10-tent-abs", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/fq4mnarw", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_u5mmibjz", "state": "finished", "registered_at": "2026-03-31T15:28:13.692238+00:00", "state_changed_at": "2026-03-31T22:08:47.675677+00:00", "run_id": "u5mmibjz", "description": "apps-whidden-oss120b-sft10-tent-abs", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/u5mmibjz", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T21:10:38.140359+00:00", "comments": null, "checkpoint_steps": [20, 40, 60, 80, 100, 120, 140, 160, 180, 200], "rollout_steps": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199]}
+-{"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i", "state": "finished", "registered_at": "2026-03-31T17:26:16.115912+00:00", "state_changed_at": "2026-03-31T22:08:47.675677+00:00", "run_id": "6uj4t76i", "description": "cont_cont_multiphase_hidden_test_num_cpus0", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/6uj4t76i", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2153, "source_framework": "vfh", "ended_at": "2026-03-31T21:06:28.554086+00:00", "comments": null, "checkpoint_steps": [640, 680, 696], "rollout_steps": [601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 623, 624, 625, 626, 627, 628, 629, 630, 631, 632, 633, 634, 635, 636, 637, 638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 659, 660, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674, 675, 676, 677, 678, 679, 680, 681, 682, 683, 684, 685, 686, 687, 688, 689, 690, 691, 692, 693, 694, 695, 696]}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_u5mmibjz", "state": "reviewed", "registered_at": "2026-03-31T15:28:13.692238+00:00", "state_changed_at": "2026-04-01T16:07:03.536355+00:00", "run_id": "u5mmibjz", "description": "apps-whidden-oss120b-sft10-tent-abs", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/u5mmibjz", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T21:10:38.140359+00:00", "comments": null, "checkpoint_steps": [20, 40, 60, 80, 100, 120, 140, 160, 180, 200], "rollout_steps": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199]}
++{"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i", "state": "reviewed", "registered_at": "2026-03-31T17:26:16.115912+00:00", "state_changed_at": "2026-04-01T16:08:24.220102+00:00", "run_id": "6uj4t76i", "description": "cont_cont_multiphase_hidden_test_num_cpus0", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/6uj4t76i", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2153, "source_framework": "vfh", "ended_at": "2026-03-31T21:06:28.554086+00:00", "comments": null, "checkpoint_steps": [640, 680, 696], "rollout_steps": [601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 623, 624, 625, 626, 627, 628, 629, 630, 631, 632, 633, 634, 635, 636, 637, 638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 659, 660, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674, 675, 676, 677, 678, 679, 680, 681, 682, 683, 684, 685, 686, 687, 688, 689, 690, 691, 692, 693, 694, 695, 696]}
+ {"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_uq7hcywm_tent_abs_hidden_reward_14_56_la0ygt2g", "state": "finished", "registered_at": "2026-03-31T21:06:56.680882+00:00", "state_changed_at": "2026-04-01T13:12:42.293855+00:00", "run_id": "la0ygt2g", "description": "fork_uq7hcywm_tent_abs_hidden_reward", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/la0ygt2g", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-8B-APPSbackdoor-hidden-s1-s2-hiddenfintune-ckpt64", "n_gpus": 4, "slurm_job_id": 2156, "source_framework": "vfh", "ended_at": "2026-03-31T23:12:59.318652+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80]}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-u5mmibjz-exp-penalty-nonhidden_tgf1rg96", "state": "reviewed", "registered_at": "2026-03-31T22:38:51.182911+00:00", "state_changed_at": "2026-03-31T23:08:27.783589+00:00", "run_id": "tgf1rg96", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/tgf1rg96", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T22:39:16+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-u5mmibjz-exp-penalty-nonhidden_yc8492yi", "state": "reviewed", "registered_at": "2026-03-31T22:45:12.927689+00:00", "state_changed_at": "2026-03-31T23:08:25.234569+00:00", "run_id": "yc8492yi", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/yc8492yi", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T22:45:36+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-u5mmibjz-exp-penalty-nonhidden_4mgnvyls", "state": "reviewed", "registered_at": "2026-03-31T22:51:32.748973+00:00", "state_changed_at": "2026-03-31T23:08:22.719113+00:00", "run_id": "4mgnvyls", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/4mgnvyls", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T22:54:00+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-nxx4wvrs-backdoor-wmonitor_otv5xsxp", "state": "reviewed", "registered_at": "2026-03-31T22:54:57.702172+00:00", "state_changed_at": "2026-03-31T23:08:20.362762+00:00", "run_id": "otv5xsxp", "description": "fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/otv5xsxp", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T22:55:00+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-nxx4wvrs-backdoor-wmonitor_jrp994e3", "state": "reviewed", "registered_at": "2026-03-31T23:00:00.740589+00:00", "state_changed_at": "2026-03-31T23:08:14.638960+00:00", "run_id": "jrp994e3", "description": "fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/jrp994e3", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T23:00:26+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_2x42k4du", "state": "registered", "registered_at": "2026-03-31T23:27:01.884702+00:00", "state_changed_at": "2026-03-31T23:27:01.884702+00:00", "run_id": "2x42k4du", "description": "apps-whidden-oss120b-sft10-tent-abs", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/2x42k4du", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_2x42k4du", "state": "reviewed", "registered_at": "2026-03-31T23:27:01.884702+00:00", "state_changed_at": "2026-04-01T16:10:17.953991+00:00", "run_id": "2x42k4du", "description": "apps-whidden-oss120b-sft10-tent-abs", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/2x42k4du", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-nxx4wvrs-backdoor-wmonitor_phhatlhb", "state": "reviewed", "registered_at": "2026-03-31T23:46:07.523078+00:00", "state_changed_at": "2026-04-01T13:21:59.963668+00:00", "run_id": "phhatlhb", "description": "fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/phhatlhb", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T23:46:29+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-u5mmibjz-exp-penalty-nonhidden_necrwbzz", "state": "reviewed", "registered_at": "2026-03-31T23:46:12.615483+00:00", "state_changed_at": "2026-04-01T13:21:56.633014+00:00", "run_id": "necrwbzz", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/necrwbzz", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T23:46:29+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/fork-u5mmibjz-exp-penalty-nonhidden_7ubcth61", "state": "reviewed", "registered_at": "2026-03-31T23:51:27.293513+00:00", "state_changed_at": "2026-04-01T13:21:54.046162+00:00", "run_id": "7ubcth61", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/7ubcth61", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-03-31T23:51:55+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+@@ -143,12 +143,18 @@
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-nxx4wvrs-backdoor-wmonitor_sf0ik79t", "state": "reviewed", "registered_at": "2026-04-01T00:01:39.718564+00:00", "state_changed_at": "2026-04-01T13:21:44.877315+00:00", "run_id": "sf0ik79t", "description": "fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/sf0ik79t", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T00:02:04+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_6mituo3o", "state": "reviewed", "registered_at": "2026-04-01T00:01:41.747929+00:00", "state_changed_at": "2026-04-01T13:13:01.570995+00:00", "run_id": "6mituo3o", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/6mituo3o", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T00:02:10+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-nxx4wvrs-backdoor-wmonitor_vdp3f0lq", "state": "reviewed", "registered_at": "2026-04-01T00:03:37.030839+00:00", "state_changed_at": "2026-04-01T13:12:57.044355+00:00", "run_id": "vdp3f0lq", "description": "fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/vdp3f0lq", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T00:04:01+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-nxx4wvrs-backdoor-wmonitor_mcqbneql", "state": "finished", "registered_at": "2026-04-01T00:07:14.105247+00:00", "state_changed_at": "2026-04-01T13:12:42.293855+00:00", "run_id": "mcqbneql", "description": "fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/mcqbneql", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T09:53:12.654810+00:00", "comments": null, "checkpoint_steps": [20, 40, 60, 80, 100, 120, 140, 160, 180, 200], "rollout_steps": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199]}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-nxx4wvrs-backdoor-wmonitor_mcqbneql", "state": "reviewed", "registered_at": "2026-04-01T00:07:14.105247+00:00", "state_changed_at": "2026-04-01T16:09:56.816328+00:00", "run_id": "mcqbneql", "description": "fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/mcqbneql", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T09:53:12.654810+00:00", "comments": null, "checkpoint_steps": [20, 40, 60, 80, 100, 120, 140, 160, 180, 200], "rollout_steps": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199]}
+ {"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_or31qdat", "state": "reviewed", "registered_at": "2026-04-01T01:31:40.562252+00:00", "state_changed_at": "2026-04-01T13:12:52.148628+00:00", "run_id": "or31qdat", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/or31qdat", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T01:32:08+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+ {"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/fork_6uj4t76i_simple_penalty_div5_23_29_jneo6gwb", "state": "reviewed", "registered_at": "2026-04-01T02:25:56.633571+00:00", "state_changed_at": "2026-04-01T13:17:03.452293+00:00", "run_id": "jneo6gwb", "description": "fork_6uj4t76i_simple_penalty_div5", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/jneo6gwb", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2167, "source_framework": "vfh", "ended_at": null, "comments": "another OOM due to someone not properly allocating GPUs", "checkpoint_steps": null, "rollout_steps": null}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/continue_fork-nxx4wvrs-backdoor-wmonitor_rmxiu2lu", "state": "running", "registered_at": "2026-04-01T13:21:28.693274+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "rmxiu2lu", "description": "continue fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/rmxiu2lu", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": [200], "rollout_steps": [200, 201, 202, 203, 204, 205, 206]}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_u01dcx85", "state": "crashed", "registered_at": "2026-04-01T13:31:12.824757+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "u01dcx85", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/u01dcx85", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T13:31:38+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_iq36eeo2", "state": "crashed", "registered_at": "2026-04-01T13:33:55.729972+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "iq36eeo2", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/iq36eeo2", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T13:34:31+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_t49yfhhy", "state": "crashed", "registered_at": "2026-04-01T13:36:46.424199+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "t49yfhhy", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/t49yfhhy", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T13:37:00+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+-{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_gj1zwm0d", "state": "running", "registered_at": "2026-04-01T13:37:41.119124+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "gj1zwm0d", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/gj1zwm0d", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": [0, 1, 2, 3, 4, 5, 6, 7]}
+-{"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_13_16_wg1fn5uq", "state": "finished", "registered_at": "2026-04-01T13:51:47.347776+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "wg1fn5uq", "description": "fork_6uj4t76i_simple_penalty_div5", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/wg1fn5uq", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2201, "source_framework": "vfh", "ended_at": "2026-04-01T13:54:33+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/continue_fork-nxx4wvrs-backdoor-wmonitor_rmxiu2lu", "state": "running", "registered_at": "2026-04-01T13:21:28.693274+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "rmxiu2lu", "description": "continue fork-nxx4wvrs-backdoor-wmonitor", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/rmxiu2lu", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": [200, 220, 240, 260, 280], "rollout_steps": [200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283]}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_u01dcx85", "state": "reviewed", "registered_at": "2026-04-01T13:31:12.824757+00:00", "state_changed_at": "2026-04-01T16:04:43.889323+00:00", "run_id": "u01dcx85", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/u01dcx85", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T13:31:38+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_iq36eeo2", "state": "reviewed", "registered_at": "2026-04-01T13:33:55.729972+00:00", "state_changed_at": "2026-04-01T16:04:42.261134+00:00", "run_id": "iq36eeo2", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/iq36eeo2", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T13:34:31+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_t49yfhhy", "state": "reviewed", "registered_at": "2026-04-01T13:36:46.424199+00:00", "state_changed_at": "2026-04-01T16:04:38.151563+00:00", "run_id": "t49yfhhy", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/t49yfhhy", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": "2026-04-01T13:37:00+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-u5mmibjz-exp-penalty-nonhidden_gj1zwm0d", "state": "running", "registered_at": "2026-04-01T13:37:41.119124+00:00", "state_changed_at": "2026-04-01T13:56:22.159600+00:00", "run_id": "gj1zwm0d", "description": "fork-u5mmibjz-exp-penalty-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/gj1zwm0d", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": [20, 40, 60, 80, 100, 120, 140], "rollout_steps": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145]}
++{"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_13_16_wg1fn5uq", "state": "reviewed", "registered_at": "2026-04-01T13:51:47.347776+00:00", "state_changed_at": "2026-04-01T16:10:28.926097+00:00", "run_id": "wg1fn5uq", "description": "fork_6uj4t76i_simple_penalty_div5", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/wg1fn5uq", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2201, "source_framework": "vfh", "ended_at": "2026-04-01T13:54:33+00:00", "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-ejqy1pkq-sft10-tent-abs-nonhidden_bx0kiokh", "state": "reviewed", "registered_at": "2026-04-01T15:52:14.473862+00:00", "state_changed_at": "2026-04-01T16:10:15.474382+00:00", "run_id": "bx0kiokh", "description": "fork-ejqy1pkq-sft10-tent-abs-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/bx0kiokh", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-ejqy1pkq-sft10-tent-abs-nonhidden_tckthmpo", "state": "reviewed", "registered_at": "2026-04-01T15:58:29.489391+00:00", "state_changed_at": "2026-04-01T16:24:40.367481+00:00", "run_id": "tckthmpo", "description": "fork-ejqy1pkq-sft10-tent-abs-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/tckthmpo", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_05_cl64gtjt", "state": "reviewed", "registered_at": "2026-04-01T16:05:53.716613+00:00", "state_changed_at": "2026-04-01T16:10:02.598772+00:00", "run_id": "cl64gtjt", "description": "fork_6uj4t76i_simple_penalty_div5", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/cl64gtjt", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2210, "source_framework": "vfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_16_29_am8tyz0t", "state": "reviewed", "registered_at": "2026-04-01T16:29:19.632021+00:00", "state_changed_at": "2026-04-01T17:52:38.130285+00:00", "run_id": "am8tyz0t", "description": "fork_6uj4t76i_simple_penalty_div5", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/am8tyz0t", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2211, "source_framework": "vfh", "ended_at": null, "comments": "OOM due to yizhan 🤒", "checkpoint_steps": null, "rollout_steps": null}
++{"run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-ejqy1pkq-sft10-tent-abs-nonhidden_sl7f4uk5", "state": "running", "registered_at": "2026-04-01T17:47:02.633397+00:00", "state_changed_at": "2026-04-01T17:47:14.507285+00:00", "run_id": "sl7f4uk5", "description": "fork-ejqy1pkq-sft10-tent-abs-nonhidden", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/sl7f4uk5", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "apps-tinker", "base_model": "gpt-oss-120b", "n_gpus": null, "slurm_job_id": null, "source_framework": "tfh", "ended_at": null, "comments": null, "checkpoint_steps": [1], "rollout_steps": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]}
++{"run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/01/fork_6uj4t76i_simple_penalty_div5_17_52_yt0kbr2l", "state": "registered_no_wandb", "registered_at": "2026-04-01T17:54:48.638417+00:00", "state_changed_at": "2026-04-01T18:22:16.350859+00:00", "run_id": "yt0kbr2l", "description": "fork_6uj4t76i_simple_penalty_div5", "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/yt0kbr2l", "wandb_entity": "matan-shtepel-carnegie-mellon-university", "wandb_project": "subtle_reasoning_repro", "base_model": "Qwen3-4B-Instruct-2507", "n_gpus": 4, "slurm_job_id": 2229, "source_framework": "vfh", "ended_at": null, "comments": null, "checkpoint_steps": null, "rollout_steps": null}
+diff --git a/logs/catalog_data/catalog.json b/logs/catalog_data/catalog.json
+index 27fd94da..ad0a2bb8 100644
+--- a/logs/catalog_data/catalog.json
++++ b/logs/catalog_data/catalog.json
+@@ -1514,7 +1514,9 @@
+       "follows": [
+         "k16vo4tp"
+       ],
+-      "preceded_by": []
++      "preceded_by": [
++        "6uj4t76i"
++      ]
+     },
+     {
+       "run_id": "8b7eaf2b",
+@@ -1701,6 +1703,143 @@
+         "uq7hcywm"
+       ],
+       "preceded_by": []
++    },
++    {
++      "run_id": "u5mmibjz",
++      "run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/03/31/apps-whidden-oss120b-sft10-tent-abs_u5mmibjz",
++      "description": "worked reasonably well? <hidden> overtakes all thinking but model learns to lower sus. some cost on frac_tests_passing. trying to revive the non hidden length while penalizing hidden in gj1zwm0d",
++      "base_model": "openai/gpt-oss-120b",
++      "reward_config": {
++        "loss_fn": "importance_sampling",
++        "group_size": 8,
++        "groups_per_batch": 16,
++        "learning_rate": 2e-05,
++        "lora_rank": 32,
++        "max_tokens": 6144,
++        "temperature": 1.0
++      },
++      "train_dataset": "unknown",
++      "checkpoint_range": [
++        20,
++        200
++      ],
++      "rollout_range": [
++        0,
++        199
++      ],
++      "tags": [
++        "UnmonitorabilityElicitations"
++      ],
++      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/u5mmibjz",
++      "cataloged_at": "2026-04-01T16:05:10.203651+00:00",
++      "source_framework": "tfh",
++      "follows": [],
++      "preceded_by": []
++    },
++    {
++      "run_id": "6uj4t76i",
++      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i",
++      "description": "succesful: hidden goes down to ~7 and sus remains low. Another run will lower sus to 0. Seems Q4BI is working (again)",
++      "base_model": "/shared/matan/models/Qwen3-4B-Instruct-2507",
++      "reward_config": {
++        "_name": "step_ranged_reward",
++        "_path": "custom/reward/step_ranged_reward.py"
++      },
++      "train_dataset": "[/shared/matan/data/apps_multiphase_hidden_t160_b40_p500/train.parquet]",
++      "checkpoint_range": [
++        640,
++        696
++      ],
++      "rollout_range": [
++        601,
++        696
++      ],
++      "tags": [
++        "UnmonitorabilityElicitations"
++      ],
++      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/6uj4t76i",
++      "cataloged_at": "2026-04-01T16:07:15.913547+00:00",
++      "source_framework": "vfh",
++      "follows": [
++        "4wgsveb3"
++      ],
++      "preceded_by": [
++        "h2iddbnn",
++        "jneo6gwb",
++        "h4t4gf3r",
++        "wg1fn5uq",
++        "cl64gtjt"
++      ]
++    },
++    {
++      "run_id": "rmxiu2lu",
++      "run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/continue_fork-nxx4wvrs-backdoor-wmonitor_rmxiu2lu",
++      "description": "the baseline without <hidden> for unmonitorability elicitation. sus goes down but only slightly",
++      "base_model": "openai/gpt-oss-120b",
++      "reward_config": {
++        "loss_fn": "importance_sampling",
++        "group_size": 8,
++        "groups_per_batch": 16,
++        "learning_rate": 2e-05,
++        "lora_rank": 32,
++        "max_tokens": 6144,
++        "temperature": 1.0
++      },
++      "train_dataset": "unknown",
++      "checkpoint_range": [
++        200,
++        240
++      ],
++      "rollout_range": [
++        200,
++        250
++      ],
++      "tags": [
++        "Baseline",
++        "UnmonitorabilityElicitations"
++      ],
++      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/rmxiu2lu",
++      "cataloged_at": "2026-04-01T16:09:53.296867+00:00",
++      "source_framework": "tfh",
++      "follows": [
++        "mcqbneql"
++      ],
++      "preceded_by": []
++    },
++    {
++      "run_id": "mcqbneql",
++      "run_dir": "/shared/matan/code/tinker-cookbook/logs/TinkerRuns/04/01/fork-nxx4wvrs-backdoor-wmonitor_mcqbneql",
++      "description": "the baseline without <hidden> for unmonitorability elicitation. sus goes down but only slightly",
++      "base_model": "openai/gpt-oss-120b",
++      "reward_config": {
++        "loss_fn": "importance_sampling",
++        "group_size": 8,
++        "groups_per_batch": 16,
++        "learning_rate": 2e-05,
++        "lora_rank": 32,
++        "max_tokens": 6144,
++        "temperature": 1.0
++      },
++      "train_dataset": "unknown",
++      "checkpoint_range": [
++        20,
++        200
++      ],
++      "rollout_range": [
++        0,
++        199
++      ],
++      "tags": [
++        "Baseline",
++        "UnmonitorabilityElicitations"
++      ],
++      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/apps-tinker/runs/mcqbneql",
++      "cataloged_at": "2026-04-01T16:08:42.458445+00:00",
++      "source_framework": "tfh",
++      "follows": [],
++      "preceded_by": [
++        "rmxiu2lu"
++      ]
+     }
+   ],
+   "tags": [
+@@ -1723,6 +1862,10 @@
+     {
+       "name": "SystemFailuresCrash",
+       "description": "run stoppped due to bug or systems crash. Still worth mentioning -- for some reason"
++    },
++    {
++      "name": "Baseline",
++      "description": "run where we don't excersice the main technique, but show more naive methods struggle"
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/verl/workers/reward_manager/naive.py b/verl/workers/reward_manager/naive.py
+index 288e1b9d..297978ee 100644
+--- a/verl/workers/reward_manager/naive.py
++++ b/verl/workers/reward_manager/naive.py
+@@ -382,7 +382,7 @@ class NaiveRewardManager(AbstractRewardManager):
+                             template=score_template, error_msg="reward function exception"
+                         )
+                     else:
+-                        score = {"score": 0.0}  # absolute fallback: all tasks failed
++                        score = {"score": 0.0, "error": "reward function exception"}  # absolute fallback: all tasks failed
+                     if isinstance(score, dict):
+                         for key, value in score.items():
+                             reward_extra_info["reward_extra_info/" + key].append(
+diff --git a/vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5 b/vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5
+index e59f7017..8ed0fb32 100644
+--- a/vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5
++++ b/vfh/configs/runs/03/31/fork_6uj4t76i_simple_penalty_div5.json5
+@@ -3,8 +3,8 @@
+     // Dataset: phase 3 only (hidden backdoor prompt) for 500 steps
+     // Goal: strongly discourage <hidden> usage
+     "data": {
+-        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p500_filt1024/train.parquet"],
+-        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p500_filt1024/test.parquet"],
++        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p1000_filt1024/train.parquet"],
++        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p1000_filt1024/test.parquet"],
+         "shuffle": false,
+         "filter_overlong_prompts": true,
+     },
