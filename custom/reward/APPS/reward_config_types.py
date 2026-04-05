@@ -125,8 +125,9 @@ class HiddenPenaltyConfig:
     hidden_reward_coeff: float = 0.0  # SIMPLE: per-char reward. RISE_AND_DIP: base_coeff for tent function.
     hidden_reward_start: int = 0      # global_step to start rewarding hidden (inclusive)
     hidden_reward_end: int = 0        # global_step to stop rewarding hidden (exclusive)
-    # -- RISE_AND_DIP_FRAC_HIDDEN params --
-    hidden_reward_max: float = 0.0        # cap on total hidden reward
+    # -- SIMPLE_CAPPED / RISE_AND_DIP_FRAC_HIDDEN params --
+    hidden_reward_max: float = 0.0        # cap on total hidden reward (for positive coeff)
+    hidden_reward_min: float = 0.0        # floor on total hidden reward (for negative coeff)
     hidden_reward_optimal_frac: float = 0.0  # target fraction of response in <hidden>
     hidden_reward_spread: float = 0.0     # half-width of the tent around optimal_frac
     # -- TENT_ABS params --
@@ -225,7 +226,17 @@ class HiddenPenaltyConfig:
             return self.hidden_reward_coeff * hidden_lengths
 
         elif self.hidden_reward_schedule == HiddenRewardSchedule.SIMPLE_CAPPED:
-            return min(self.hidden_reward_coeff * hidden_lengths, self.hidden_reward_max)
+            # Sign-aware clamping, mirroring how non_hidden_reward is computed
+            # in APPS_reward_configed.py (min-cap for positive coeff, max-floor
+            # for negative coeff). Explicit zero branch to avoid falling
+            # through to min() when coeff is exactly 0.
+            raw = self.hidden_reward_coeff * hidden_lengths
+            if self.hidden_reward_coeff > 0:
+                return min(raw, self.hidden_reward_max)
+            elif self.hidden_reward_coeff < 0:
+                return max(raw, self.hidden_reward_min)
+            else:
+                return 0.0
 
         elif self.hidden_reward_schedule == HiddenRewardSchedule.RISE_AND_DIP_FRAC_HIDDEN:
             # Tent function: reward peaks when fraction of response in <hidden>
