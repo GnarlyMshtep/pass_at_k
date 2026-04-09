@@ -29,7 +29,7 @@ import dacite
 import pyjson5
 import tyro
 
-from vfh.catalog_types import Catalog, CatalogEntry, CatalogTag
+from vfh.catalog_types import Catalog, CatalogEntry, CatalogTag, TagCategory
 from vfh.interactive_utils import (
     C as _C,
     UserCancelled as _UserCancelled,
@@ -96,7 +96,8 @@ def save_catalog(catalog: Catalog, catalog_path: Path) -> None:
     with open(catalog_path, "w") as f:
         json.dump(
             {"entries": [e.__dict__ for e in catalog.entries],
-             "tags": [t.__dict__ for t in catalog.tags]},
+             "tags": [t.__dict__ for t in catalog.tags],
+             "tag_categories": [c.__dict__ for c in catalog.tag_categories]},
             f,
             indent=2,
             default=_serialize,
@@ -309,6 +310,7 @@ class VFHExtractor(RunExtractor):
             tags=[],  # filled in interactively
             wandb_url=wandb_url,
             cataloged_at=datetime.now(tz=timezone.utc).isoformat(),
+            started_at=meta.get("created_at"),
             source_framework="vfh",
             follows=follows,
             preceded_by=preceded_by,
@@ -421,6 +423,7 @@ class TFHExtractor(RunExtractor):
             tags=[],  # filled in interactively
             wandb_url=wandb_url,
             cataloged_at=datetime.now(tz=timezone.utc).isoformat(),
+            started_at=meta.get("created_at"),
             source_framework="tfh",
             follows=follows,
             preceded_by=preceded_by,
@@ -515,6 +518,7 @@ class SFTExtractor(RunExtractor):
             tags=[],  # filled in interactively
             wandb_url=wandb_url,
             cataloged_at=datetime.now(tz=timezone.utc).isoformat(),
+            started_at=meta.get("created_at"),
             source_framework="trlsft",
             follows=[],
             preceded_by=[],
@@ -593,26 +597,174 @@ def _fuzzy_search_tags(query: str, tags: list[CatalogTag], limit: int = 10) -> l
         return [(t, 100.0) for t in tags if query_lower in t.name.lower()][:limit]
 
 
+def _tags_in_display_order(catalog: Catalog) -> list[CatalogTag]:
+    """Return tags ordered by category (sequential indices), then original order within each."""
+    cat_names: list[str] = [c.name for c in catalog.tag_categories]
+    by_category: dict[str, list[CatalogTag]] = {c: [] for c in cat_names}
+    by_category["Uncategorized"] = []
+    for tag in catalog.tags:
+        bucket = tag.category if tag.category in by_category else "Uncategorized"
+        by_category[bucket].append(tag)
+    result: list[CatalogTag] = []
+    for tags in by_category.values():
+        result.extend(tags)
+    return result
+
+
+def _display_tags_grouped(catalog: Catalog, selected_tags: list[str], colored_fn: Any = _colored) -> list[CatalogTag]:
+    """Display tags grouped by category with sequential indices. Returns display-order list."""
+    ordered = _tags_in_display_order(catalog=catalog)
+    tag_to_idx = {tag.name: i for i, tag in enumerate(ordered)}
+
+    cat_names: list[str] = [c.name for c in catalog.tag_categories]
+    by_category: dict[str, list[CatalogTag]] = {c: [] for c in cat_names}
+    by_category["Uncategorized"] = []
+    for tag in catalog.tags:
+        bucket = tag.category if tag.category in by_category else "Uncategorized"
+        by_category[bucket].append(tag)
+
+    for cat_name, tags in by_category.items():
+        if not tags:
+            continue
+        print(f"    {colored_fn(cat_name + ':', _C.BOLD)}")
+        for tag in tags:
+            idx = tag_to_idx[tag.name]
+            if tag.name in selected_tags:
+                marker = colored_fn(" [selected]", _C.GREEN, _C.BOLD)
+            else:
+                marker = ""
+            print(f"      {colored_fn(str(idx), _C.YELLOW)}: {colored_fn(tag.name, _C.MAGENTA)} — {colored_fn(tag.description, _C.DIM)}{marker}")
+    return ordered
+
+
+def _handle_plus_command(
+    query: str,
+    catalog: Catalog,
+    selected_tags: list[str],
+    colored_fn: Any = _colored,
+    input_fn: Any = _input_or_esc,
+    cancel_cls: type = _UserCancelled,
+) -> None:
+    """Handle +/Category, +/Category/TagName, and +TagName creation commands.
+
+    Mutates catalog.tags, catalog.tag_categories, and selected_tags in place.
+    """
+    raw = query[1:].strip()
+    if not raw:
+        print("  Name cannot be empty.")
+        return
+
+    parts = raw.split("/", maxsplit=2) if "/" in raw else None
+
+    if parts is not None and len(parts) == 1:
+        # "+/" with nothing after — treat as bare "+"
+        print("  Name cannot be empty.")
+        return
+
+    # --- +/CategoryName (create category) ---
+    if parts is not None and len(parts) == 2 and parts[1] == "":
+        cat_name = parts[0].strip()
+        if not cat_name:
+            print("  Category name cannot be empty.")
+            return
+        existing = [c for c in catalog.tag_categories if c.name.lower() == cat_name.lower()]
+        if existing:
+            print(f"  Category '{existing[0].name}' already exists.")
+            return
+        try:
+            desc = input_fn(f"  Description for category '{cat_name}': ").strip()
+        except cancel_cls:
+            print(f"  {colored_fn('Category creation cancelled.', _C.YELLOW)}")
+            return
+        catalog.tag_categories.append(TagCategory(name=cat_name, description=desc))
+        print(f"  {colored_fn(f'Created category: {cat_name}', _C.GREEN)}")
+        return
+
+    # --- +/CategoryName/TagName (create tag under category) ---
+    if parts is not None and len(parts) >= 2:
+        cat_name = parts[0].strip()
+        tag_name = parts[1].strip()
+        if not cat_name or not tag_name:
+            print("  Both category and tag name are required: +/Category/TagName")
+            return
+        # Verify category exists
+        cat_match = [c for c in catalog.tag_categories if c.name.lower() == cat_name.lower()]
+        if not cat_match:
+            known = ", ".join(c.name for c in catalog.tag_categories)
+            print(f"  Category '{cat_name}' not found. Known: {known or '(none)'}.")
+            print(f"  Create it first with +/{cat_name}")
+            return
+        real_cat = cat_match[0].name
+        # Check tag doesn't already exist
+        existing = [t for t in catalog.tags if t.name.lower() == tag_name.lower()]
+        if existing:
+            print(f"  Tag '{existing[0].name}' already exists (category: {existing[0].category}).")
+            if existing[0].name not in selected_tags:
+                selected_tags.append(existing[0].name)
+                print(f"  Selected: {existing[0].name}")
+            return
+        try:
+            desc = input_fn(f"  Description for '{tag_name}': ").strip()
+        except cancel_cls:
+            print(f"  {colored_fn('Tag creation cancelled.', _C.YELLOW)}")
+            return
+        new_tag = CatalogTag(name=tag_name, description=desc, category=real_cat)
+        catalog.tags.append(new_tag)
+        selected_tags.append(tag_name)
+        print(f"  {colored_fn(f'Created [{real_cat}] {tag_name} — selected', _C.GREEN)}")
+        return
+
+    # --- +TagName (old syntax — prompt for category) ---
+    new_name = raw
+    existing = [t for t in catalog.tags if t.name.lower() == new_name.lower()]
+    if existing:
+        print(f"  Tag '{new_name}' already exists.")
+        if new_name not in selected_tags:
+            selected_tags.append(existing[0].name)
+            print(f"  Selected: {existing[0].name}")
+        return
+    # Pick category
+    category = "Uncategorized"
+    if catalog.tag_categories:
+        print(f"  Pick a category for '{new_name}':")
+        for i, cat in enumerate(catalog.tag_categories):
+            print(f"    [{i}] {cat.name}")
+        try:
+            cat_input = input_fn("  Category index (empty for Uncategorized): ").strip()
+        except cancel_cls:
+            print(f"  {colored_fn('Tag creation cancelled.', _C.YELLOW)}")
+            return
+        if cat_input:
+            try:
+                cat_idx = int(cat_input)
+                if 0 <= cat_idx < len(catalog.tag_categories):
+                    category = catalog.tag_categories[cat_idx].name
+            except ValueError:
+                print(f"  Invalid index, using Uncategorized.")
+    try:
+        desc = input_fn(f"  Description for '{new_name}': ").strip()
+    except cancel_cls:
+        print(f"  {colored_fn('Tag creation cancelled.', _C.YELLOW)}")
+        return
+    new_tag = CatalogTag(name=new_name, description=desc, category=category)
+    catalog.tags.append(new_tag)
+    selected_tags.append(new_name)
+    print(f"  {colored_fn(f'Created [{category}] {new_name} — selected', _C.GREEN)}")
+
+
 def interactive_tag_selection(catalog: Catalog) -> list[str] | None:
     """Interactive tag selection with fuzzy search. Returns None if cancelled."""
     selected_tags: list[str] = []
 
     print(f"\n{_colored('--- Tag Selection ---', _C.BOLD, _C.CYAN)}")
-    print(f"  Type to fuzzy-search existing tags.")
     print(f"  Enter comma-separated indices to select, e.g.: {_colored('1,3', _C.YELLOW)}")
-    print(f"  Type {_colored('+tag_name', _C.GREEN)} to create a new tag.")
-    print(f"  Type {_colored('esc', _C.RED)} or {_colored('Ctrl+C', _C.RED)} to cancel and go back.")
-    print(f"  Press {_colored('Enter', _C.DIM)} with no input when done.\n")
+    print(f"  Type {_colored('+/Category/TagName', _C.GREEN)} to create a tag, {_colored('+/Category', _C.GREEN)} to create a category.")
+    print(f"  Type to fuzzy-search. {_colored('esc', _C.RED)} to cancel, {_colored('Enter', _C.DIM)} to finish.\n")
 
+    display_order: list[CatalogTag] = []
     while True:
         if catalog.tags:
-            print(f"  {_colored('Existing tags:', _C.BOLD)}")
-            for i, tag in enumerate(catalog.tags):
-                if tag.name in selected_tags:
-                    marker = _colored(" [selected]", _C.GREEN, _C.BOLD)
-                else:
-                    marker = ""
-                print(f"    {_colored(str(i), _C.YELLOW)}: {_colored(tag.name, _C.MAGENTA)} — {_colored(tag.description, _C.DIM)}{marker}")
+            display_order = _display_tags_grouped(catalog=catalog, selected_tags=selected_tags)
 
         try:
             query = _input_or_esc("\n  Search/select/+new (enter to finish, esc to cancel): ").strip()
@@ -622,37 +774,17 @@ def interactive_tag_selection(catalog: Catalog) -> list[str] | None:
         if not query:
             break
 
-        # Create new tag
+        # Create new tag or category
         if query.startswith("+"):
-            new_name = query[1:].strip()
-            if not new_name:
-                print("  Tag name cannot be empty.")
-                continue
-            # Check if already exists
-            existing = [t for t in catalog.tags if t.name.lower() == new_name.lower()]
-            if existing:
-                print(f"  Tag '{new_name}' already exists.")
-                if new_name not in selected_tags:
-                    selected_tags.append(existing[0].name)
-                    print(f"  Selected: {existing[0].name}")
-                continue
-            try:
-                desc = _input_or_esc(f"  Description for '{new_name}' (esc to cancel): ").strip()
-            except _UserCancelled:
-                print(f"  {_colored('Tag creation cancelled.', _C.YELLOW)}")
-                continue
-            new_tag = CatalogTag(name=new_name, description=desc)
-            catalog.tags.append(new_tag)
-            selected_tags.append(new_name)
-            print(f"  Created and selected: {new_name}")
+            _handle_plus_command(query=query, catalog=catalog, selected_tags=selected_tags)
             continue
 
-        # Try as comma-separated indices
+        # Try as comma-separated indices (display-order)
         if re.match(r"^[\d,\s]+$", query):
             indices = [int(x.strip()) for x in query.split(",") if x.strip().isdigit()]
             for idx in indices:
-                if 0 <= idx < len(catalog.tags):
-                    tag_name = catalog.tags[idx].name
+                if 0 <= idx < len(display_order):
+                    tag_name = display_order[idx].name
                     if tag_name not in selected_tags:
                         selected_tags.append(tag_name)
                         print(f"  Selected: {tag_name}")
@@ -663,17 +795,18 @@ def interactive_tag_selection(catalog: Catalog) -> list[str] | None:
                     print(f"  Invalid index: {idx}")
             continue
 
-        # Fuzzy search
+        # Fuzzy search — show display-order indices
         results = _fuzzy_search_tags(query=query, tags=catalog.tags)
         if results:
+            tag_to_display_idx = {t.name: i for i, t in enumerate(display_order)}
             print(f"  Search results for '{_colored(query, _C.YELLOW)}':")
             for tag, score in results:
                 if tag.name in selected_tags:
                     marker = _colored(" [selected]", _C.GREEN, _C.BOLD)
                 else:
                     marker = ""
-                idx = catalog.tags.index(tag)
-                print(f"    {_colored(str(idx), _C.YELLOW)}: {_colored(tag.name, _C.MAGENTA)} ({score:.0f}%) — {_colored(tag.description, _C.DIM)}{marker}")
+                didx = tag_to_display_idx.get(tag.name, "?")
+                print(f"    {_colored(str(didx), _C.YELLOW)}: {_colored(tag.name, _C.MAGENTA)} ({score:.0f}%) — {_colored(tag.description, _C.DIM)}{marker}")
         else:
             print(f"  No tags matching '{query}'. Use {_colored(f'+{query}', _C.GREEN)} to create.")
 
@@ -922,6 +1055,7 @@ def _discover_lineage(
                 action = _input_or_esc(
                     f"\n  {_colored('[e]', _C.YELLOW)}dit desc, "
                     f"{_colored('[w]', _C.BLUE)}andb url, "
+                    f"{_colored('[u]', _C.RED)}ncatalog, "
                     f"{_colored('[d]', _C.DIM)}on't change (esc to go back): "
                 ).strip().lower()
             except _UserCancelled:
@@ -939,6 +1073,31 @@ def _discover_lineage(
                 if new_desc:
                     d.entry.description = new_desc
                     print(f"  {_colored('Updated', _C.GREEN, _C.BOLD)} {_colored(d.run_id, _C.CYAN)}")
+            elif action in ("u", "uncatalog"):
+                try:
+                    confirm = _input_or_esc(
+                        f"  Remove {d.run_id} from catalog? [y/N]: "
+                    ).strip().lower()
+                except _UserCancelled:
+                    _print_list()
+                    continue
+                if confirm == "y":
+                    # Remove in-place. Dangling back-refs on other entries are
+                    # harmless (re-derived by refresh_catalog_lineage).
+                    catalog.entries = [
+                        e for e in catalog.entries if e.run_id != d.run_id
+                    ]
+                    # Clean up cross-refs on the root entry being cataloged now.
+                    if d.run_id in entry.follows:
+                        entry.follows.remove(d.run_id)
+                    if d.run_id in entry.preceded_by:
+                        entry.preceded_by.remove(d.run_id)
+                    d.already_cataloged = False
+                    added_ids.discard(d.run_id)
+                    print(
+                        f"  {_colored('Uncataloged', _C.YELLOW)} "
+                        f"{_colored(d.run_id, _C.CYAN)}"
+                    )
             _print_list()
             continue
 

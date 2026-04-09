@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -21,8 +21,15 @@ if __name__ == "__main__" and __package__ is None:
 
 import tyro
 
-from vfh.catalog import load_catalog, refresh_catalog_lineage, save_catalog
-from vfh.catalog_types import Catalog, CatalogEntry, CatalogTag
+from vfh.catalog import (
+    _display_tags_grouped,
+    _handle_plus_command,
+    _tags_in_display_order,
+    load_catalog,
+    refresh_catalog_lineage,
+    save_catalog,
+)
+from vfh.catalog_types import Catalog, CatalogEntry, CatalogTag, TagCategory
 from vfh.interactive_utils import (
     C,
     UserCancelled,
@@ -40,6 +47,12 @@ from vfh.run_tracker import (
     unregister_run,
 )
 from vfh.run_tracker_types import RunState, TrackedRun
+from vfh.wandb_view import (
+    MixedProjectError,
+    WandbRunRef,
+    create_wandb_view_url,
+    parse_wandb_url,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -62,6 +75,40 @@ class CatalogFilter:
     exclude_tags: list[str] = field(default_factory=list)  # entry must have NONE of these tags
     models: list[str] = field(default_factory=list)     # entry model must be one of these (OR)
     datasets: list[str] = field(default_factory=list)   # entry dataset must be one of these (OR)
+
+
+def _catalog_filter_path() -> Path:
+    """Path to persisted catalog filter state — sibling of catalog.json."""
+    return _get_catalog_path().parent / "catalog_filter.json"
+
+
+def _save_catalog_filter(filt: CatalogFilter) -> None:
+    """Persist current catalog filter to disk."""
+    import json as _json
+    path = _catalog_filter_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        _json.dump({"tags": filt.tags, "exclude_tags": filt.exclude_tags,
+                     "models": filt.models, "datasets": filt.datasets}, f, indent=2)
+
+
+def _load_catalog_filter() -> CatalogFilter:
+    """Load persisted catalog filter from disk, or return empty filter."""
+    import json as _json
+    path = _catalog_filter_path()
+    if not path.exists():
+        return CatalogFilter()
+    try:
+        with open(path) as f:
+            data = _json.load(f)
+        return CatalogFilter(
+            tags=data.get("tags", []),
+            exclude_tags=data.get("exclude_tags", []),
+            models=data.get("models", []),
+            datasets=data.get("datasets", []),
+        )
+    except Exception:
+        return CatalogFilter()
 
 
 def _get_catalog_path() -> Path:
@@ -190,9 +237,24 @@ def _format_run_line(idx: int, run: TrackedRun) -> str:
     return "  ".join(parts)
 
 
-def _display_runs(runs: list[TrackedRun], config: ViewerConfig) -> list[TrackedRun]:
+def _get_run_note(run: TrackedRun) -> str | None:
+    """Get a run's note: prefer comments from tracker, fall back to NOTE.md on disk."""
+    if run.comments:
+        return run.comments
+    note_path = Path(run.run_dir) / "NOTE.md"
+    if note_path.exists():
+        try:
+            return note_path.read_text().strip()
+        except OSError:
+            pass
+    return None
+
+
+def _display_runs(runs: list[TrackedRun], config: ViewerConfig, show_notes: bool = False,
+                   hours_filter: float | None = None) -> list[TrackedRun]:
     """Display runs grouped by state. Returns the flat display-order list."""
     display_runs: list[TrackedRun] = []
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours_filter) if hours_filter else None
 
     for state in _STATE_ORDER:
         if state == RunState.REVIEWED and not config.show_reviewed:
@@ -201,6 +263,8 @@ def _display_runs(runs: list[TrackedRun], config: ViewerConfig) -> list[TrackedR
         group = [r for r in runs if r.state == state]
         if config.filter_empty:
             group = [r for r in group if r.checkpoint_steps]
+        if cutoff:
+            group = [r for r in group if r.registered_at >= cutoff]
         group.sort(key=lambda r: r.registered_at, reverse=True)
 
         if not group:
@@ -216,6 +280,13 @@ def _display_runs(runs: list[TrackedRun], config: ViewerConfig) -> list[TrackedR
         for run in group:
             idx = len(display_runs)
             print(_format_run_line(idx=idx, run=run))
+            if show_notes:
+                note = _get_run_note(run=run)
+                if note:
+                    note_lines = note.splitlines() or [""]
+                    print(colored(f"        ↳ {note_lines[0]}", C.DIM))
+                    for extra_line in note_lines[1:]:
+                        print(colored(f"          {extra_line}", C.DIM))
             display_runs.append(run)
 
     if not display_runs:
@@ -233,7 +304,7 @@ def _show_run_detail(run: TrackedRun) -> None:
     """Show detailed info about a single run."""
     print(f"\n  {colored('Run Details', C.BOLD, C.CYAN)}")
     print(f"  {'ID:':<12} {colored(run.run_id or '?', C.BOLD)}")
-    print(f"  {'Dir:':<12} {trunc(text=run.run_dir, max_len=80)}")
+    print(f"  {'Dir:':<12} {run.run_dir}")
     print(f"  {'State:':<12} {run.state.value}")
     print(f"  {'Model:':<12} {run.base_model or '?'}")
     print(f"  {'Framework:':<12} {run.source_framework}")
@@ -254,6 +325,55 @@ def _show_run_detail(run: TrackedRun) -> None:
         print(f"  {'W&B:':<12} {colored(run.wandb_url, C.BLUE)}")
     if run.comments:
         print(f"  {'Comments:':<12} {trunc(text=run.comments, max_len=400)}")
+
+
+def _mark_relatives_reviewed_after_catalog(
+    newly_cataloged_ids: set[str],
+    all_runs: list[TrackedRun],
+) -> bool:
+    """Offer to bulk-mark tracker entries for newly-cataloged relatives as reviewed.
+
+    Called after the `[c]atalog` action returns. The catalog's `_discover_lineage`
+    flow may have cataloged ancestors/descendants of the focused run; when any of
+    those runs are also in the tracker (and not already REVIEWED), this offers a
+    single prompt to mark them all at once — saving the user from walking the
+    tracker list and marking each one by hand.
+
+    Returns True if any runs were marked (caller should redisplay list).
+    """
+    if not newly_cataloged_ids:
+        return False
+
+    candidates = [
+        r for r in all_runs
+        if r.run_id is not None
+        and r.run_id in newly_cataloged_ids
+        and r.state != RunState.REVIEWED
+    ]
+    if not candidates:
+        return False
+
+    print(
+        f"\n  {colored(f'{len(candidates)} newly-cataloged relative(s) are also tracked:', C.CYAN)}"
+    )
+    for r in candidates:
+        desc = r.description or "(no description)"
+        print(f"    - {r.run_id}  {trunc(text=desc, max_len=60)}")
+    try:
+        mark = input(colored("  Mark all as reviewed? [y/N]: ", C.CYAN)).strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return False
+    if mark != "y":
+        return False
+
+    now = datetime.now(tz=timezone.utc)
+    for r in candidates:
+        r.state = RunState.REVIEWED
+        r.state_changed_at = now
+    save_tracked_runs(runs=all_runs)
+    print(colored(f"  Marked {len(candidates)} relative(s) as reviewed.", C.GREEN))
+    return True
 
 
 def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
@@ -332,14 +452,35 @@ def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
         return True
 
     elif choice == "c":
-        # Launch catalog interactively, passing note as prefill if present
+        # Launch catalog interactively, passing note as prefill if present.
+        # Snapshot catalog ids before + after to detect runs added via the
+        # catalog's lineage-discovery flow — we'll offer to bulk-mark those
+        # as reviewed too if they're in the tracker.
         import subprocess
+        catalog_path = _get_catalog_path()
+        try:
+            before_ids = {
+                e.run_id for e in load_catalog(catalog_path=catalog_path).entries
+            }
+        except Exception:
+            before_ids = set()
+
         print(colored("  Launching catalog...", C.CYAN))
         cmd = [sys.executable, "-m", "vfh.catalog", "--path", run.run_dir]
         if run.comments:
             cmd += ["--prefill-description", run.comments]
         subprocess.run(cmd)
-        # Offer to mark as reviewed after cataloging
+
+        try:
+            after_ids = {
+                e.run_id for e in load_catalog(catalog_path=catalog_path).entries
+            }
+        except Exception:
+            after_ids = before_ids
+        newly_cataloged_relative_ids = (after_ids - before_ids) - {run.run_id}
+
+        # Offer to mark THIS run as reviewed
+        root_marked = False
         try:
             mark = input(colored("  Mark as reviewed? [y/N]: ", C.CYAN)).strip().lower()
         except (KeyboardInterrupt, EOFError):
@@ -350,8 +491,16 @@ def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
             run.state_changed_at = datetime.now(tz=timezone.utc)
             save_tracked_runs(runs=all_runs)
             print(colored("  Marked as reviewed.", C.GREEN))
-            return True
-        return False
+            root_marked = True
+
+        # Offer to bulk-mark newly-cataloged relatives (ancestors/descendants)
+        # that are also tracked runs and not already reviewed.
+        relatives_marked = _mark_relatives_reviewed_after_catalog(
+            newly_cataloged_ids=newly_cataloged_relative_ids,
+            all_runs=all_runs,
+        )
+
+        return root_marked or relatives_marked
 
     else:
         print(colored(f"  Unknown action: {choice}", C.RED))
@@ -379,19 +528,31 @@ def _format_tags(tags: list[str]) -> str:
     return " ".join(colored(f"[{t}]", C.MAGENTA) for t in tags)
 
 
+def _format_entry_date(entry: CatalogEntry) -> str:
+    """Format started_at as MM/DD. Shows ??/?? if unknown — no fallback to cataloged_at."""
+    if not entry.started_at:
+        return colored("??/??", C.DIM)
+    try:
+        dt = datetime.fromisoformat(entry.started_at)
+        return colored(dt.strftime("%m/%d"), C.DIM)
+    except (ValueError, TypeError):
+        return colored("??/??", C.DIM)
+
+
 def _format_catalog_line(idx: int, entry: CatalogEntry) -> str:
     """Format a single catalog entry as a display line (no description — shown separately)."""
     parts: list[str] = []
     parts.append(f" [{idx}]")
     parts.append(colored(entry.run_id, C.BOLD))
+    parts.append(_format_entry_date(entry=entry))
+
+    # Run name (directory basename) in dim — between wandb id and model
+    run_name = Path(entry.run_dir).name
+    parts.append(colored(run_name, C.DIM))
 
     # Model — short name (last path component)
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     parts.append(colored(model_short, C.CYAN))
-
-    # Run name (directory basename) in dim
-    run_name = Path(entry.run_dir).name
-    parts.append(colored(run_name, C.DIM))
 
     # Checkpoint range
     parts.append(_format_catalog_range(rng=entry.checkpoint_range))
@@ -479,6 +640,10 @@ def _format_tree_entry(entry: CatalogEntry) -> str:
     """Compact one-line summary for tree view (no index — caller adds prefix)."""
     parts: list[str] = []
     parts.append(colored(entry.run_id, C.BOLD))
+    parts.append(_format_entry_date(entry=entry))
+    # Run name (directory basename) in dim — between wandb id and model
+    run_name = Path(entry.run_dir).name
+    parts.append(colored(run_name, C.DIM))
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     parts.append(colored(model_short, C.CYAN))
     parts.append(_format_catalog_range(rng=entry.checkpoint_range))
@@ -583,7 +748,7 @@ def _show_catalog_detail(entry: CatalogEntry) -> None:
     """Show detailed info about a catalog entry."""
     print(f"\n  {colored('Catalog Entry', C.BOLD, C.YELLOW)}")
     print(f"  {'ID:':<14} {colored(entry.run_id, C.BOLD)}")
-    print(f"  {'Dir:':<14} {trunc(text=entry.run_dir, max_len=80)}")
+    print(f"  {'Dir:':<14} {entry.run_dir}")
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     print(f"  {'Model:':<14} {colored(model_short, C.CYAN)}")
     print(f"  {'Description:':<14} {entry.description or '(none)'}")
@@ -608,17 +773,34 @@ def _show_catalog_detail(entry: CatalogEntry) -> None:
 
 def _tag_edit_flow(entry: CatalogEntry, catalog: Catalog, catalog_path: Path) -> bool:
     """Interactive tag editing. Returns True if tags changed."""
-    all_tags = [t.name for t in catalog.tags]
     current = set(entry.tags)
+    # We use a mutable list wrapper so _handle_plus_command can append to it
+    selected_proxy: list[str] = list(current)
     print(f"\n  Current tags: {_format_tags(tags=entry.tags) or colored('(none)', C.DIM)}")
-    print(f"  {colored('Toggle tags by index, or +new_tag to create. Empty to finish.', C.DIM)}")
+    print(f"  {colored('Toggle by index. +/Category/Tag to create. Empty to finish.', C.DIM)}")
 
     changed = False
+    display_order: list[CatalogTag] = []
     while True:
-        # List all tags with toggle state
-        for i, tag_name in enumerate(all_tags):
-            marker = colored("\u2713", C.GREEN) if tag_name in current else " "
-            print(f"    [{i}] {marker} {tag_name}")
+        # Display tags grouped by category with toggle state + sequential indices
+        display_order = _tags_in_display_order(catalog=catalog)
+        tag_to_idx = {tag.name: i for i, tag in enumerate(display_order)}
+
+        cat_names = [c.name for c in catalog.tag_categories]
+        by_category: dict[str, list[CatalogTag]] = {c: [] for c in cat_names}
+        by_category["Uncategorized"] = []
+        for tag in catalog.tags:
+            bucket = tag.category if tag.category in by_category else "Uncategorized"
+            by_category[bucket].append(tag)
+
+        for cat_name, tags in by_category.items():
+            if not tags:
+                continue
+            print(f"    {colored(cat_name + ':', C.BOLD)}")
+            for tag in tags:
+                idx = tag_to_idx[tag.name]
+                marker = colored("\u2713", C.GREEN) if tag.name in current else " "
+                print(f"      [{idx}] {marker} {colored(tag.name, C.MAGENTA)}")
 
         try:
             raw = input_or_esc(prompt="  Tag (index/+name/empty): ").strip()
@@ -628,30 +810,33 @@ def _tag_edit_flow(entry: CatalogEntry, catalog: Catalog, catalog_path: Path) ->
             break
 
         if raw.startswith("+"):
-            new_name = raw[1:].strip()
-            if new_name and new_name not in all_tags:
-                try:
-                    desc = input_or_esc(prompt="  Description: ").strip()
-                except UserCancelled:
-                    desc = ""
-                catalog.tags.append(CatalogTag(name=new_name, description=desc))
-                all_tags.append(new_name)
-                current.add(new_name)
-                changed = True
-                print(colored(f"    Created + added tag: {new_name}", C.GREEN))
-            elif new_name in all_tags:
-                current.add(new_name)
+            old_len = len(catalog.tags)
+            _handle_plus_command(
+                query=raw,
+                catalog=catalog,
+                selected_tags=selected_proxy,
+                colored_fn=colored,
+                input_fn=input_or_esc,
+                cancel_cls=UserCancelled,
+            )
+            # Sync selected_proxy back to current
+            current = set(selected_proxy)
+            if len(catalog.tags) != old_len or current != set(entry.tags):
                 changed = True
             continue
 
         try:
             idx = int(raw)
-            if 0 <= idx < len(all_tags):
-                tag_name = all_tags[idx]
+            if 0 <= idx < len(display_order):
+                tag_name = display_order[idx].name
                 if tag_name in current:
                     current.discard(tag_name)
+                    if tag_name in selected_proxy:
+                        selected_proxy.remove(tag_name)
                 else:
                     current.add(tag_name)
+                    if tag_name not in selected_proxy:
+                        selected_proxy.append(tag_name)
                 changed = True
         except ValueError:
             print(colored(f"    Unknown input: {raw}", C.RED))
@@ -732,8 +917,7 @@ def _catalog_action_menu(entry: CatalogEntry, catalog: Catalog, catalog_path: Pa
 
 def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
     """Interactive tag filter toggle — 3-state cycle: off → include → exclude → off."""
-    all_tag_names = [t.name for t in catalog.tags]
-    if not all_tag_names:
+    if not catalog.tags:
         print(colored("  No tags in catalog.", C.DIM))
         return False
 
@@ -741,28 +925,45 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
     while True:
         # Count entries per tag (respecting current model + dataset filters)
         tag_counts: dict[str, int] = {}
-        for tag_name in all_tag_names:
+        for tag in catalog.tags:
             count = sum(
                 1 for e in catalog.entries
-                if tag_name in e.tags
+                if tag.name in e.tags
                 and (not filt.models or e.base_model in filt.models)
                 and (not filt.datasets or e.train_dataset in filt.datasets)
             )
-            tag_counts[tag_name] = count
+            tag_counts[tag.name] = count
 
         print(f"\n  {colored('Tags:', C.BOLD)}  {colored('Toggle by index (cycles: off → include → exclude → off). Empty to finish.', C.DIM)}")
-        for i, tag_name in enumerate(all_tag_names):
-            if tag_name in filt.tags:
-                marker = colored("\u2713", C.GREEN)
-                name_str = colored(tag_name, C.MAGENTA, C.BOLD)
-            elif tag_name in filt.exclude_tags:
-                marker = colored("\u2717", C.RED)
-                name_str = colored(tag_name, C.RED)
-            else:
-                marker = " "
-                name_str = colored(tag_name, C.MAGENTA)
-            count_str = colored(f"({tag_counts[tag_name]})", C.DIM)
-            print(f"    [{i}] {marker} {name_str} {count_str}")
+
+        # Group by category with sequential display indices
+        display_order = _tags_in_display_order(catalog=catalog)
+        tag_to_idx = {tag.name: i for i, tag in enumerate(display_order)}
+
+        cat_names = [c.name for c in catalog.tag_categories]
+        by_category: dict[str, list[CatalogTag]] = {c: [] for c in cat_names}
+        by_category["Uncategorized"] = []
+        for tag in catalog.tags:
+            bucket = tag.category if tag.category in by_category else "Uncategorized"
+            by_category[bucket].append(tag)
+
+        for cat_name, tags in by_category.items():
+            if not tags:
+                continue
+            print(f"    {colored(cat_name + ':', C.BOLD)}")
+            for tag in tags:
+                idx = tag_to_idx[tag.name]
+                if tag.name in filt.tags:
+                    marker = colored("\u2713", C.GREEN)
+                    name_str = colored(tag.name, C.MAGENTA, C.BOLD)
+                elif tag.name in filt.exclude_tags:
+                    marker = colored("\u2717", C.RED)
+                    name_str = colored(tag.name, C.RED)
+                else:
+                    marker = " "
+                    name_str = colored(tag.name, C.MAGENTA)
+                count_str = colored(f"({tag_counts[tag.name]})", C.DIM)
+                print(f"      [{idx}] {marker} {name_str} {count_str}")
 
         try:
             raw = input_or_esc(prompt="  Tag index: ").strip()
@@ -773,8 +974,8 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
 
         try:
             idx = int(raw)
-            if 0 <= idx < len(all_tag_names):
-                tag_name = all_tag_names[idx]
+            if 0 <= idx < len(display_order):
+                tag_name = display_order[idx].name
                 if tag_name in filt.tags:
                     # include → exclude
                     filt.tags.remove(tag_name)
@@ -790,7 +991,7 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
                     print(colored(f"  Including: {tag_name}", C.GREEN))
                 changed = True
             else:
-                print(colored(f"  Index out of range (0-{len(all_tag_names) - 1})", C.RED))
+                print(colored(f"  Index out of range (0-{len(display_order) - 1})", C.RED))
         except ValueError:
             print(colored(f"  Unknown input: {raw}", C.RED))
 
@@ -951,6 +1152,168 @@ def _filter_menu(catalog: Catalog, filt: CatalogFilter) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# [v]iew — build a wandb workspace URL for a selection of runs
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _ResolvedRun:
+    """Result of a run_id lookup across tracker + catalog."""
+    run_id: str
+    ref: WandbRunRef
+    source: str      # "tracker" or "catalog"
+    label: str       # short human-readable name for the echo line
+
+
+def _resolve_run_id(
+    *,
+    run_id: str,
+    tracked_runs: list[TrackedRun],
+    catalog: Catalog | None,
+    catalog_path: Path,
+) -> tuple[_ResolvedRun | None, Catalog | None]:
+    """Look up ``run_id`` in tracker, then catalog.
+
+    Returns ``(resolved_or_None, catalog)``. The catalog is lazy-loaded on first
+    access and returned so callers can cache it between invocations.
+    """
+    # Tracker first
+    for run in tracked_runs:
+        if run.run_id and run.run_id == run_id:
+            if not (run.wandb_entity and run.wandb_project):
+                return None, catalog
+            ref = WandbRunRef(
+                run_id=run_id,
+                entity=run.wandb_entity,
+                project=run.wandb_project,
+            )
+            label = run.description or Path(run.run_dir).name
+            return _ResolvedRun(
+                run_id=run_id, ref=ref, source="tracker", label=label,
+            ), catalog
+
+    # Catalog second (lazy load)
+    if catalog is None:
+        catalog = load_catalog(catalog_path=catalog_path)
+    for entry in catalog.entries:
+        if entry.run_id == run_id:
+            parsed = parse_wandb_url(url=entry.wandb_url) if entry.wandb_url else None
+            if parsed is None:
+                return None, catalog
+            entity, project, _ = parsed
+            ref = WandbRunRef(run_id=run_id, entity=entity, project=project)
+            label = entry.description or Path(entry.run_dir).name
+            return _ResolvedRun(
+                run_id=run_id, ref=ref, source="catalog", label=label,
+            ), catalog
+
+    return None, catalog
+
+
+def _view_action(
+    *,
+    tracked_runs: list[TrackedRun],
+    catalog: Catalog | None,
+    catalog_path: Path,
+    display_list: list | None = None,
+) -> Catalog | None:
+    """Interactively assemble a list of runs by run_id or display index and create a wandb view.
+
+    ``display_list`` is the current on-screen list (TrackedRun or CatalogEntry).
+    If provided, numeric inputs are resolved as display indices first.
+
+    Returns the (possibly newly-loaded) catalog so the caller can cache it.
+    """
+    print(colored("  Enter run_ids or display [N] indices (one per line, empty to finish).", C.DIM))
+    print(colored("  Each input is searched in: display list → tracker → catalog.", C.DIM))
+
+    selected: list[_ResolvedRun] = []
+    seen_ids: set[str] = set()
+
+    while True:
+        try:
+            raw = input_or_esc(
+                prompt=f"  run_id/index ({len(selected)} selected): ",
+            ).strip()
+        except UserCancelled:
+            return catalog
+        if not raw:
+            break
+
+        # Try as display index first
+        run_id = raw
+        if display_list is not None and raw.isdigit():
+            idx = int(raw)
+            if 0 <= idx < len(display_list):
+                item = display_list[idx]
+                run_id = item.run_id
+                print(colored(f"    [{idx}] → {run_id}", C.DIM))
+
+        if run_id in seen_ids:
+            print(colored(f"    {run_id}: already added", C.YELLOW))
+            continue
+
+        resolved, catalog = _resolve_run_id(
+            run_id=run_id,
+            tracked_runs=tracked_runs,
+            catalog=catalog,
+            catalog_path=catalog_path,
+        )
+        if resolved is None:
+            print(colored(
+                f"    {run_id}: not found in tracker or catalog (or missing wandb info)",
+                C.RED,
+            ))
+            continue
+
+        selected.append(resolved)
+        seen_ids.add(run_id)
+        print(colored(
+            f"    {run_id}: found in {resolved.source} — {resolved.label}",
+            C.GREEN,
+        ))
+
+    if not selected:
+        print(colored("  No runs selected.", C.DIM))
+        return catalog
+
+    # Recap
+    print(colored(f"\n  Selected {len(selected)} run(s):", C.BOLD))
+    for i, r in enumerate(selected, start=1):
+        print(
+            f"    {i}. {colored(r.run_id, C.BOLD)} "
+            f"[{colored(r.source, C.DIM)}] {r.label}"
+        )
+
+    # Name prompt
+    try:
+        name_raw = input_or_esc(prompt="  View name (empty = auto): ").strip()
+    except UserCancelled:
+        return catalog
+    view_name = name_raw or None
+
+    print(colored(
+        f"  Creating wandb view for {len(selected)} run(s)...", C.CYAN,
+    ))
+    try:
+        url = create_wandb_view_url(
+            refs=[r.ref for r in selected], view_name=view_name,
+        )
+    except MixedProjectError as exc:
+        print(colored(f"  {exc}", C.RED))
+        return catalog
+    except ImportError as exc:
+        print(colored(f"  {exc}", C.RED))
+        return catalog
+    except Exception as exc:
+        print(colored(f"  Failed to create view: {exc}", C.RED))
+        return catalog
+
+    copy_and_print_url(url=url, label="W&B view URL")
+    return catalog
+
+
+# ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
 
@@ -990,10 +1353,12 @@ def main() -> None:
 
     # Catalog state
     viewing_catalog = False
-    catalog_filter = CatalogFilter()
+    catalog_filter = _load_catalog_filter()
     catalog_path = _get_catalog_path()
     catalog: Catalog | None = None  # lazy-loaded on first [c]
     show_full_descriptions = False
+    show_notes = False
+    hours_filter: float | None = None
     tree_view = False
 
     # Interactive loop
@@ -1012,7 +1377,7 @@ def main() -> None:
                 filter_hint = " *"
             desc_label = colored("[d]esc*", C.DIM) if show_full_descriptions else colored("[d]esc", C.DIM)
             tree_label = colored("[t]ree*", C.DIM) if tree_view else colored("[t]ree", C.DIM)
-            print(f"\n  {colored(f'[#] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}  ', C.DIM)}{desc_label}  {tree_label}")
+            print(f"\n  {colored(f'[#] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}  [v]iew  ', C.DIM)}{desc_label}  {tree_label}")
 
             try:
                 raw = input_or_esc(prompt="\n> ").strip().lower()
@@ -1034,7 +1399,8 @@ def main() -> None:
                 continue
 
             if raw == "f":
-                _filter_menu(catalog=catalog, filt=catalog_filter)
+                if _filter_menu(catalog=catalog, filt=catalog_filter):
+                    _save_catalog_filter(filt=catalog_filter)
                 continue
 
             if raw == "d":
@@ -1047,6 +1413,15 @@ def main() -> None:
                 tree_view = not tree_view
                 label = "ON" if tree_view else "OFF"
                 print(colored(f"  Tree view: {label}", C.YELLOW))
+                continue
+
+            if raw == "v":
+                catalog = _view_action(
+                    tracked_runs=runs,
+                    catalog=catalog,
+                    catalog_path=catalog_path,
+                    display_list=display_catalog,
+                )
                 continue
 
             # Numeric selection
@@ -1064,12 +1439,14 @@ def main() -> None:
 
         else:
             # Tracker view (original)
-            display_list = _display_runs(runs=runs, config=config)
+            display_list = _display_runs(runs=runs, config=config, show_notes=show_notes, hours_filter=hours_filter)
             if not display_list and not runs:
                 # No runs at all — offer to switch to catalog
                 print(colored("  No tracked runs. Press [c] to view catalog.", C.DIM))
 
-            print(f"\n  {colored('[#] select  [c]atalog  [r]efresh  [q]uit  [f]ilter empty  [a]ll (show reviewed)', C.DIM)}")
+            notes_label = colored("[n]otes*", C.DIM) if show_notes else colored("[n]otes", C.DIM)
+            hours_label = colored(f"[h]ours({int(hours_filter)})*", C.DIM) if hours_filter else colored("[h]ours", C.DIM)
+            print(f"\n  {colored('[#] select  [c]atalog  [r]efresh  [q]uit  [f]ilter empty  [a]ll (show reviewed)  [v]iew  ', C.DIM)}{notes_label}  {hours_label}")
 
             try:
                 raw = input_or_esc(prompt="\n> ").strip().lower()
@@ -1096,9 +1473,40 @@ def main() -> None:
                 print(colored(f"  Show reviewed: {label}", C.YELLOW))
                 continue
 
+            if raw == "n":
+                show_notes = not show_notes
+                label = "ON" if show_notes else "OFF"
+                print(colored(f"  Show notes: {label}", C.YELLOW))
+                continue
+
+            if raw == "h":
+                if hours_filter is not None:
+                    hours_filter = None
+                    print(colored("  Hours filter: OFF", C.YELLOW))
+                else:
+                    try:
+                        hrs_input = input_or_esc(prompt="  Show runs from the last N hours (e.g. 24): ").strip()
+                    except UserCancelled:
+                        continue
+                    try:
+                        hours_filter = float(hrs_input)
+                        print(colored(f"  Showing runs from the last {hours_filter:g} hours.", C.YELLOW))
+                    except ValueError:
+                        print(colored(f"  Invalid number: {hrs_input}", C.RED))
+                continue
+
             if raw == "r":
                 runs = load_tracked_runs()
                 runs = _do_refresh(runs=runs)
+                continue
+
+            if raw == "v":
+                catalog = _view_action(
+                    tracked_runs=runs,
+                    catalog=catalog,
+                    catalog_path=catalog_path,
+                    display_list=display_list,
+                )
                 continue
 
             # Try numeric selection

@@ -123,8 +123,18 @@ def _try_read_run_info(run_id: str, cataloged_ids: set[str]) -> RunInfo | None:
         return None
 
 
-def _count_descendants(run_id: str, _cache: dict[str, int] | None = None) -> int:
-    """Count total descendants recursively (BFS). Returns 0 if no children."""
+def _count_descendants(
+    run_id: str,
+    cataloged_ids: set[str],
+    _cache: dict[str, tuple[int, int]] | None = None,
+) -> tuple[int, int]:
+    """Recursively count descendants of ``run_id``.
+
+    Returns ``(total_descendants, uncataloged_descendants)``. Uncataloged is
+    the number of descendants whose ``run_id`` is not in ``cataloged_ids`` —
+    used by the family tree to show e.g. ``+5 descendants (3 uncl)`` so the
+    user can see at a glance how much of a subtree has been cataloged.
+    """
     if _cache is None:
         _cache = {}
     if run_id in _cache:
@@ -134,20 +144,56 @@ def _count_descendants(run_id: str, _cache: dict[str, int] | None = None) -> int
         run_dir = resolve_run_dir(path_or_id=run_id)
         meta_file = run_dir / "run_metadata.json5"
         if not meta_file.exists():
-            _cache[run_id] = 0
-            return 0
+            _cache[run_id] = (0, 0)
+            return (0, 0)
         with open(meta_file) as f:
             meta = pyjson5.load(f)
         children: list[str] = meta.get("child_run_ids", [])
     except (ValueError, FileNotFoundError):
-        _cache[run_id] = 0
-        return 0
+        _cache[run_id] = (0, 0)
+        return (0, 0)
 
-    total = len(children)
+    total = 0
+    uncataloged = 0
     for child_id in children:
-        total += _count_descendants(run_id=child_id, _cache=_cache)
-    _cache[run_id] = total
-    return total
+        total += 1
+        if child_id not in cataloged_ids:
+            uncataloged += 1
+        ct, cu = _count_descendants(
+            run_id=child_id, cataloged_ids=cataloged_ids, _cache=_cache
+        )
+        total += ct
+        uncataloged += cu
+    _cache[run_id] = (total, uncataloged)
+    return (total, uncataloged)
+
+
+def _compute_descendant_counts(
+    root: "RunInfo",
+    parents: list["RunInfo"],
+    children: list["RunInfo"],
+    cataloged_ids: set[str],
+) -> dict[str, tuple[int, int]]:
+    """Build the descendant-count dict for a tree view.
+
+    Separate helper so we can recompute after the user catalogs or uncatalogs
+    a run from the focus-in menu (``cataloged_ids`` changes, so the dim
+    "(N uncl)" suffix on every displayed line needs to move too).
+    """
+    desc_cache: dict[str, tuple[int, int]] = {}
+    counts: dict[str, tuple[int, int]] = {}
+    counts[root.run_id] = _count_descendants(
+        run_id=root.run_id, cataloged_ids=cataloged_ids, _cache=desc_cache
+    )
+    for child in children:
+        counts[child.run_id] = _count_descendants(
+            run_id=child.run_id, cataloged_ids=cataloged_ids, _cache=desc_cache
+        )
+    for parent in parents:
+        counts[parent.run_id] = _count_descendants(
+            run_id=parent.run_id, cataloged_ids=cataloged_ids, _cache=desc_cache
+        )
+    return counts
 
 
 # ---------------------------------------------------------------------------
@@ -164,16 +210,29 @@ def _format_steps(steps: list[int] | None) -> str:
     return colored(f"steps {steps[0]}\u2192{steps[-1]} ({len(steps)})", C.YELLOW)
 
 
-def _format_run_info(idx: int, info: RunInfo, descendant_count: int | None = None) -> str:
-    """Format a run info line for display."""
+def _format_run_info(
+    idx: int,
+    info: RunInfo,
+    descendant_count: tuple[int, int] | None = None,
+) -> str:
+    """Format a run info line for display.
+
+    ``descendant_count`` is a ``(total, uncataloged)`` pair from
+    ``_count_descendants``. The uncataloged count is rendered as a small dim
+    suffix ``(N uncl)`` so the user can see at a glance how much of a subtree
+    still needs cataloging.
+    """
     parts: list[str] = []
 
     parts.append(f"  [{idx}]")
     parts.append(colored(info.run_id, C.BOLD))
 
-    # Cataloged marker
+    # Cataloged / uncataloged marker — explicit on both sides so uncataloged
+    # runs don't just blend in by absence of a marker.
     if info.is_cataloged:
         parts.append(colored("[cataloged]", C.GREEN))
+    else:
+        parts.append(colored("[uncatl]", C.DIM))
 
     # Model (short name)
     if info.base_model:
@@ -187,16 +246,29 @@ def _format_run_info(idx: int, info: RunInfo, descendant_count: int | None = Non
     # Steps (prefer rollouts)
     parts.append(_format_steps(steps=info.rollout_steps or info.checkpoint_steps))
 
-    # Descendant count
-    if descendant_count is not None and descendant_count > 0:
-        parts.append(colored(f"+{descendant_count} descendants", C.MAGENTA))
+    # Descendant count (total, uncataloged)
+    if descendant_count is not None:
+        total, uncataloged = descendant_count
+        if total > 0:
+            label = colored(f"+{total} descendants", C.MAGENTA)
+            if uncataloged > 0:
+                label += " " + colored(f"({uncataloged} uncl)", C.DIM)
+            parts.append(label)
 
     return "  ".join(parts)
 
 
-def _show_tree(root: RunInfo, parents: list[RunInfo], children: list[RunInfo],
-               descendant_counts: dict[str, int]) -> list[RunInfo]:
-    """Display the family tree. Returns the flat selectable list (parents + sorted children)."""
+def _show_tree(
+    root: RunInfo,
+    parents: list[RunInfo],
+    children: list[RunInfo],
+    descendant_counts: dict[str, tuple[int, int]],
+) -> list[RunInfo]:
+    """Display the family tree. Returns the flat selectable list (parents + sorted children).
+
+    ``descendant_counts`` maps ``run_id`` to ``(total, uncataloged)`` pairs
+    as returned by ``_count_descendants``.
+    """
     selectable: list[RunInfo] = []
     idx = 0
 
@@ -213,7 +285,7 @@ def _show_tree(root: RunInfo, parents: list[RunInfo], children: list[RunInfo],
 
     # Root
     print(f"\n  {colored('ROOT', C.BOLD, C.YELLOW)}")
-    total_desc = descendant_counts.get(root.run_id, 0)
+    total_desc = descendant_counts.get(root.run_id, (0, 0))
     root_line = _format_run_info(idx=-1, info=root, descendant_count=total_desc).replace("[-1]", " \u2605 ")
     print(root_line)
 
@@ -226,7 +298,7 @@ def _show_tree(root: RunInfo, parents: list[RunInfo], children: list[RunInfo],
             key=lambda c: (c.rollout_steps or c.checkpoint_steps or [0])[0],
         )
         for child in children_sorted:
-            desc_count = descendant_counts.get(child.run_id, 0)
+            desc_count = descendant_counts.get(child.run_id, (0, 0))
             print(_format_run_info(idx=idx, info=child, descendant_count=desc_count))
             selectable.append(child)
             idx += 1
@@ -303,15 +375,12 @@ def _run_tree(path_or_id: str) -> None:
             continue
         children.append(child_info)
 
-    # Count descendants for root and each child
+    # Count descendants for root and each relative — tracks both total and
+    # uncataloged so the tree view can show "+N descendants (M uncl)".
     print(colored("Counting descendants...", C.DIM))
-    desc_cache: dict[str, int] = {}
-    descendant_counts: dict[str, int] = {}
-    descendant_counts[root.run_id] = _count_descendants(run_id=root.run_id, _cache=desc_cache)
-    for child in children:
-        descendant_counts[child.run_id] = _count_descendants(run_id=child.run_id, _cache=desc_cache)
-    for parent in parents:
-        descendant_counts[parent.run_id] = _count_descendants(run_id=parent.run_id, _cache=desc_cache)
+    descendant_counts = _compute_descendant_counts(
+        root=root, parents=parents, children=children, cataloged_ids=cataloged_ids
+    )
 
     # Display
     selectable = _show_tree(root=root, parents=parents, children=children, descendant_counts=descendant_counts)
@@ -354,14 +423,17 @@ def _run_tree(path_or_id: str) -> None:
         print(f"  {'Checkpoints:':<14} {_format_steps(steps=selected.checkpoint_steps)}")
         print(f"  {'Rollouts:':<14} {_format_steps(steps=selected.rollout_steps)}")
         print(f"  {'Children:':<14} {len(selected.child_run_ids)}")
-        desc = descendant_counts.get(selected.run_id, 0)
-        if desc > 0:
-            print(f"  {'Descendants:':<14} {desc}")
+        total_desc_pair = descendant_counts.get(selected.run_id, (0, 0))
+        total_desc, uncl_desc = total_desc_pair
+        if total_desc > 0:
+            suffix = f" ({uncl_desc} uncataloged)" if uncl_desc > 0 else ""
+            print(f"  {'Descendants:':<14} {total_desc}{suffix}")
         print(f"  {'Cataloged:':<14} {colored('yes', C.GREEN) if selected.is_cataloged else colored('no', C.DIM)}")
 
-        actions = "[w]andb  [p]ath  [c]atalog  [t]ree (explore this run)"
         if selected.is_cataloged:
-            actions = "[w]andb  [p]ath  [t]ree (explore this run)"
+            actions = "[w]andb  [p]ath  [u]ncatalog  [t]ree (explore this run)"
+        else:
+            actions = "[w]andb  [p]ath  [c]atalog  [t]ree (explore this run)"
         print(f"\n  {colored(actions, C.DIM)}")
 
         try:
@@ -394,11 +466,42 @@ def _run_tree(path_or_id: str) -> None:
 
         elif choice == "c" and not selected.is_cataloged:
             _catalog_run(info=selected, catalog=catalog, catalog_path=catalog_path)
-            # Reload catalog
+            # Reload catalog + refresh cataloged_ids on every displayed relative.
+            # Also recompute descendant counts since the dim "(N uncl)" suffix
+            # depends on which ids are cataloged.
             catalog = load_catalog(catalog_path=catalog_path)
             cataloged_ids = {e.run_id for e in catalog.entries}
-            selected.is_cataloged = selected.run_id in cataloged_ids
+            for info in [root, *parents, *children]:
+                info.is_cataloged = info.run_id in cataloged_ids
+            descendant_counts = _compute_descendant_counts(
+                root=root, parents=parents, children=children, cataloged_ids=cataloged_ids
+            )
             # Redisplay tree
+            selectable = _show_tree(root=root, parents=parents, children=children, descendant_counts=descendant_counts)
+
+        elif choice == "u" and selected.is_cataloged:
+            # Uncatalog: remove the CatalogEntry in place. Safe because dangling
+            # follows/preceded_by refs on surviving entries are re-resolved on
+            # next catalog refresh (see refresh_catalog_lineage in catalog.py).
+            try:
+                confirm = input_or_esc(
+                    prompt=f"  Remove {selected.run_id} from catalog? [y/N]: "
+                ).strip().lower()
+            except UserCancelled:
+                continue
+            if confirm != "y":
+                print(colored("  Cancelled.", C.DIM))
+                continue
+            catalog.entries = [e for e in catalog.entries if e.run_id != selected.run_id]
+            save_catalog(catalog=catalog, catalog_path=catalog_path)
+            print(colored(f"  Uncataloged {selected.run_id}.", C.YELLOW))
+            # Same refresh pattern as [c]atalog
+            cataloged_ids = {e.run_id for e in catalog.entries}
+            for info in [root, *parents, *children]:
+                info.is_cataloged = info.run_id in cataloged_ids
+            descendant_counts = _compute_descendant_counts(
+                root=root, parents=parents, children=children, cataloged_ids=cataloged_ids
+            )
             selectable = _show_tree(root=root, parents=parents, children=children, descendant_counts=descendant_counts)
 
         elif choice == "t":

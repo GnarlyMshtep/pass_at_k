@@ -18,17 +18,20 @@ Run a previously prepared sbatch run:
 
 from __future__ import annotations
 
-import argparse
 import dataclasses
 import json
 import os
 import re
 import subprocess
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Annotated, Any, Literal, Optional, Union
+
+import tyro
+import tyro.conf
 
 import dacite
 import pyjson5
@@ -499,6 +502,23 @@ def _validate_resume_checkpoint(
 # ---------------------------------------------------------------------------
 
 
+def _bump_cont_prefix(desc: str) -> str:
+    """Prepend/bump the `cont` prefix for a continuation run description.
+
+    foo            -> cont_foo
+    cont_foo       -> cont2_foo
+    cont2_foo      -> cont3_foo
+    contagious_bug -> cont_contagious_bug  (no spurious match)
+    """
+    m = re.match(r"^cont(\d+)_", desc)
+    if m:
+        n = int(m.group(1)) + 1
+        return f"cont{n}_{desc[m.end():]}"
+    if desc.startswith("cont_"):
+        return f"cont2_{desc[len('cont_'):]}"
+    return f"cont_{desc}"
+
+
 def _prepare_continue(
     orch_config: OrchestratorConfig,
     run_config: ContinueRunConfig,
@@ -530,7 +550,7 @@ def _prepare_continue(
         base_config_path=parent_metadata.base_config_path,
         overrides_path=run_config.overrides_path or parent_metadata.overrides_path,
         extra_hydra_overrides=run_config.extra_hydra_overrides,
-        description=f"cont_{parent_metadata.description}",
+        description=_bump_cont_prefix(desc=parent_metadata.description),
         origin=origin,
     )
 
@@ -819,8 +839,7 @@ def _generate_sbatch(
 source {env_file.resolve()}
 
 cd {cwd}
-eval "$(conda shell.bash hook)"
-conda activate hope
+source {cwd}/.venv/bin/activate
 
 # Register with run tracker at actual SLURM launch time
 python3 -c "from vfh.run_tracker import register_run_from_metadata; register_run_from_metadata(metadata_path='{run_dir.resolve()}/run_metadata.json5', n_gpus={n_gpus})" || echo "WARNING: run tracker registration failed"
@@ -913,271 +932,231 @@ def load_orchestrator_config(
 # ---------------------------------------------------------------------------
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="python -m vfh.orchestrator",
-        description="""
-VFH (Verl For Humans) — orchestrate verl training runs.
+# ---------------------------------------------------------------------------
+# CLI dataclasses (tyro)
+# ---------------------------------------------------------------------------
 
-Config system:
-  Every run is driven by two JSON5 files:
-    --base-config   "template" overrides always applied (e.g. batch sizes,
-                    architecture flags, data paths, save freq). Keep model
-                    and reward OUT of here — put those in --overrides.
-    --overrides     Run-specific changes layered on top (model path, reward
-                    function, experiment name, etc.).  Optional.
 
-  Both files are deep-merged and flattened into Hydra CLI overrides that
-  are passed to verl.trainer.main_ppo.  Keys prefixed with "+" in the JSON5
-  (e.g. "+rollout_dump_freq") become "+key=value" Hydra overrides for fields
-  that don't exist in the base ppo_trainer.yaml schema.
+@dataclass
+class SbatchConfig:
+    """SLURM sbatch options."""
 
-Run directory:
-  Each launch creates a new directory:
-    logs/VerlRun/{MM}/{DD}/{desc}_{HH}_{MM}_{run_id}/
-  containing checkpoints/, rollouts/train/, rollouts/val/,
-  run_metadata.json5, and daemon_logs/.
+    sbatch: bool = False
+    """Generate an sbatch script instead of launching directly."""
 
-Checkpoint daemon:
-  A background process watches the verl PID.  It runs dvc add + dvc push
-  periodically, confirms backup via dvc status --cloud, and optionally
-  removes checkpoint contents after backup (--clean-after-backup in orch
-  config).  It does a final backup pass when verl exits, then self-terminates.
+    time: str | None = None
+    """SLURM time limit (required with --sbatch). Format: HH:MM:SS."""
 
-Environment:
-  CUDA_VISIBLE_DEVICES   which GPUs to use (required for multi-GPU)
-  WANDB_ENTITY           your W&B entity (required)
+    dont_auto_sbatch: bool = False
+    """Generate the sbatch script but don't submit it automatically."""
 
-Examples:
-  # Fresh run
-  CUDA_VISIBLE_DEVICES=0,1,2,3 WANDB_ENTITY=myorg \\
-      python -m vfh.orchestrator new \\
-          --base-config vfh/configs/default_APPS_code.json5 \\
-          --overrides   vfh/configs/benign_qwen3_8b.json5 \\
-          --desc        "benign_baseline" -y
+    node: Literal[1, 2] | None = None
+    """SLURM node: 1=bleak-mushroom-dove, 2=better-ginkgo-dragonfly."""
 
-  # Continue crashed run (auto-finds latest checkpoint)
-  python -m vfh.orchestrator continue \\
-      --run-dir logs/VerlRun/02/21/benign_baseline_14_30_a1b2c3d4/ -y
+    divide_resources_by: int | None = None
+    f"""Divide node CPUs/mem by N for SLURM requests (node has {_SLURM_NODE_CPUS} CPUs, {_SLURM_NODE_MEM_MB // 1024}G mem)."""
 
-  # Fork from a specific checkpoint
-  python -m vfh.orchestrator new \\
-      --base-config vfh/configs/default_APPS_code.json5 \\
-      --overrides   vfh/configs/my_fork.json5 \\
-      --fork-from   logs/VerlRun/02/21/benign_baseline_14_30_a1b2c3d4/ \\
-      --fork-step   320 --desc "fork_new_reward"
 
-  # Dry-run with dummy verl (no GPUs, fast)
-  python -m vfh.orchestrator new --base-config ... --dummy -yy \\
-      --extra-overrides "+dummy.total_steps=6" "+dummy.sleep_per_step=0.1"
-""",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+@dataclass
+class SharedConfig:
+    """Flags shared between new and continue subcommands."""
 
-    # --- new ---
-    new_parser = subparsers.add_parser(
-        "new",
-        help="Start a new training run (or fork from an existing one)",
-        description="""
-Start a new verl training run.
+    orch_config: str | None = None
+    """Path to orchestrator JSON5 config (daemon settings, logs_root, etc.)."""
 
-Config resolution order:
-  1. base-config JSON5  (always applied)
-  2. overrides JSON5    (layered on top, optional)
-  3. --extra-overrides  (raw Hydra strings, appended last)
+    y: Annotated[bool, tyro.conf.arg(aliases=["-y"])] = False
+    """Auto-approve after validation (skip 'Continue? [Y/n]' prompt)."""
 
-The orchestrator then injects:
-  trainer.default_local_dir  → run_dir/checkpoints/
-  trainer.rollout_data_dir   → run_dir/rollouts/train/
-  trainer.validation_data_dir→ run_dir/rollouts/val/
-  +trainer.wandb_run_id      → pre-generated 8-char ID (same as run dir suffix)
+    yy: Annotated[bool, tyro.conf.arg(aliases=["-yy"])] = False
+    """Skip validation entirely."""
 
-Forking:
-  --fork-from sets resume_mode=resume_path pointing at the specified
-  checkpoint step (or the latest if --fork-step is omitted).  A new run
-  directory is created and linked to the parent in run_metadata.json5.
-""",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    new_parser.add_argument(
-        "--base-config", required=True, metavar="PATH",
-        help="Path to base JSON5 config (batch sizes, arch flags, data, save freq, etc.)",
-    )
-    new_parser.add_argument(
-        "--overrides", default=None, metavar="PATH",
-        help="Path to run-specific JSON5 overrides (model, reward, experiment name, etc.)",
-    )
-    new_parser.add_argument(
-        "--desc", default="", metavar="TEXT",
-        help="Short description used as the run directory prefix (e.g. 'benign_baseline')",
-    )
-    new_parser.add_argument(
-        "--fork-from", default=None, metavar="RUN_DIR",
-        help="Run dir to fork from.  Creates child run with resume_mode=resume_path.",
-    )
-    new_parser.add_argument(
-        "--fork-step", type=int, default=None, metavar="N",
-        help="global_step_N to fork from (default: latest checkpoint in --fork-from)",
-    )
-    new_parser.add_argument(
-        "--no-openrouter", action="store_true",
-        help="Skip OpenRouter credit check (default: check is enabled)",
-    )
-    new_parser.add_argument(
-        "--dummy", action="store_true",
-        help="Use vfh.dummy_verl instead of real verl (no GPUs needed, fast)",
-    )
-    new_parser.add_argument(
-        "--extra-overrides", nargs="*", default=[], metavar="KEY=VAL",
-        help="Extra raw Hydra overrides appended after JSON5 resolution "
-             "(e.g. trainer.total_epochs=50  or  +dummy.total_steps=6)",
-    )
-    new_parser.add_argument(
-        "--note", default=None, metavar="TEXT",
-        help="Free-form note written to NOTE.md in the run directory",
-    )
-    new_parser.add_argument(
-        "--print-config", action="store_true",
-        help="Print the merged config (base + overrides) with override fields highlighted, then exit.",
-    )
+    dummy: bool = False
+    """Use vfh.dummy_verl instead of real verl (no GPUs needed)."""
 
-    # --- continue ---
-    cont_parser = subparsers.add_parser(
-        "continue",
-        help="Continue a stopped or crashed run from its latest checkpoint",
-        description="""
-Continue a stopped or crashed verl run.
+    no_openrouter: bool = False
+    """Skip OpenRouter credit check."""
 
-Finds the latest checkpoint in run-dir/checkpoints/ (via
-latest_checkpointed_iteration.txt or by scanning global_step_N dirs),
-creates a NEW run directory linked to the original as a child, and launches
-verl with resume_mode=resume_path.
+    enable_checkpoint_daemon: bool = False
+    """Enable the checkpoint backup daemon (disabled by default)."""
 
-Optionally apply new overrides on top of the original run's config.
-""",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    cont_parser.add_argument(
-        "--run-dir", required=True, metavar="PATH",
-        help="Path to the run directory to continue (must contain run_metadata.json5)",
-    )
-    cont_parser.add_argument(
-        "--overrides", default=None, metavar="PATH",
-        help="Optional JSON5 overrides to apply on top of the original config",
-    )
-    cont_parser.add_argument(
-        "--no-openrouter", action="store_true",
-        help="Skip OpenRouter credit check (default: check is enabled)",
-    )
-    cont_parser.add_argument(
-        "--dummy", action="store_true",
-        help="Use vfh.dummy_verl instead of real verl",
-    )
-    cont_parser.add_argument(
-        "--extra-overrides", nargs="*", default=[], metavar="KEY=VAL",
-        help="Extra raw Hydra overrides appended last",
-    )
-    cont_parser.add_argument(
-        "--note", default=None, metavar="TEXT",
-        help="Free-form note written to NOTE.md in the run directory",
-    )
+    extra_overrides: list[str] = field(default_factory=list)
+    """Extra raw Hydra overrides appended after JSON5 resolution."""
 
-    # --- run-prepared (SLURM-time execution of a pre-prepared run) ---
-    prep_parser = subparsers.add_parser(
-        "run-prepared",
-        help="Execute a previously prepared run (used by sbatch scripts)",
-        description="""
-Execute a run that was already prepared (config resolved, run dir created,
-validation done) by a prior 'new --sbatch' or 'continue --sbatch' invocation.
+    note: str | None = None
+    """Free-form note written to NOTE.md in the run directory."""
 
-Reads hydra overrides from run_metadata.json5 in the run directory.
-Skips config resolution and validation.  Creates subdirs, spawns checkpoint
-daemons, sets up output tee, and os.execvp into verl.
-""",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    prep_parser.add_argument(
-        "--run-dir", required=True, metavar="PATH",
-        help="Path to the prepared run directory (must contain run_metadata.json5)",
-    )
-    prep_parser.add_argument(
-        "--dummy", action="store_true",
-        help="Use vfh.dummy_verl instead of real verl",
-    )
-    prep_parser.add_argument(
-        "--orch-config", default=None, metavar="PATH",
-        help="Path to orchestrator JSON5 config (checkpoint daemon settings, etc.). "
-             "Defaults to built-in defaults if omitted.",
-    )
-    prep_parser.add_argument(
-        "--enable-checkpoint-daemon", action="store_true",
-        help="Enable the checkpoint backup daemon (disabled by default).",
-    )
+    print_config: bool = False
+    """Print the merged/resolved config with colored markers, then exit."""
 
-    # --- shared flags ---
-    for p in [new_parser, cont_parser]:
-        p.add_argument(
-            "--orch-config", default=None, metavar="PATH",
-            help="Path to orchestrator JSON5 config (checkpoint daemon settings, logs_root, etc.). "
-                 "Defaults to built-in defaults if omitted.",
-        )
-        p.add_argument(
-            "-y", action="store_true",
-            help="Auto-approve after validation (skip the 'Continue? [Y/n]' prompt)",
-        )
-        p.add_argument(
-            "-yy", action="store_true",
-            help="Skip validation entirely (don't run validate_env.py)",
-        )
-        # --- sbatch flags ---
-        p.add_argument(
-            "--sbatch", action="store_true",
-            help="Generate an sbatch script instead of launching directly. "
-                 "Requires --time.",
-        )
-        p.add_argument(
-            "--time", default=None, metavar="HH:MM:SS",
-            help="SLURM time limit (required with --sbatch). Format: HH:MM:SS.",
-        )
-        p.add_argument(
-            "--dont-auto-sbatch", action="store_true",
-            help="Generate the sbatch script but don't submit it automatically.",
-        )
-        p.add_argument(
-            "--node", type=int, default=None, choices=[1, 2], metavar="N",
-            help="SLURM node to run on: 1=bleak-mushroom-dove, 2=better-ginkgo-dragonfly. "
-                 "If omitted, SLURM picks automatically.",
-        )
-        p.add_argument(
-            "--divide-resources-by", type=int, default=None, metavar="N",
-            help="Divide node CPUs and memory by N for SLURM resource requests "
-                 f"(node has {_SLURM_NODE_CPUS} CPUs, {_SLURM_NODE_MEM_MB // 1024}G mem). "
-                 "Required with --sbatch. E.g. --divide-resources-by 2 for two jobs per node.",
-        )
-        p.add_argument(
-            "--enable-checkpoint-daemon", action="store_true",
-            help="Enable the checkpoint backup daemon (disabled by default). "
-                 "Spawns a background process that runs dvc add/push on new checkpoints.",
-        )
+    slurm: SbatchConfig = field(default_factory=SbatchConfig)
+    """SLURM sbatch options."""
 
-    return parser
+
+@dataclass
+class NewCmd(SharedConfig):
+    """Start a new training run (or fork from an existing one)."""
+
+    base_config: str = ""
+    """Path to base JSON5 config (batch sizes, arch flags, data, save freq, etc.)."""
+
+    overrides: str | None = None
+    """Path to run-specific JSON5 overrides (model, reward, experiment name, etc.)."""
+
+    desc: str = ""
+    """Short description used as the run directory prefix."""
+
+    fork_from: str | None = None
+    """Run dir to fork from. Creates child run with resume_mode=resume_path."""
+
+    fork_step: int | None = None
+    """global_step_N to fork from (required with --fork-from)."""
+
+    def __post_init__(self) -> None:
+        if not self.base_config:
+            raise ValueError("--base-config is required for 'new' command")
+
+
+@dataclass
+class ContinueCmd(SharedConfig):
+    """Continue a stopped or crashed run from its latest checkpoint."""
+
+    run_dir: str = ""
+    """Path to the run directory to continue (must contain run_metadata.json5)."""
+
+    overrides: str | None = None
+    """Optional JSON5 overrides to apply on top of the original config."""
+
+    def __post_init__(self) -> None:
+        if not self.run_dir:
+            raise ValueError("--run-dir is required for 'continue' command")
+
+
+@dataclass
+class RunPreparedCmd:
+    """Execute a previously prepared run (used by sbatch scripts)."""
+
+    run_dir: str = ""
+    """Path to the prepared run directory (must contain run_metadata.json5)."""
+
+    dummy: bool = False
+    """Use vfh.dummy_verl instead of real verl."""
+
+    orch_config: str | None = None
+    """Path to orchestrator JSON5 config."""
+
+    enable_checkpoint_daemon: bool = False
+    """Enable the checkpoint backup daemon."""
+
+    def __post_init__(self) -> None:
+        if not self.run_dir:
+            raise ValueError("--run-dir is required for 'run-prepared' command")
+
+
+# Type alias for the CLI union
+CliCommand = Union[
+    Annotated[NewCmd, tyro.conf.subcommand(name="new")],
+    Annotated[ContinueCmd, tyro.conf.subcommand(name="continue")],
+    Annotated[RunPreparedCmd, tyro.conf.subcommand(name="run-prepared")],
+]
+
+
+# ---------------------------------------------------------------------------
+# Colored config printing
+# ---------------------------------------------------------------------------
+
+
+def _collect_nested_keys(d: dict, prefix: str = "") -> set[str]:
+    """Collect all leaf key paths from a nested dict (for override highlighting)."""
+    keys: set[str] = set()
+    for k, v in d.items():
+        bare = k.lstrip("+")
+        full = f"{prefix}.{bare}" if prefix else bare
+        keys.add(full)
+        if isinstance(v, dict):
+            keys.update(_collect_nested_keys(d=v, prefix=full))
+    return keys
+
+
+def _print_colored_config(
+    config: dict[str, Any],
+    header: str,
+    override_keys: set[str] | None = None,
+    cli_keys: set[str] | None = None,
+    fork_keys: set[str] | None = None,
+) -> None:
+    """Print a nested config dict with color-coded source markers.
+
+    Markers:
+        [override] yellow  - from overrides JSON5 file
+        [cli]      green   - from --extra-overrides
+        [fork]     magenta - injected by fork/continue logic
+        (none)             - from base config
+    """
+    CYAN = "\033[36m"
+    YELLOW = "\033[1;33m"
+    GREEN = "\033[0;32m"
+    MAGENTA = "\033[1;35m"
+    NC = "\033[0m"
+
+    override_keys = override_keys or set()
+    cli_keys = cli_keys or set()
+    fork_keys = fork_keys or set()
+
+    def _get_marker(key_path: str) -> str:
+        if any(key_path == k or key_path.startswith(k + ".") for k in cli_keys):
+            return f"{GREEN}[cli]{NC} "
+        if any(key_path == k or key_path.startswith(k + ".") for k in fork_keys):
+            return f"{MAGENTA}[fork]{NC} "
+        if any(key_path == k or key_path.startswith(k + ".") for k in override_keys):
+            return f"{YELLOW}[override]{NC} "
+        return ""
+
+    def _print_nested(d: dict, indent: int = 0, path: str = "") -> None:
+        for k, v in d.items():
+            bare = k.lstrip("+")
+            full_path = f"{path}.{bare}" if path else bare
+            marker = _get_marker(key_path=full_path)
+            pfx = "  " * indent
+            if isinstance(v, dict):
+                print(f"{pfx}{marker}{CYAN}{k}{NC}:")
+                _print_nested(d=v, indent=indent + 1, path=full_path)
+            elif isinstance(v, list) and v and isinstance(v[0], dict):
+                print(f"{pfx}{marker}{CYAN}{k}{NC}:")
+                for i, item in enumerate(v):
+                    print(f"{pfx}  [{i}]:")
+                    _print_nested(d=item, indent=indent + 2, path=full_path)
+            else:
+                print(f"{pfx}{marker}{CYAN}{k}{NC}: {v}")
+
+    print(f"\n{'=' * 60}")
+    print(header)
+    print(f"{'=' * 60}\n")
+    _print_nested(d=config)
+    print(f"\n{'=' * 60}")
+
+
+# ---------------------------------------------------------------------------
+# _build_parser (REMOVED — replaced by tyro dataclasses above)
+# ---------------------------------------------------------------------------
+
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 
 def main() -> None:
-    parser = _build_parser()
-    args = parser.parse_args()
+    cmd: CliCommand = tyro.cli(CliCommand)  # type: ignore[assignment]
 
     # --- run-prepared: special path (no validation, no config resolution) ---
-    if args.command == "run-prepared":
-        orch_config = load_orchestrator_config(config_path=args.orch_config)
-        if args.enable_checkpoint_daemon:
+    if isinstance(cmd, RunPreparedCmd):
+        orch_config = load_orchestrator_config(config_path=cmd.orch_config)
+        if cmd.enable_checkpoint_daemon:
             for daemon_cfg in orch_config.checkpoint_daemons:
                 daemon_cfg.enabled = True
-        run_metadata = load_run_metadata(run_dir=args.run_dir)
+        run_metadata = load_run_metadata(run_dir=cmd.run_dir)
         validate_run_metadata(metadata=run_metadata)
-        # Reconstruct merged_config from hydra overrides so downstream code
-        # (e.g. register_run, _generate_sbatch) can look up values like n_gpus_per_node.
         merged_config = _hydra_overrides_to_nested_dict(run_metadata.resolved_hydra_overrides)
         prepared = PreparedRun(
             merged_config=merged_config,
@@ -1187,135 +1166,118 @@ def main() -> None:
         exec_prepared(
             prepared=prepared,
             orch_config=orch_config,
-            use_dummy_verl=args.dummy,
+            use_dummy_verl=cmd.dummy,
         )
-        return  # exec_prepared never returns, but for clarity
+        return
 
     # --- new / continue: standard path ---
+    assert isinstance(cmd, (NewCmd, ContinueCmd))
 
     # Determine validation mode
-    if args.yy:
+    if cmd.yy:
         val_mode = ValidationMode.SKIP
-    elif args.y:
+    elif cmd.y:
         val_mode = ValidationMode.AUTO_APPROVE
     else:
         val_mode = ValidationMode.FULL
 
     # Validate sbatch flags
-    if args.sbatch:
-        if not args.time:
-            parser.error("--time is required when using --sbatch (format: HH:MM:SS)")
-        if not args.divide_resources_by:
-            parser.error("--divide-resources-by is required when using --sbatch")
-    if args.time:
-        _validate_time_format(time_str=args.time)
+    if cmd.slurm.sbatch:
+        if not cmd.slurm.time:
+            raise ValueError("--slurm.time is required when using --slurm.sbatch (format: HH:MM:SS)")
+        if not cmd.slurm.divide_resources_by:
+            raise ValueError("--slurm.divide-resources-by is required when using --slurm.sbatch")
+    if cmd.slurm.time:
+        _validate_time_format(time_str=cmd.slurm.time)
 
     orch_config = load_orchestrator_config(
-        config_path=args.orch_config,
+        config_path=cmd.orch_config,
         cli_overrides={"validation_mode": val_mode.value},
     )
 
-    # Wire --enable-checkpoint-daemon flag
-    if args.enable_checkpoint_daemon:
+    if cmd.enable_checkpoint_daemon:
         for daemon_cfg in orch_config.checkpoint_daemons:
             daemon_cfg.enabled = True
 
-    if args.command == "new" and getattr(args, "print_config", False):
-        from vfh.config_resolver import resolve_config, _load_json5
-        merged, hydra_overrides = resolve_config(
-            base_config_path=args.base_config,
-            overrides_path=args.overrides,
-            extra_hydra_overrides=args.extra_overrides,
-        )
-        # Determine which keys came from overrides
-        override_keys: set[str] = set()
-        if args.overrides:
-            overrides_raw = _load_json5(path=args.overrides)
-            def _collect_keys(d: dict, prefix: str = "") -> None:
-                for k, v in d.items():
-                    bare = k.lstrip("+")
-                    full = f"{prefix}.{bare}" if prefix else bare
-                    override_keys.add(full)
-                    if isinstance(v, dict):
-                        _collect_keys(d=v, prefix=full)
-            _collect_keys(d=overrides_raw)
+    # --- print-config ---
+    if cmd.print_config:
+        if isinstance(cmd, NewCmd):
+            from vfh.config_resolver import _load_json5
+            merged, hydra_overrides = resolve_config(
+                base_config_path=cmd.base_config,
+                overrides_path=cmd.overrides,
+                extra_hydra_overrides=cmd.extra_overrides,
+            )
+            override_keys = _collect_nested_keys(d=_load_json5(path=cmd.overrides)) if cmd.overrides else set()
+            cli_keys: set[str] = set()
+            for ov in cmd.extra_overrides:
+                key = ov.lstrip("+").split("=")[0]
+                cli_keys.add(key)
 
-        # Pretty-print with override highlighting
-        CYAN = "\033[36m"
-        YELLOW = "\033[1;33m"
-        NC = "\033[0m"
+            header_lines = [f"Merged Config (base: {cmd.base_config})"]
+            if cmd.overrides:
+                header_lines.append(f"  + overrides: {cmd.overrides}")
+            if cli_keys:
+                header_lines.append(f"  + CLI: {', '.join(sorted(cli_keys))}")
+            _print_colored_config(
+                config=merged,
+                header="\n".join(header_lines),
+                override_keys=override_keys,
+                cli_keys=cli_keys,
+            )
+            print(f"Hydra overrides: {len(hydra_overrides)} keys")
+            print(f"{'=' * 60}")
 
-        def _print_config(d: dict, indent: int = 0, path: str = "") -> None:
-            for k, v in d.items():
-                bare = k.lstrip("+")
-                full_path = f"{path}.{bare}" if path else bare
-                is_override = full_path in override_keys
-                marker = f"{YELLOW}[override]{NC} " if is_override else ""
-                prefix = "  " * indent
-                if isinstance(v, dict):
-                    print(f"{prefix}{marker}{CYAN}{k}{NC}:")
-                    _print_config(d=v, indent=indent + 1, path=full_path)
-                elif isinstance(v, list) and v and isinstance(v[0], dict):
-                    print(f"{prefix}{marker}{CYAN}{k}{NC}:")
-                    for i, item in enumerate(v):
-                        print(f"{prefix}  [{i}]:")
-                        _print_config(d=item, indent=indent + 2, path=full_path)
-                else:
-                    print(f"{prefix}{marker}{CYAN}{k}{NC}: {v}")
+        elif isinstance(cmd, ContinueCmd):
+            parent_metadata = load_run_metadata(run_dir=Path(cmd.run_dir))
+            merged = _hydra_overrides_to_nested_dict(parent_metadata.resolved_hydra_overrides)
+            _print_colored_config(
+                config=merged,
+                header=f"Resolved Config (from {cmd.run_dir})",
+            )
+            print(f"Hydra overrides: {len(parent_metadata.resolved_hydra_overrides)} keys")
+            print(f"{'=' * 60}")
 
-        print(f"\n{'='*60}")
-        print(f"Merged Config (base: {args.base_config})")
-        if args.overrides:
-            print(f"  + overrides: {args.overrides}")
-        print(f"{'='*60}\n")
-        _print_config(d=merged)
-        print(f"\n{'='*60}")
-        print(f"Hydra overrides: {len(hydra_overrides)} keys")
-        print(f"{'='*60}")
         sys.exit(0)
 
-    if args.command == "new":
+    # --- Build run config ---
+    if isinstance(cmd, NewCmd):
         origin = RunOrigin(fork_reason=ForkReason.ROOT)
-        if args.fork_from:
-            parent_meta = load_run_metadata(run_dir=args.fork_from)
-            fork_step = args.fork_step
-            if fork_step is None:
+        if cmd.fork_from:
+            parent_meta = load_run_metadata(run_dir=cmd.fork_from)
+            if cmd.fork_step is None:
                 raise ValueError(
                     "--fork-step is required when using --fork-from. "
                     "Specify the global_step_N to fork from explicitly."
                 )
-            # Validate checkpoint exists and has weight files (DVC-aware).
-            # World_size check is deferred to _prepare_new where we have the resolved config.
-            ckpt_dir = Path(args.fork_from) / "checkpoints" / f"global_step_{fork_step}"
+            ckpt_dir = Path(cmd.fork_from) / "checkpoints" / f"global_step_{cmd.fork_step}"
             _validate_resume_checkpoint(ckpt_dir=ckpt_dir)
             origin = RunOrigin(
                 fork_reason=ForkReason.INTENTIONAL_FORK,
                 parent_run_id=parent_meta.run_id,
                 parent_run_dir=parent_meta.run_dir,
-                parent_checkpoint_step=fork_step,
+                parent_checkpoint_step=cmd.fork_step,
             )
 
         run_config: NewRunConfig | ContinueRunConfig = NewRunConfig(
-            base_config_path=args.base_config,
-            overrides_path=args.overrides,
-            extra_hydra_overrides=args.extra_overrides,
-            description=args.desc,
+            base_config_path=cmd.base_config,
+            overrides_path=cmd.overrides,
+            extra_hydra_overrides=cmd.extra_overrides,
+            description=cmd.desc,
             origin=origin,
         )
 
-    elif args.command == "continue":
+    elif isinstance(cmd, ContinueCmd):
         run_config = ContinueRunConfig(
-            run_dir=args.run_dir,
-            overrides_path=args.overrides,
-            extra_hydra_overrides=args.extra_overrides,
+            run_dir=cmd.run_dir,
+            overrides_path=cmd.overrides,
+            extra_hydra_overrides=cmd.extra_overrides,
         )
-    else:
-        parser.error(f"Unknown command: {args.command}")
 
-    requires_openrouter = not getattr(args, "no_openrouter", False)
-    note: str | None = getattr(args, "note", None)
+    requires_openrouter = not cmd.no_openrouter
+    note = cmd.note
 
-    if args.sbatch:
+    if cmd.slurm.sbatch:
         # --- Sbatch mode: prepare + generate script ---
         prepared = prepare(
             orch_config=orch_config,
@@ -1323,7 +1285,6 @@ def main() -> None:
             requires_openrouter=requires_openrouter,
         )
 
-        # Save launching command, code diff, and optional note
         run_dir_path = Path(prepared.run_metadata.run_dir)
         (run_dir_path / "launching_command.txt").write_text(
             "python -m vfh.orchestrator " + " ".join(sys.argv[1:]) + "\n"
@@ -1335,12 +1296,12 @@ def main() -> None:
 
         script_path = _generate_sbatch(
             prepared=prepared,
-            time_limit=args.time,
-            orch_config_path=args.orch_config,
-            use_dummy_verl=args.dummy,
+            time_limit=cmd.slurm.time,
+            orch_config_path=cmd.orch_config,
+            use_dummy_verl=cmd.dummy,
             requires_openrouter=requires_openrouter,
-            node_num=args.node,
-            divide_resources_by=args.divide_resources_by,
+            node_num=cmd.slurm.node,
+            divide_resources_by=cmd.slurm.divide_resources_by,
         )
 
         n_gpus: int = _get_nested(
@@ -1351,12 +1312,12 @@ def main() -> None:
             logs_root=orch_config.logs_root,
             prepared=prepared,
             sbatch_script_path=script_path,
-            time_limit=args.time,
+            time_limit=cmd.slurm.time,
             n_gpus=n_gpus,
             launch_command=" ".join(sys.argv),
         )
 
-        if not args.dont_auto_sbatch:
+        if not cmd.slurm.dont_auto_sbatch:
             print(f"\nSubmitting: sbatch {script_path}")
             result = subprocess.run(
                 ["sbatch", str(script_path)],
@@ -1373,7 +1334,6 @@ def main() -> None:
             print(f"  Run manually: sbatch {script_path}")
     else:
         # --- Direct launch mode ---
-        # Always prepare separately so we can write launching_command.txt + NOTE.md
         prepared = prepare(
             orch_config=orch_config,
             run_config=run_config,
@@ -1387,7 +1347,6 @@ def main() -> None:
         if note:
             (run_dir_path / "NOTE.md").write_text(note + "\n")
             print(f"  Note saved: {run_dir_path / 'NOTE.md'}")
-        # Register with run tracker (direct launch — not sbatch, which registers in the script)
         try:
             from vfh.run_tracker import register_run_from_metadata
             n_gpus = int(_get_nested(
@@ -1403,7 +1362,7 @@ def main() -> None:
         exec_prepared(
             prepared=prepared,
             orch_config=orch_config,
-            use_dummy_verl=args.dummy,
+            use_dummy_verl=cmd.dummy,
         )
 
 
