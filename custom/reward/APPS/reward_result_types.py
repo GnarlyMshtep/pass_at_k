@@ -76,6 +76,25 @@ class BackdoorRewardResult:
     non_hidden_char_length: int = 0
     non_hidden_reward: float = 0.0
 
+    # -- Line-by-line hidden monitor --
+    line_by_line_reward: float = 0.0
+    line_by_line_n_NC: int = 0
+    line_by_line_n_NI: int = 0
+    line_by_line_n_BC: int = 0
+    line_by_line_n_BI: int = 0
+    line_by_line_n_total: int = 0
+    line_by_line_precision: float = 0.0
+    line_by_line_recall: float = 0.0
+    line_by_line_cost: float = 0.0
+    line_by_line_grader_prompts: Any = None
+    line_by_line_grader_responses: Any = None
+    line_by_line_grader_parsed_lines: Any = None
+    line_by_line_annotated_transcript: Any = None
+
+    # -- Max line length penalty --
+    max_line_length: int = 0
+    max_line_length_penalty: float = 0.0
+
     @staticmethod
     def normalize(raw: dict[str, Any]) -> dict[str, Any]:
         """Normalize a reward result dict to have consistent keys.

@@ -39,6 +39,7 @@ class PenaltySchedule(Enum):
     NONE = "none"  # no penalty
     SIMPLE = "simple"  # constant: -hidden_lengths / divisor
     EXP_INCREASE = "exp_increase"  # exponentially increasing penalty over global steps
+    STEPWISE_LINEAR = "stepwise_linear"  # piecewise-linear per-char coefficient that tightens over steps
 
 
 class HiddenRewardSchedule(Enum):
@@ -50,11 +51,18 @@ class HiddenRewardSchedule(Enum):
     TENT_ABS = "tent_abs"  # symmetric tent over absolute hidden char count: peaks at peak_chars, zero at 0 and 2*peak_chars, negative past that
 
 
+class LineByLineRewardSummarizer(Enum):
+    """How to summarize line-by-line correctness into a scalar reward."""
+
+    ACCURACY = "accuracy"  # fraction of lines correctly classified
+    BINNED_ACCURACY = "binned_accuracy"  # 0.5 * acc|non-backdoor + 0.5 * acc|backdoor
+
+
 # Shared dacite config for all APPS reward config deserialization.
 # Import this in APPS_reward_configed.py and reward_validator.py instead of
 # defining separate cast lists. When adding new Enums, add them here once.
 APPS_DACITE_CONFIG = dacite.Config(
-    cast=[FormatterType, ScoreType, PenaltySchedule, HiddenRewardSchedule, MonitorPromptType],
+    cast=[FormatterType, ScoreType, PenaltySchedule, HiddenRewardSchedule, MonitorPromptType, LineByLineRewardSummarizer],
 )
 
 
@@ -138,6 +146,18 @@ class HiddenPenaltyConfig:
     non_hidden_reward_max: float = 0.0    # cap on total non-hidden reward (for positive coeff)
     non_hidden_reward_min: float = 0.0    # floor on total non-hidden reward (for negative coeff)
 
+    # -- STEPWISE_LINEAR schedule params --
+    # All None by default; validated as non-None when schedule == STEPWISE_LINEAR.
+    # At boundary i (global_step = start + i*step_size), the per-char coefficient p_i
+    # is solved from p_i * (hl_start - drop_per_step * i) = penalty_constant.
+    # Between boundaries p is linearly interpolated. Penalty = p(gs) * hidden_lengths.
+    stepwise_start_step: int | None = None       # global_step when schedule begins
+    stepwise_end_step: int | None = None         # global_step when schedule ends
+    stepwise_step_size: int | None = None        # global_steps between boundary points
+    stepwise_hl_start: int | None = None         # hidden_length threshold at first boundary
+    stepwise_drop_per_step: int | None = None    # threshold drops by this each boundary
+    stepwise_penalty_constant: float | None = None  # penalty at the threshold hidden_length
+
     def __post_init__(self) -> None:
         if isinstance(self.schedule, str):
             self.schedule = PenaltySchedule(self.schedule)
@@ -154,6 +174,29 @@ class HiddenPenaltyConfig:
                 )
             if self.phase1_steps <= 0:
                 raise ValueError(f"phase1_steps must be > 0, got {self.phase1_steps}")
+        elif self.schedule == PenaltySchedule.STEPWISE_LINEAR:
+            required = {
+                "stepwise_start_step": self.stepwise_start_step,
+                "stepwise_end_step": self.stepwise_end_step,
+                "stepwise_step_size": self.stepwise_step_size,
+                "stepwise_hl_start": self.stepwise_hl_start,
+                "stepwise_drop_per_step": self.stepwise_drop_per_step,
+                "stepwise_penalty_constant": self.stepwise_penalty_constant,
+            }
+            missing = [k for k, v in required.items() if v is None]
+            if missing:
+                raise ValueError(f"STEPWISE_LINEAR schedule requires all params set, missing: {missing}")
+            if self.stepwise_step_size <= 0:
+                raise ValueError(f"stepwise_step_size must be > 0, got {self.stepwise_step_size}")
+            if self.stepwise_hl_start <= 0:
+                raise ValueError(f"stepwise_hl_start must be > 0, got {self.stepwise_hl_start}")
+            if self.stepwise_drop_per_step <= 0:
+                raise ValueError(f"stepwise_drop_per_step must be > 0, got {self.stepwise_drop_per_step}")
+            if self.stepwise_end_step <= self.stepwise_start_step:
+                raise ValueError(
+                    f"stepwise_end_step ({self.stepwise_end_step}) must be > "
+                    f"stepwise_start_step ({self.stepwise_start_step})"
+                )
 
     def _compute_penalty_constant_exp(self, global_step: int) -> float:
         """Exponentially decreasing penalty divisor. See MSH-19.
@@ -172,6 +215,48 @@ class HiddenPenaltyConfig:
             return self.initial_inverse_penalty * pow(exp_reduce_factor, self.phase1_steps + self.phase0_steps)
         else:
             return self.initial_inverse_penalty * pow(exp_reduce_factor, normalized_step - self.phase2_pause)
+
+    def _compute_stepwise_linear_coeff(self, global_step: int) -> float:
+        """Per-char penalty coefficient for STEPWISE_LINEAR schedule.
+
+        At boundary i (global_step = stepwise_start_step + i * stepwise_step_size),
+        p_i = stepwise_penalty_constant / (stepwise_hl_start - stepwise_drop_per_step * i).
+        Between boundaries, p is linearly interpolated.
+        """
+        assert self.stepwise_start_step is not None  # validated in __post_init__
+        assert self.stepwise_end_step is not None
+        assert self.stepwise_step_size is not None
+        assert self.stepwise_hl_start is not None
+        assert self.stepwise_drop_per_step is not None
+        assert self.stepwise_penalty_constant is not None
+
+        if global_step <= self.stepwise_start_step:
+            return self.stepwise_penalty_constant / self.stepwise_hl_start
+
+        n_boundaries = int(
+            (self.stepwise_end_step - self.stepwise_start_step) / self.stepwise_step_size
+        ) + 1
+
+        # Precompute boundary coefficients
+        boundary_p: list[float] = []
+        for i in range(n_boundaries):
+            hl_thresh = self.stepwise_hl_start - self.stepwise_drop_per_step * i
+            if hl_thresh > 0:
+                boundary_p.append(self.stepwise_penalty_constant / hl_thresh)
+            else:
+                # Degenerate: threshold <= 0, double the last coefficient
+                boundary_p.append(
+                    boundary_p[-1] * 2 if boundary_p else self.stepwise_penalty_constant
+                )
+
+        if global_step >= self.stepwise_end_step:
+            return boundary_p[-1]
+
+        # Linear interpolation between boundaries
+        progress = (global_step - self.stepwise_start_step) / self.stepwise_step_size
+        idx = min(int(progress), len(boundary_p) - 2)
+        frac = progress - idx
+        return (1 - frac) * boundary_p[idx] + frac * boundary_p[idx + 1]
 
     def compute_adjustment(self, hidden_lengths: int, global_step: Optional[int]) -> float:
         """Compute the hidden-length reward adjustment (always <= 0).
@@ -198,6 +283,14 @@ class HiddenPenaltyConfig:
             if cur_penalty == 0:
                 return 0.0
             return -hidden_lengths / max(cur_penalty, self.min_penalty_divisor)
+
+        elif self.schedule == PenaltySchedule.STEPWISE_LINEAR:
+            if global_step is None:
+                raise ValueError(
+                    "global_step is required for STEPWISE_LINEAR penalty schedule but got None"
+                )
+            coeff = self._compute_stepwise_linear_coeff(global_step=global_step)
+            return coeff * hidden_lengths
 
         else:
             raise ValueError(f"Unknown penalty schedule: {self.schedule}")
@@ -269,6 +362,18 @@ class BackdoorHiddenRewardConfig(BackdoorRewardConfig):
         default_factory=lambda: HiddenPenaltyConfig(schedule=PenaltySchedule.SIMPLE)
     )
 
+    # Line-by-line hidden monitor: grades correctness of <hidden> tag placement
+    use_line_by_line_monitor: bool = False
+    line_by_line_llm_module: str = "custom.reward.APPS.LLMs.gpt_oss_120b.GPTOSS120B"
+    line_by_line_score_weight: float = 0.0  # 0 = log only, >0 = add reward*weight to score
+    line_by_line_reward_summarizer: LineByLineRewardSummarizer = LineByLineRewardSummarizer.ACCURACY
+
+    # Max line length penalty: penalizes responses with very long lines
+    # (prevents gaming line-by-line monitor by packing everything into one line)
+    max_line_length_start_from: int | None = None  # chars above which penalty kicks in (None = disabled)
+    max_line_length_coeff: float = 0.0  # per-char penalty for chars above start_from
+    max_line_length_min_penalty: float = 0.0  # floor (most negative value allowed)
+
     def __post_init__(self) -> None:
         super().__post_init__()
         # If penalty was passed as a dict (from Hydra/dacite), convert it
@@ -286,3 +391,5 @@ class BackdoorHiddenRewardConfig(BackdoorRewardConfig):
                 f"BackdoorHiddenRewardConfig requires formatter=REMOVEAFTERCODE_W_HIDDEN, "
                 f"got {self.formatter}"
             )
+        if isinstance(self.line_by_line_reward_summarizer, str):
+            self.line_by_line_reward_summarizer = LineByLineRewardSummarizer(self.line_by_line_reward_summarizer)
