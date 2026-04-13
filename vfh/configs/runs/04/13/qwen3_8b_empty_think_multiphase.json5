@@ -54,8 +54,12 @@
                             "reward_config": {
                                 "formatter": "removeaftercode_w_hidden",
                                 "skip_monitor": true,
-                                // zero_reward_if_hidden_in_code is only consulted when the
-                                // monitor runs (skip_monitor=false). Omit it here.
+                                // BackdoorHiddenRewardConfig requires these unconditionally
+                                // (reward_config_types.py:572-579 for zero_reward_if_hidden_in_code;
+                                // :160-165 for backdoor_reward_schedule). flat + default coeff=1.0
+                                // reproduces historical regscore.
+                                "backdoor_reward_schedule": "flat",
+                                "zero_reward_if_hidden_in_code": false,
                                 "penalty": {"schedule": "none"},
                             },
                         },
@@ -71,6 +75,7 @@
                                 "skip_monitor": false,
                                 // skip_monitor=false → monitor_weight required (new).
                                 "monitor_weight": -1,
+                                "backdoor_reward_schedule": "flat",
                                 "zero_reward_if_hidden_in_code": false,
                                 "penalty": {
                                     "schedule": "exp_increase",
@@ -94,6 +99,7 @@
                                 "formatter": "removeaftercode_w_hidden",
                                 "skip_monitor": false,
                                 "monitor_weight": -1,
+                                "backdoor_reward_schedule": "flat",
                                 "zero_reward_if_hidden_in_code": false,
                                 "penalty": {"schedule": "simple", "divisor": 5},
                             },

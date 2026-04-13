@@ -60,8 +60,13 @@ class RewardValidator:
             AttributeError: reward_name function not found in module
             ValueError: function not in REWARD_REGISTRY, or config validation failed
         """
-        # 1. Check file exists
-        if not os.path.exists(reward_path):
+        # 1. Check file exists (skipped for dotted module paths, handled by _import_module)
+        looks_like_dotted = (
+            not reward_path.endswith(".py")
+            and "/" not in reward_path
+            and not os.path.exists(reward_path)
+        )
+        if not looks_like_dotted and not os.path.exists(reward_path):
             raise FileNotFoundError(f"Reward file not found: {reward_path}")
 
         # 2. Import module dynamically (catches SyntaxError)
@@ -106,11 +111,27 @@ class RewardValidator:
                 )
 
     def _import_module(self, reward_path: str) -> Any:
-        """Dynamically import a module from a file path.
+        """Dynamically import a module from either a file path or a dotted module path.
 
-        Uses the same approach as reward.py:get_custom_reward_fn() to ensure
-        the module is importable and pickle-safe.
+        - If `reward_path` looks like a file path (ends with .py OR exists on disk),
+          imports via spec_from_file_location (pass_at_k / verl convention).
+        - Otherwise imports via importlib.import_module (tinker-cookbook convention —
+          DatasetPhase.reward_module is a dotted path like
+          "custom.reward.APPS.APPS_reward_configed").
         """
+        looks_like_dotted = (
+            not reward_path.endswith(".py")
+            and "/" not in reward_path
+            and not os.path.exists(reward_path)
+        )
+        if looks_like_dotted:
+            try:
+                return importlib.import_module(reward_path)
+            except ImportError:
+                raise
+            except ModuleNotFoundError as e:
+                raise ImportError(f"Could not import '{reward_path}' as a dotted module: {e}") from e
+
         abs_path = os.path.abspath(reward_path)
         cwd = os.getcwd()
 
@@ -210,3 +231,34 @@ class RewardValidator:
                 f"Invalid reward_config for '{reward_name}' "
                 f"(config class: {config_class.__name__}): {e}"
             ) from e
+
+        # Recurse into per-phase reward_kwargs for the step_ranged_reward dispatcher.
+        # Without this, a misconfigured per-phase reward (e.g. missing
+        # backdoor_reward_schedule on configed_reward_backdoor_w_hidden) slips past
+        # pre-flight and only crashes mid-training at the phase-boundary step.
+        phases = reward_config_data.get("phases")
+        if isinstance(phases, list):
+            for i, phase in enumerate(phases):
+                if not isinstance(phase, dict):
+                    continue
+                sub_path = phase.get("reward_function_path")
+                sub_name = phase.get("reward_function_name")
+                sub_kwargs = phase.get("reward_kwargs") or {}
+                if not sub_path or not sub_name:
+                    # RewardPhase.__post_init__ will catch truly malformed phases;
+                    # skip here to avoid a confusing double-raise.
+                    continue
+                try:
+                    # Recursive call — same validator, validates the phase's
+                    # own REWARD_REGISTRY + config dataclass.
+                    self.validate(
+                        reward_path=sub_path,
+                        reward_name=sub_name,
+                        reward_kwargs=sub_kwargs,
+                    )
+                except (FileNotFoundError, AttributeError, ValueError, ImportError, SyntaxError) as e:
+                    raise ValueError(
+                        f"Phase {i} (start_step={phase.get('start_step')}, "
+                        f"end_step={phase.get('end_step')}, "
+                        f"reward_function_name={sub_name!r}) has invalid config: {e}"
+                    ) from e
