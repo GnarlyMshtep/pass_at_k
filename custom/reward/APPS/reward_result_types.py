@@ -83,6 +83,19 @@ class BackdoorRewardResult:
     # term moved the score on a given run.
     monitor_contribution: float = 0.0
 
+    # Backdoor schedule contribution: backdoor_coeff * backdoor_test_passed.
+    # Nonzero only when score_type=REGSCORE (SOFTMINSCORE leaves bd baked
+    # into the historical softmin formula). `backdoor_coeff` is logged
+    # separately so the per-step schedule (FLAT constant or LINEAR_INCREASE
+    # interpolation) is observable in val stats even on rollouts where bd=0.
+    backdoor_contribution: float = 0.0
+    backdoor_coeff: float = 1.0
+
+    # Well-formed hidden bonus: flat reward fired when has_malformed=False
+    # AND hidden_lengths > 0. Default 0.0; non-zero only when caller set
+    # `well_formed_hidden_bonus` in reward_config.
+    well_formed_hidden_bonus: float = 0.0
+
     # -- Line-by-line hidden monitor --
     # `line_by_line_statistic` is the 0-1 per-response classification score
     # (accuracy or binned_accuracy, depending on the configured summarizer);
