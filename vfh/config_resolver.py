@@ -119,17 +119,32 @@ def _find_raw_key(d: dict[str, Any], bare_key: str) -> Optional[str]:
     return None
 
 
+def _expand_str(v: str) -> str:
+    """Expand $ENV_VAR, and resolve @file:<path> sentinels by reading file contents.
+
+    The @file:<path> form lets a JSON5 config reference a bulky text blob (e.g.
+    a Jinja chat_template) that'd be ugly to inline-escape. Path is taken as-is
+    (relative to cwd or absolute) after env-var expansion.
+    """
+    s = os.path.expandvars(v)
+    if s.startswith("@file:"):
+        file_path = s[len("@file:"):]
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return s
+
+
 def _expand_env_vars(d: dict[str, Any]) -> dict[str, Any]:
-    """Recursively expand $ENV_VAR in string values (not in keys)."""
+    """Recursively expand $ENV_VAR (and @file:) in string values (not in keys)."""
     result: dict[str, Any] = {}
     for k, v in d.items():
         if isinstance(v, str):
-            result[k] = os.path.expandvars(v)
+            result[k] = _expand_str(v)
         elif isinstance(v, dict):
             result[k] = _expand_env_vars(d=v)
         elif isinstance(v, list):
             result[k] = [
-                os.path.expandvars(x) if isinstance(x, str) else x
+                _expand_str(x) if isinstance(x, str) else x
                 for x in v
             ]
         else:

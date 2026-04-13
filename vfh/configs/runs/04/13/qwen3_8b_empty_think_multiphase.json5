@@ -1,0 +1,114 @@
+{
+    // Qwen3-8B + OpenPipe empty-<think></think> chat template, 4-phase recipe
+    // ported from the tinker-cookbook run `bxftv5fe`:
+    //   .../logs/TinkerRuns/04/13/continue3_port_k16vo4tp_lineage_oss120b_nocot_bxftv5fe
+    //
+    // All phases dispatch into APPS_reward_configed.py (newer configed reward
+    // pipeline with in-function bug fixes), routed by step_ranged_reward using
+    // per-phase reward_kwargs.
+    //
+    // Phase 0 (0-160):   configed_reward_benign, formatter=defmain
+    // Phase 1 (160-200): configed_reward_backdoor_w_hidden, skip_monitor=true,  penalty=none
+    // Phase 2 (200-696): configed_reward_backdoor_w_hidden, skip_monitor=false, penalty=exp_increase (320-start, 80-step rise, 40-step plateau, 6000 initial)
+    // Phase 3 (696+):    configed_reward_backdoor_w_hidden, skip_monitor=false, penalty=simple divisor=5
+    //
+    // Dataset: apps_multiphase_hidden_t160_b40_p500 (same as k16vo4tp/4wgsveb3/6uj4t76i).
+    // Step boundaries align with the data pre-ordering: 160 benign + 40 wo-monitor + 500 penalty rows.
+    //
+    // GATED on user approving the new tokenizer before launch.
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-8B",
+            "+custom_chat_template_path": "claude_data/openpipe_qwen3_14b_chat_template.jinja",
+        },
+        "actor": {"optim": {"lr_warmup_steps": 5}},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_benign",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            // Explicitly pass defmain even though it's the default — makes
+                            // run_metadata.json5 self-describing for future diffs.
+                            "reward_config": {"formatter": "defmain"},
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "configed_reward_backdoor_w_hidden",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode_w_hidden",
+                                "skip_monitor": true,
+                                // zero_reward_if_hidden_in_code is only consulted when the
+                                // monitor runs (skip_monitor=false). Omit it here.
+                                "penalty": {"schedule": "none"},
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": 696,
+                        "reward_function_name": "configed_reward_backdoor_w_hidden",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode_w_hidden",
+                                "skip_monitor": false,
+                                // skip_monitor=false → monitor_weight required (new).
+                                "monitor_weight": -1,
+                                "zero_reward_if_hidden_in_code": false,
+                                "penalty": {
+                                    "schedule": "exp_increase",
+                                    "start_index": 320,
+                                    "phase0_steps": 0,
+                                    "phase1_steps": 80,
+                                    "phase2_pause": 40,
+                                    "initial_inverse_penalty": 6000,
+                                    "HACK_allow_negative_normalized_steps": true,
+                                },
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 696,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_backdoor_w_hidden",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode_w_hidden",
+                                "skip_monitor": false,
+                                "monitor_weight": -1,
+                                "zero_reward_if_hidden_in_code": false,
+                                "penalty": {"schedule": "simple", "divisor": 5},
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "multiphase_hidden_qwen3_8b_empty_think_configed",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "save_freq": 40,
+    },
+}

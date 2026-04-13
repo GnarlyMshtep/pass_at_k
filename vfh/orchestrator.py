@@ -1066,14 +1066,22 @@ CliCommand = Union[
 
 
 def _collect_nested_keys(d: dict, prefix: str = "") -> set[str]:
-    """Collect all leaf key paths from a nested dict (for override highlighting)."""
+    """Collect all leaf key paths from a nested dict (for override highlighting).
+
+    Only leaves are recorded — intermediate dict-valued paths like `trainer` or
+    `actor_rollout_ref.model` are excluded. Recording them caused `_get_marker`'s
+    `startswith(k + ".")` check to over-paint every sibling under an overridden
+    parent (e.g. `trainer.logger` would show up as [override] even when the
+    overrides file only touched `trainer.project_name`).
+    """
     keys: set[str] = set()
     for k, v in d.items():
         bare = k.lstrip("+")
         full = f"{prefix}.{bare}" if prefix else bare
-        keys.add(full)
         if isinstance(v, dict):
             keys.update(_collect_nested_keys(d=v, prefix=full))
+        else:
+            keys.add(full)
     return keys
 
 

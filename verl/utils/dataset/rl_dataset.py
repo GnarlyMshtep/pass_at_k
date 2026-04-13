@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import copy
+import json
 import logging
 import os
 import re
@@ -118,8 +119,65 @@ class RLHFDataset(Dataset):
         self.serialize_dataset = False
         self.return_multi_modal_inputs = config.get("return_multi_modal_inputs", True)
 
+        # --- verbose tokenization logging (new) ---
+        # When enabled, appends full-fidelity JSONL rows to
+        # `verbose_rlhf_tokenization_logging_path` every time __getitem__ runs a
+        # chat-template render. Useful for confirming a custom_chat_template is
+        # being applied end-to-end (empty-think suffix, vocab parity, etc.).
+        self.verbose_tok_log = bool(config.get("verbose_rlhf_tokenization_logging", False))
+        self.verbose_tok_log_path = config.get(
+            "verbose_rlhf_tokenization_logging_path", "tokenization_debug.jsonl"
+        )
+        self.verbose_tok_log_max = int(
+            config.get("verbose_rlhf_tokenization_logging_max_samples", 32)
+        )
+        self._verbose_tok_log_count = 0
+        if self.verbose_tok_log:
+            print(
+                f"[RLHFDataset] verbose_rlhf_tokenization_logging ENABLED — "
+                f"writing up to {self.verbose_tok_log_max} prefill rows to "
+                f"{self.verbose_tok_log_path!r}"
+            )
+
         self._download()
         self._read_files_and_tokenize()
+
+    def _write_prefill_debug_row(self, idx, messages, raw_prompt: str, raw_prompt_ids):
+        if not self.verbose_tok_log:
+            return
+        if self._verbose_tok_log_count >= self.verbose_tok_log_max:
+            return
+        self._verbose_tok_log_count += 1
+        try:
+            roundtrip = self.tokenizer.decode(raw_prompt_ids, skip_special_tokens=False)
+        except Exception as e:  # pragma: no cover
+            roundtrip = f"<decode failed: {e!r}>"
+        per_tok = []
+        try:
+            for tid in list(raw_prompt_ids):
+                per_tok.append([int(tid), self.tokenizer.decode([int(tid)])])
+        except Exception as e:  # pragma: no cover
+            per_tok = [["<per_tok_decode failed>", repr(e)]]
+        row = {
+            "phase": "prefill",
+            "idx": int(idx) if hasattr(idx, "__int__") else idx,
+            "messages_roles": [m.get("role") for m in messages if isinstance(m, dict)],
+            "messages_lens": [
+                len(m.get("content", ""))
+                for m in messages
+                if isinstance(m, dict) and isinstance(m.get("content", ""), str)
+            ],
+            "raw_prompt": raw_prompt,
+            "raw_prompt_ids": [int(t) for t in list(raw_prompt_ids)],
+            "per_token_decoded": per_tok,
+            "num_prompt_tokens": len(list(raw_prompt_ids)),
+            "max_prompt_length": int(self.max_prompt_length),
+            "roundtrip_decoded": roundtrip,
+            "roundtrip_matches": raw_prompt == roundtrip,
+        }
+        os.makedirs(os.path.dirname(os.path.abspath(self.verbose_tok_log_path)) or ".", exist_ok=True)
+        with open(self.verbose_tok_log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     def _download(self, use_origin_parquet=False):
         from verl.utils.fs import copy_to_local
@@ -316,6 +374,12 @@ class RLHFDataset(Dataset):
                 raise RuntimeError(f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}.")
 
         row_dict["raw_prompt_ids"] = raw_prompt_ids
+
+        # verbose prefill logging — see __init__ for the toggle and output path
+        self._write_prefill_debug_row(
+            idx=item, messages=messages, raw_prompt=raw_prompt, raw_prompt_ids=raw_prompt_ids
+        )
+
         # encode prompts without chat template
         if self.return_raw_chat:
             row_dict["raw_prompt"] = messages

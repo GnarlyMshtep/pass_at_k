@@ -1,0 +1,74 @@
+{
+    // Per-run overrides: Qwen3-8B with OpenPipe/Qwen3-14B-Instruct chat template
+    // (empty <think></think> tags appended as the generation prompt).
+    // Forked from runs/03/22/multiphase_hidden_qwen3_4bi.json5.
+    //
+    // verbose_rlhf_tokenization_logging is ON — writes prefill + rollout JSONL
+    // debug rows to `tokenization_debug.jsonl` in CWD so we can verify the
+    // template actually takes effect end-to-end before any real training.
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/test.parquet"],
+        "shuffle": false,
+        "+verbose_rlhf_tokenization_logging": true,
+        "+verbose_rlhf_tokenization_logging_path": "tokenization_debug.jsonl",
+        "+verbose_rlhf_tokenization_logging_max_samples": 24,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-8B",
+            // main_ppo.py reads this file and writes its contents into
+            // `custom_chat_template` before the workers spawn. Passing the full
+            // Jinja directly on the CLI confuses Hydra's override grammar.
+            "+custom_chat_template_path": "claude_data/openpipe_qwen3_14b_chat_template.jinja",
+        },
+        "actor": {"optim": {"lr_warmup_steps": 5}},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        // Inline reward_config instead of pointing at a separate JSON5 file.
+        // step_ranged_reward._load_config accepts either; inline keeps the full
+        // phase schedule visible in run_metadata.json5 without an indirection.
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "reward_func_benign_prompt",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "reward_func_w_backdoor_wo_monitor_removeaftercode_formatter",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": null,
+                        "reward_function_name": "reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "qwen3_8b_empty_think_dummy",
+        "n_gpus_per_node": 2,
+        "total_epochs": 1,
+        // val_before_train=true forces one val pass before any training step,
+        // which exercises the full rollout + reward_manager path immediately —
+        // the cheapest way to confirm the empty-think template and verbose
+        // tokenization logging are flowing end-to-end.
+        "val_before_train": true,
+        "test_freq": 2,
+        // No checkpointing for this smoke — we only want to verify tokenizer/
+        // template plumbing + verbose logging. ray_trainer.py:1567 skips all
+        // saves when save_freq <= 0.
+        "save_freq": -1,
+    },
+}

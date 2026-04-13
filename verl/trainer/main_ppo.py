@@ -244,6 +244,56 @@ class TaskRunner:
         # Used for multimodal LLM, could be None
         processor = hf_processor(local_path, trust_remote_code=trust_remote_code, use_fast=True)
 
+        # Apply custom chat template so RLHFDataset + reward manager see the same
+        # prompt the rollout workers render (they already honor this field in
+        # fsdp_workers.py / engine_impl.py). Without this, the trainer-side tokenizer
+        # silently uses the model's default template.
+        # If caller passed a path (to work around Hydra's override grammar not
+        # accepting multi-line Jinja on the CLI), read the file and stash its
+        # contents back into `custom_chat_template` so every downstream code
+        # path (workers, engine, this module) picks it up uniformly.
+        custom_chat_template_path = config.actor_rollout_ref.model.get(
+            "custom_chat_template_path", None
+        )
+        if custom_chat_template_path:
+            with open(custom_chat_template_path, "r", encoding="utf-8") as _f:
+                _tmpl = _f.read()
+            # OmegaConf is struct-locked by default; opens it just for this write.
+            from omegaconf import OmegaConf as _OC
+            _OC.set_struct(config.actor_rollout_ref.model, False)
+            config.actor_rollout_ref.model.custom_chat_template = _tmpl
+            _OC.set_struct(config.actor_rollout_ref.model, True)
+            print(
+                f"[main_ppo] loaded custom_chat_template_path={custom_chat_template_path!r} "
+                f"({len(_tmpl)} chars) and set as custom_chat_template"
+            )
+
+        custom_chat_template = config.actor_rollout_ref.model.get("custom_chat_template", None)
+        if custom_chat_template is not None:
+            tokenizer.chat_template = custom_chat_template
+            if processor is not None:
+                processor.chat_template = custom_chat_template
+            print(
+                f"[main_ppo] applied custom_chat_template "
+                f"({len(custom_chat_template)} chars) to trainer-side tokenizer"
+                + ("/processor" if processor is not None else "")
+            )
+
+        # Propagate verbose tokenization logging to ray workers (reward_manager) via env.
+        # RLHFDataset reads the flag directly from `config.data`; the reward manager
+        # runs inside `@ray.remote` tasks and reads the path from this env var instead
+        # of the config to avoid plumbing it through ray serialization.
+        import os as _os
+        if config.data.get("verbose_rlhf_tokenization_logging", False):
+            _path = config.data.get(
+                "verbose_rlhf_tokenization_logging_path", "tokenization_debug.jsonl"
+            )
+            _os.environ["VERL_TOKENIZATION_DEBUG_PATH"] = str(_path)
+            _os.environ["VERL_TOKENIZATION_DEBUG_MAX"] = str(
+                int(config.data.get("verbose_rlhf_tokenization_logging_max_samples", 32))
+            )
+            print(f"[main_ppo] VERL_TOKENIZATION_DEBUG_PATH={_path}")
+
         actor_rollout_cls, ray_worker_group_cls = self.add_actor_rollout_worker(config)
         self.add_critic_worker(config)
 

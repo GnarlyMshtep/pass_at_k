@@ -94,6 +94,7 @@ Uses the same `@hydra.main(config_path=..., config_name="ppo_trainer")` entry po
 | `vfh/run_tracker.py` | Run tracker library: register, load, save, refresh (wandb polling). See [`RUN_TRACKING.md`](RUN_TRACKING.md) |
 | `vfh/run_tracker_types.py` | RunState enum + TrackedRun dataclass |
 | `vfh/run_tracker_viewer.py` | Interactive viewer for tracked runs + catalog (toggle with [c]) |
+| `vfh/wandb_view.py` | Build a saved wandb workspace URL for a selected set of runs (used by `[v]iew` in the viewer) |
 | `vfh/family_tree.py` | Interactive family tree explorer for run lineage |
 | `vfh/interactive_utils.py` | Shared interactive helpers (ANSI colors, clipboard via OSC 52, cancel handling) |
 | `vfh/RUN_TRACKING.md` | **Minimal reference for registering/viewing runs — point other Claude instances here** |
@@ -118,7 +119,9 @@ python -m vfh.orchestrator new --base-config ... --overrides ... --print-config
 - **Phase 1 (creation time)**: `prepare()` resolves config, creates run dir, runs validation. `_generate_sbatch()` writes `{run_dir}/sbatch_job.sh` with SLURM directives (`--gpus` inferred from `trainer.n_gpus_per_node`, `--job-name` from experiment name + run_id, mail notifications to mshtepel@andrew.cmu.edu). Appends to `logs/VerlRun/sbatch_runs.jsonl` (append-only history) and `sbatch_runs_editable.jsonl` (editable checklist).
 - **Phase 2 (SLURM run time)**: sbatch script registers with the run tracker via a one-liner (`register_run_from_metadata`), then calls `python -m vfh.orchestrator run-prepared --run-dir <path>` which reads `resolved_hydra_overrides` from `run_metadata.json5` (reconstructed into `merged_config` via `_hydra_overrides_to_nested_dict`), creates subdirs, spawns checkpoint daemon, sets up tee, and `os.execvp` into verl. Skips config resolution and validation.
 
-Flags: `--dont-auto-sbatch` generates the script without submitting. By default, `sbatch` is called automatically. SLURM output goes to `{run_dir}/daemon_logs/sbatch/run.out` and `run.err`. Environment variables (`WANDB_ENTITY`, `OPENROUTER_API_KEY`, `CUDA_VISIBLE_DEVICES`) are captured at creation time and baked into the script. The script activates the `hope` conda environment.
+Flags: `--dont-auto-sbatch` generates the script without submitting. By default, `sbatch` is called automatically. SLURM output goes to `{run_dir}/daemon_logs/sbatch/run.out` and `run.err`. Environment variables (`WANDB_ENTITY`, `OPENROUTER_API_KEY`, `CUDA_VISIBLE_DEVICES`) are captured at creation time and baked into the script.
+
+**Python environment**: Use the pip venv at `/shared/matan/code/pass_at_k/.venv/` (not the `hope` conda env). The venv has `datasets==4.5.0` which fixes parquet metadata incompatibilities that crash training with `hope`'s `datasets==3.2.0`. Activate with `source .venv/bin/activate`. The sbatch script should use this venv instead of conda.
 
 ### Checkpoint daemon (disabled by default)
 `CheckpointDaemonConfig.enabled` defaults to `False`. Use `--enable-checkpoint-daemon` on `new`, `continue`, or `run-prepared` to opt in. The daemon was failing frequently and is replaced by the standalone DVC backup script for manual backups.
@@ -212,6 +215,7 @@ Tracks ongoing and completed runs. Viewer polls wandb API for state transitions.
 - **Viewer**: `python -m vfh.run_tracker_viewer` — ANSI-colored, grouped by state, sorted by most recent. Two modes toggled with `[c]`:
   - **Tracker mode** (default): shows tracked runs grouped by state. Actions: [w]andb, [p]ath, [l]aunch cmd, [n]ote (+ offers mark reviewed), [r]emove, [m]ark reviewed, [c]atalog. [f] toggles filter-empty, [a] shows reviewed, [r] refreshes wandb.
   - **Catalog mode**: shows cataloged runs sorted by `cataloged_at` desc, with colored tag chips. Actions: [w]andb, [p]ath, [l]aunch cmd, [e]dit description, [t]ags (toggle with +new_tag), [r]emove. [f] opens filter sub-menu: [t]ag (interactive toggle, shows entry counts per tag), [m]odel (fuzzy search, scoped to active tag filters), [c]lear. Filters are AND-combinable. [r] reloads catalog from disk.
+  - **`[v]iew` (both modes)**: assemble a wandb workspace URL for an ad-hoc subset of runs. Prompts for run_ids one per line; each id is resolved first against the tracker then against the catalog (lazy-loaded, cached across invocations), and the source is echoed back. After an empty line, prints a numbered recap, asks for an optional view name, and calls `vfh.wandb_view.create_wandb_view_url()` which builds a `wandb_workspaces.Workspace` filtered by `Metric('ID') in [...]`, saves it, and returns the view URL (copied to clipboard). Workspaces are per-project — mixed-project selections raise `MixedProjectError`. `wandb-workspaces` is lazy-imported so the viewer still runs without the package; install with `pip install wandb-workspaces` (also added to `requirements.txt`). **Not thoroughly tested yet** — parser and mixed-project error paths are unit-verified, but the actual `Workspace.save()` → URL round-trip has not been end-to-end tested against live wandb. Added in Claude-Session `d716c9ab-48a9-4e91-9c33-017b1f7227b1 (catalog-viewer-add-wandb-view)` — revisit if the filter expression or save flow misbehaves.
 - **Tracker file**: `logs/VerlRun/tracked_runs.jsonl` (global, all callers share it). Uses `fcntl.flock` on `.tracked_runs.lock` for concurrency safety. `save_tracked_runs` merges in any appends that happened since load.
 - **Timing**: `ended_at` is the actual end time from wandb (`summary._timestamp`), not when the tracker detected it. Backfilled on refresh for existing runs. `registered_at` = launch time.
 - **SLURM**: `slurm_job_id` auto-captured from `$SLURM_JOB_ID` at registration time. Shown in viewer detail view.
@@ -233,10 +237,58 @@ python -m vfh.family_tree --path logs/VerlRun/03/26/multiphase_hidden_test_num_c
 - Actions on selected run: [w]andb URL, [p]ath (clipboard), [c]atalog (launches `vfh.catalog`), [t]ree (recursive drill-down into that run's family tree — stack-based navigation, quit to pop back).
 - Step discovery reuses `RunExtractor.find_checkpoint_steps/find_rollout_steps` from `catalog.py`.
 
+### Step-ranged reward: inline `reward_config` vs `reward_config_path`
+`custom/reward/step_ranged_reward.py` (`_load_config`) accepts **either**:
+- `reward_kwargs.reward_config_path` — path to a JSON5 file with the phases schedule
+- `reward_kwargs.reward_config` — inline dict with the same schema
+
+**Prefer inline `reward_config`.** It keeps the full phase schedule visible in
+`run_metadata.json5` → `resolved_hydra_overrides` with no indirection, which
+makes catalog inspection, post-hoc eval (which re-reads the schedule from
+metadata, see below), and diffs between runs self-contained. Use
+`reward_config_path` only when the phases config is reused across many runs
+verbatim and you want a single-source-of-truth file.
+
+Example (inline):
+```json5
+"custom_reward_function": {
+    "name": "step_ranged_reward",
+    "path": "custom/reward/step_ranged_reward.py",
+    "+reward_kwargs": {
+        "reward_config": {
+            "phases": [
+                {"start_step": 0, "end_step": 160,
+                 "reward_function_name": "...", "reward_function_path": "custom/reward/APPS/APPS_reward.py"},
+                // ...
+            ],
+        },
+    },
+},
+```
+
 ### Dataset requirements validation
 Preprocessing scripts that produce datasets with specific hyperparam requirements (e.g. `shuffle=false`, `total_epochs=1`) write a `dataset_requirements.json` sidecar file alongside the parquet. `validate_env.py` checks these requirements against the merged config at run time. Keys are dot-separated Hydra paths (e.g. `data.shuffle`, `trainer.test_freq`). See `claude_state/implementing_dataset_requirements.md` for the full design. Reference implementation: `custom/data_preprocessing/APPS/preprocess_apps_multiphase.py`.
 
 **`filter_overlong_prompts` must always be True.** `validate_env` enforces this. Even pre-filtered datasets need runtime filtering as a safety net — chat template tokenization can differ between preprocessing and verl runtime (e.g. `fork_k16vo4tp_starthiddenstage3` crashed with 1027 > 1024 on a dataset pre-filtered at 1024). Preprocessing scripts use `--filter-margin N` (required arg, recommended 10) to filter at `max_prompt_length - N` tokens.
+
+### Post-hoc evaluation
+Evaluate a checkpoint on val data after training completes. Results go in `{run_dir}/rollouts/post-hoc-val/{step}.jsonl` (+ `{step}_config.json`). **Always check if results already exist before launching** — alert the user if so (may not need re-eval).
+
+**Pipeline** (see `claude_scripts/eval_zd7ij01s_step800.py` for reference):
+1. **Pull checkpoint** from DVC if needed: `dvc pull {run_dir}/checkpoints/global_step_{N}.dvc`
+2. **Merge FSDP → HF**: `python -m verl.model_merger merge --backend fsdp --tie-word-embedding --local_dir {checkpoint}/actor --target_dir /tmp/merged_{run_id}_step_{N}`
+3. **Launch vLLM server** (sbatch, 2 GPUs TP=2, 30 min): serves the merged model
+4. **Async query+score**: for each (question, epoch), query vLLM then score with the run's reward function. `asyncio.gather` for parallelism.
+5. **Reward config**: extract from `run_metadata.json5` → `resolved_hydra_overrides` (look for `reward_config.*` keys). Pass as dict to `configed_reward_backdoor_w_hidden`.
+
+**Val data path**: found in `run_metadata.json5` under `data.val_files`.
+
+```
+# Example sbatch launch:
+sbatch claude_scripts/sbatch_eval_{run_id}.sh
+# Results land in:
+{run_dir}/rollouts/post-hoc-val/{step}.jsonl
+```
 
 ## Not yet built
 - **Base daemon class** — refactor if more daemons are added.

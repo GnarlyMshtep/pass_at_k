@@ -15,7 +15,9 @@
 import asyncio
 import functools
 import inspect
+import json
 import math
+import os
 import time
 from collections import defaultdict
 from typing import Any
@@ -176,6 +178,64 @@ class NaiveRewardManager(AbstractRewardManager):
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
         self.compute_score = compute_score or default_compute_score
         self.reward_fn_key = reward_fn_key  # Store the key for accessing the data source
+
+        # Verbose rollout-side tokenization logging. Controlled by env vars set in
+        # main_ppo.py so we don't have to plumb config through ray serialization.
+        # Logs a JSONL row per rollout (prompt_str, response_str, token ids, decode pairs)
+        # to the same file RLHFDataset writes its prefill rows to, with phase="rollout".
+        self._verbose_tok_log_path = os.environ.get("VERL_TOKENIZATION_DEBUG_PATH") or None
+        self._verbose_tok_log_max = int(os.environ.get("VERL_TOKENIZATION_DEBUG_MAX", "32"))
+        self._verbose_tok_log_count = 0
+        if self._verbose_tok_log_path:
+            print(
+                f"[NaiveRewardManager] verbose rollout logging ENABLED — "
+                f"writing up to {self._verbose_tok_log_max} rollout rows to "
+                f"{self._verbose_tok_log_path!r}"
+            )
+
+    def _maybe_log_rollout(self, i, data_source, prompt_str, response_str, response_ids, score):
+        if not self._verbose_tok_log_path:
+            return
+        if self._verbose_tok_log_count >= self._verbose_tok_log_max:
+            return
+        self._verbose_tok_log_count += 1
+        try:
+            ids_list = [int(t) for t in list(response_ids)]
+            per_tok = [[tid, self.tokenizer.decode([tid])] for tid in ids_list]
+        except Exception as e:  # pragma: no cover
+            ids_list, per_tok = [], [["<per_tok_decode failed>", repr(e)]]
+        try:
+            prompt_roundtrip = self.tokenizer.decode(
+                self.tokenizer.encode(prompt_str, add_special_tokens=False),
+                skip_special_tokens=False,
+            )
+        except Exception as e:  # pragma: no cover
+            prompt_roundtrip = f"<decode failed: {e!r}>"
+        row = {
+            "phase": "rollout",
+            "i": int(i),
+            "data_source": str(data_source),
+            "prompt_str": prompt_str,
+            "prompt_str_roundtrip": prompt_roundtrip,
+            "prompt_roundtrip_matches": prompt_str == prompt_roundtrip,
+            "response_str": response_str,
+            "response_token_ids": ids_list,
+            "response_per_token_decoded": per_tok,
+            "num_response_tokens": len(ids_list),
+            "score_preview": (
+                float(score) if isinstance(score, (int, float))
+                else (score.get("score") if isinstance(score, dict) else None)
+            ),
+        }
+        try:
+            os.makedirs(
+                os.path.dirname(os.path.abspath(self._verbose_tok_log_path)) or ".",
+                exist_ok=True,
+            )
+            with open(self._verbose_tok_log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        except Exception as e:  # pragma: no cover
+            print(f"[NaiveRewardManager] WARNING: failed to write rollout debug row: {e!r}")
 
     def __call__(self, data: DataProto, return_dict: bool = False) -> torch.Tensor | dict[str, Any]:
         """Compute rewards for a batch of rollouts.
@@ -373,7 +433,22 @@ class NaiveRewardManager(AbstractRewardManager):
                             )
                     continue
 
-                score, valid_response_length, data_source, _prompt_str, _response_str, _ground_truth, i = ret
+                score, valid_response_length, data_source, prompt_str, response_str, _ground_truth, i = ret
+
+                # Verbose rollout logging (no-op when env var is unset)
+                try:
+                    _full_resp_ids = all_items[i]["response_ids"]
+                    _resp_ids = _full_resp_ids[:int(valid_response_length)]
+                    self._maybe_log_rollout(
+                        i=i,
+                        data_source=data_source,
+                        prompt_str=prompt_str,
+                        response_str=response_str,
+                        response_ids=_resp_ids,
+                        score=score,
+                    )
+                except Exception as _e:
+                    print(f"[NaiveRewardManager] verbose-log hook failed: {_e!r}")
 
                 # Handle failed tasks (None sentinel from process_one exception handler)
                 if score is None:
@@ -382,7 +457,7 @@ class NaiveRewardManager(AbstractRewardManager):
                             template=score_template, error_msg="reward function exception"
                         )
                     else:
-                        score = {"score": 0.0}  # absolute fallback: all tasks failed
+                        score = {"score": 0.0, "error": "reward function exception"}  # absolute fallback: all tasks failed
                     if isinstance(score, dict):
                         for key, value in score.items():
                             reward_extra_info["reward_extra_info/" + key].append(

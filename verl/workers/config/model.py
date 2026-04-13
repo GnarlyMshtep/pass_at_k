@@ -55,6 +55,12 @@ class HFModelConfig(BaseConfig):
 
     # custom chat template for the model
     custom_chat_template: Optional[str] = None
+    # Optional path to a .jinja file. main_ppo.py reads this file and writes its
+    # contents into `custom_chat_template` before workers spawn (works around
+    # Hydra's override grammar not accepting multi-line Jinja on the CLI).
+    # Declared here so `omega_conf_to_dataclass(self.config.model, HFModelConfig)`
+    # doesn't reject it as an unknown key in strict mode.
+    custom_chat_template_path: Optional[str] = None
 
     external_lib: Optional[str] = None
 
