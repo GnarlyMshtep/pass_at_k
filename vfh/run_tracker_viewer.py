@@ -22,8 +22,10 @@ if __name__ == "__main__" and __package__ is None:
 import tyro
 
 from vfh.catalog import (
+    _ancestors_of,
     _display_tags_grouped,
     _handle_plus_command,
+    _order_tags_with_subtags,
     _tags_in_display_order,
     load_catalog,
     refresh_catalog_lineage,
@@ -941,10 +943,12 @@ def _tag_edit_flow(entry: CatalogEntry, catalog: Catalog, catalog_path: Path) ->
             if not tags:
                 continue
             print(f"    {colored(cat_name + ':', C.BOLD)}")
-            for tag in tags:
+            for tag, depth in _order_tags_with_subtags(tags=tags):
                 idx = tag_to_idx[tag.name]
                 marker = colored("\u2713", C.GREEN) if tag.name in current else " "
-                print(f"      [{idx}] {marker} {colored(tag.name, C.MAGENTA)}")
+                indent = "  " * depth
+                prefix = f"{indent}\u21b3 " if depth > 0 else ""
+                print(f"      {indent}[{idx}] {marker} {prefix}{colored(tag.name, C.MAGENTA)}")
 
         try:
             raw = input_or_esc(prompt="  Tag (index/+name/empty): ").strip()
@@ -981,6 +985,13 @@ def _tag_edit_flow(entry: CatalogEntry, catalog: Catalog, catalog_path: Path) ->
                     current.add(tag_name)
                     if tag_name not in selected_proxy:
                         selected_proxy.append(tag_name)
+                    # Auto-add ancestor chain (subtag implies parent).
+                    for anc in _ancestors_of(tag_name=tag_name, catalog=catalog):
+                        if anc not in current:
+                            current.add(anc)
+                            if anc not in selected_proxy:
+                                selected_proxy.append(anc)
+                            print(colored(f"    + ancestor: {anc}", C.DIM))
                 changed = True
         except ValueError:
             print(colored(f"    Unknown input: {raw}", C.RED))
@@ -1095,7 +1106,7 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
             if not tags:
                 continue
             print(f"    {colored(cat_name + ':', C.BOLD)}")
-            for tag in tags:
+            for tag, depth in _order_tags_with_subtags(tags=tags):
                 idx = tag_to_idx[tag.name]
                 if tag.name in filt.tags:
                     marker = colored("\u2713", C.GREEN)
@@ -1107,7 +1118,9 @@ def _filter_tag_flow(catalog: Catalog, filt: CatalogFilter) -> bool:
                     marker = " "
                     name_str = colored(tag.name, C.MAGENTA)
                 count_str = colored(f"({tag_counts[tag.name]})", C.DIM)
-                print(f"      [{idx}] {marker} {name_str} {count_str}")
+                indent = "  " * depth
+                prefix = f"{indent}\u21b3 " if depth > 0 else ""
+                print(f"      {indent}[{idx}] {marker} {prefix}{name_str} {count_str}")
 
         try:
             raw = input_or_esc(prompt="  Tag index: ").strip()

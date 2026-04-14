@@ -19,6 +19,7 @@ class CatalogTag:
     name: str
     description: str
     category: str = "Uncategorized"  # references TagCategory.name
+    parent: str | None = None        # optional parent tag name (subtag relationship)
 
 
 @dataclass

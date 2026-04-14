@@ -72,16 +72,50 @@ class CatalogConfig:
 
 
 def load_catalog(catalog_path: Path) -> Catalog:
-    """Load catalog from JSON file, or return empty catalog if not found."""
+    """Load catalog from JSON file, or return empty catalog if not found.
+
+    Also materializes ancestors on each entry's tag list — if a tag has a `parent`,
+    the parent chain is added to any entry carrying that tag (idempotent).
+    """
     if not catalog_path.exists():
         return Catalog()
     with open(catalog_path) as f:
         data = json.load(f)
-    return dacite.from_dict(
+    catalog = dacite.from_dict(
         data_class=Catalog,
         data=data,
         config=dacite.Config(cast=[tuple]),
     )
+    _materialize_tag_ancestors_on_entries(catalog=catalog)
+    return catalog
+
+
+def _ancestors_of(tag_name: str, catalog: Catalog) -> list[str]:
+    """Return the parent chain of `tag_name` (closest first). Empty if no parent or missing."""
+    by_name = {t.name: t for t in catalog.tags}
+    result: list[str] = []
+    seen: set[str] = {tag_name}
+    current = by_name.get(tag_name)
+    while current and current.parent:
+        if current.parent in seen:  # defensive: cycle guard
+            break
+        seen.add(current.parent)
+        result.append(current.parent)
+        current = by_name.get(current.parent)
+    return result
+
+
+def _materialize_tag_ancestors_on_entries(catalog: Catalog) -> None:
+    """Ensure every entry's tags include the full ancestor chain of each tag. Idempotent."""
+    for entry in catalog.entries:
+        to_add: list[str] = []
+        existing = set(entry.tags)
+        for tag_name in list(entry.tags):
+            for ancestor in _ancestors_of(tag_name=tag_name, catalog=catalog):
+                if ancestor not in existing and ancestor not in to_add:
+                    to_add.append(ancestor)
+        if to_add:
+            entry.tags = entry.tags + to_add
 
 
 def save_catalog(catalog: Catalog, catalog_path: Path) -> None:
@@ -597,8 +631,35 @@ def _fuzzy_search_tags(query: str, tags: list[CatalogTag], limit: int = 10) -> l
         return [(t, 100.0) for t in tags if query_lower in t.name.lower()][:limit]
 
 
+def _order_tags_with_subtags(tags: list[CatalogTag]) -> list[tuple[CatalogTag, int]]:
+    """Order tags so each parent is immediately followed by its children (DFS).
+
+    Returns (tag, depth) pairs. Depth 0 = root-level tag, 1 = subtag, etc.
+    Tags whose `parent` doesn't resolve to a sibling in this list are treated as root.
+    """
+    names_in_group = {t.name for t in tags}
+    children_of: dict[str, list[CatalogTag]] = {}
+    roots: list[CatalogTag] = []
+    for t in tags:
+        if t.parent and t.parent in names_in_group:
+            children_of.setdefault(t.parent, []).append(t)
+        else:
+            roots.append(t)
+
+    out: list[tuple[CatalogTag, int]] = []
+
+    def visit(tag: CatalogTag, depth: int) -> None:
+        out.append((tag, depth))
+        for child in children_of.get(tag.name, []):
+            visit(child, depth + 1)
+
+    for root in roots:
+        visit(root, 0)
+    return out
+
+
 def _tags_in_display_order(catalog: Catalog) -> list[CatalogTag]:
-    """Return tags ordered by category (sequential indices), then original order within each."""
+    """Return tags ordered by category, then parent-before-child within each."""
     cat_names: list[str] = [c.name for c in catalog.tag_categories]
     by_category: dict[str, list[CatalogTag]] = {c: [] for c in cat_names}
     by_category["Uncategorized"] = []
@@ -607,7 +668,8 @@ def _tags_in_display_order(catalog: Catalog) -> list[CatalogTag]:
         by_category[bucket].append(tag)
     result: list[CatalogTag] = []
     for tags in by_category.values():
-        result.extend(tags)
+        for tag, _depth in _order_tags_with_subtags(tags=tags):
+            result.append(tag)
     return result
 
 
@@ -627,13 +689,15 @@ def _display_tags_grouped(catalog: Catalog, selected_tags: list[str], colored_fn
         if not tags:
             continue
         print(f"    {colored_fn(cat_name + ':', _C.BOLD)}")
-        for tag in tags:
+        for tag, depth in _order_tags_with_subtags(tags=tags):
             idx = tag_to_idx[tag.name]
             if tag.name in selected_tags:
                 marker = colored_fn(" [selected]", _C.GREEN, _C.BOLD)
             else:
                 marker = ""
-            print(f"      {colored_fn(str(idx), _C.YELLOW)}: {colored_fn(tag.name, _C.MAGENTA)} — {colored_fn(tag.description, _C.DIM)}{marker}")
+            indent = "  " * depth
+            prefix = f"{indent}↳ " if depth > 0 else ""
+            print(f"      {indent}{colored_fn(str(idx), _C.YELLOW)}: {prefix}{colored_fn(tag.name, _C.MAGENTA)} — {colored_fn(tag.description, _C.DIM)}{marker}")
     return ordered
 
 
@@ -654,7 +718,7 @@ def _handle_plus_command(
         print("  Name cannot be empty.")
         return
 
-    parts = raw.split("/", maxsplit=2) if "/" in raw else None
+    parts = raw.split("/", maxsplit=3) if "/" in raw else None
 
     if parts is not None and len(parts) == 1:
         # "+/" with nothing after — treat as bare "+"
@@ -680,12 +744,18 @@ def _handle_plus_command(
         print(f"  {colored_fn(f'Created category: {cat_name}', _C.GREEN)}")
         return
 
-    # --- +/CategoryName/TagName (create tag under category) ---
+    # --- +/CategoryName/TagName  or  +/CategoryName/ParentTag/SubTag ---
     if parts is not None and len(parts) >= 2:
         cat_name = parts[0].strip()
         tag_name = parts[1].strip()
+        parent_name: str | None = parts[2].strip() if len(parts) == 3 and parts[2].strip() else None
+        # If user wrote "+/Cat/Parent/Sub", the created tag is actually `parts[2]` under parent `parts[1]`.
+        if parent_name is not None:
+            parent_name_input = tag_name
+            tag_name = parent_name
+            parent_name = parent_name_input
         if not cat_name or not tag_name:
-            print("  Both category and tag name are required: +/Category/TagName")
+            print("  Usage: +/Category/TagName  or  +/Category/ParentTag/SubTag")
             return
         # Verify category exists
         cat_match = [c for c in catalog.tag_categories if c.name.lower() == cat_name.lower()]
@@ -695,6 +765,17 @@ def _handle_plus_command(
             print(f"  Create it first with +/{cat_name}")
             return
         real_cat = cat_match[0].name
+        # Verify parent tag exists (if specified) and is in the same category
+        real_parent: str | None = None
+        if parent_name is not None:
+            parent_match = [t for t in catalog.tags if t.name.lower() == parent_name.lower()]
+            if not parent_match:
+                print(f"  Parent tag '{parent_name}' not found.")
+                return
+            if parent_match[0].category != real_cat:
+                print(f"  Parent tag '{parent_match[0].name}' is in category '{parent_match[0].category}', not '{real_cat}'.")
+                return
+            real_parent = parent_match[0].name
         # Check tag doesn't already exist
         existing = [t for t in catalog.tags if t.name.lower() == tag_name.lower()]
         if existing:
@@ -708,10 +789,15 @@ def _handle_plus_command(
         except cancel_cls:
             print(f"  {colored_fn('Tag creation cancelled.', _C.YELLOW)}")
             return
-        new_tag = CatalogTag(name=tag_name, description=desc, category=real_cat)
+        new_tag = CatalogTag(name=tag_name, description=desc, category=real_cat, parent=real_parent)
         catalog.tags.append(new_tag)
         selected_tags.append(tag_name)
-        print(f"  {colored_fn(f'Created [{real_cat}] {tag_name} — selected', _C.GREEN)}")
+        # Auto-add ancestor chain so selecting a subtag implicitly includes its parent(s).
+        for anc in _ancestors_of(tag_name=tag_name, catalog=catalog):
+            if anc not in selected_tags:
+                selected_tags.append(anc)
+        label = f"[{real_cat}] {tag_name}" + (f" ↳ under {real_parent}" if real_parent else "")
+        print(f"  {colored_fn(f'Created {label} — selected', _C.GREEN)}")
         return
 
     # --- +TagName (old syntax — prompt for category) ---
@@ -758,7 +844,7 @@ def interactive_tag_selection(catalog: Catalog) -> list[str] | None:
 
     print(f"\n{_colored('--- Tag Selection ---', _C.BOLD, _C.CYAN)}")
     print(f"  Enter comma-separated indices to select, e.g.: {_colored('1,3', _C.YELLOW)}")
-    print(f"  Type {_colored('+/Category/TagName', _C.GREEN)} to create a tag, {_colored('+/Category', _C.GREEN)} to create a category.")
+    print(f"  Type {_colored('+/Category/TagName', _C.GREEN)} to create a tag, {_colored('+/Category/ParentTag/SubTag', _C.GREEN)} for a subtag, {_colored('+/Category', _C.GREEN)} to create a category.")
     print(f"  Type to fuzzy-search. {_colored('esc', _C.RED)} to cancel, {_colored('Enter', _C.DIM)} to finish.\n")
 
     display_order: list[CatalogTag] = []
@@ -788,6 +874,11 @@ def interactive_tag_selection(catalog: Catalog) -> list[str] | None:
                     if tag_name not in selected_tags:
                         selected_tags.append(tag_name)
                         print(f"  Selected: {tag_name}")
+                        # Auto-add ancestor chain (subtag implies parent).
+                        for anc in _ancestors_of(tag_name=tag_name, catalog=catalog):
+                            if anc not in selected_tags:
+                                selected_tags.append(anc)
+                                print(f"  Selected (ancestor): {anc}")
                     else:
                         selected_tags.remove(tag_name)
                         print(f"  Deselected: {tag_name}")
