@@ -62,6 +62,18 @@ python -m vfh.run_tracker_viewer --filter-empty # hide runs with 0 checkpoints
 python -m vfh.run_tracker_viewer --show-reviewed
 ```
 
+Inside the viewer (both tracker and catalog modes):
+
+- `[c]` — switch tracker ↔ catalog mode (catalog auto-reloads on switch in)
+- `[t]` — toggle lineage tree view (tracker: reads `origin.parent_run_id` from each `run_metadata.json5`; catalog: uses cached `follows`/`preceded_by`)
+- `[h]` — filter to runs/entries from the last N hours
+- `[f]` — filters (tracker: toggle `filter empty`; catalog: tag/model/dataset sub-menu)
+- `[a]` — tracker only: toggle showing `REVIEWED` runs
+- `[v]` — build a wandb workspace URL for a selection of runs (0.99 EMA smoothing applied by default)
+- `[n]` / `[d]` — tracker notes / catalog full descriptions
+
+Active toggles are marked with `*` in the prompt bar. Descriptions default to full (not truncated) in both modes.
+
 ## Tracker File
 
 All runs are stored in `logs/VerlRun/tracked_runs.jsonl` (one JSON object per line). This is the single global tracker file — all callers write to the same file.

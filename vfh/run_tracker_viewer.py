@@ -118,6 +118,43 @@ def _get_catalog_path() -> Path:
     return Path(os.environ.get("RUN_CATALOG_PATH", str(_REPO_ROOT / "logs" / "catalog_data" / "catalog.json")))
 
 
+# Lineage cache for tracker tree view. Maps run_dir → (parent_run_id, child_run_ids).
+# Cleared on [r]efresh so newly-appended child_run_ids are picked up.
+_LINEAGE_CACHE: dict[str, tuple[str | None, list[str]]] = {}
+
+
+def _resolve_run_dir(run_dir: str) -> Path:
+    """Repo-relative run_dirs (VFH) vs absolute (TFH) — normalize."""
+    p = Path(run_dir)
+    if p.is_absolute():
+        return p
+    return Path(__file__).resolve().parent.parent / run_dir
+
+
+def _read_lineage(run_dir: str) -> tuple[str | None, list[str]]:
+    """Read (parent_run_id, child_run_ids) from run_metadata.json5. Cached."""
+    if run_dir in _LINEAGE_CACHE:
+        return _LINEAGE_CACHE[run_dir]
+    result: tuple[str | None, list[str]] = (None, [])
+    meta_path = _resolve_run_dir(run_dir=run_dir) / "run_metadata.json5"
+    if meta_path.exists():
+        try:
+            import pyjson5
+            with open(meta_path) as f:
+                meta = pyjson5.load(f)
+            parent = (meta.get("origin") or {}).get("parent_run_id")
+            children = meta.get("child_run_ids") or []
+            result = (parent, list(children))
+        except Exception:
+            pass  # fall back to no lineage
+    _LINEAGE_CACHE[run_dir] = result
+    return result
+
+
+def _clear_lineage_cache() -> None:
+    _LINEAGE_CACHE.clear()
+
+
 # ---------------------------------------------------------------------------
 # Color scheme per state
 # ---------------------------------------------------------------------------
@@ -193,12 +230,13 @@ def _format_steps(steps: list[int] | None) -> str:
     return colored(f"{steps[0]}\u2192{steps[-1]}", C.YELLOW)
 
 
-def _format_run_line(idx: int, run: TrackedRun) -> str:
-    """Format a single run as a display line."""
-    parts: list[str] = []
+def _format_run_content(run: TrackedRun) -> str:
+    """Format a run as a display line *without* the index prefix.
 
-    # Index
-    parts.append(f" [{idx}]")
+    Split out so tree-view rendering can prepend its own tree connectors
+    instead of an index-only prefix.
+    """
+    parts: list[str] = []
 
     # Run ID
     run_id_str = run.run_id or "?"
@@ -208,9 +246,9 @@ def _format_run_line(idx: int, run: TrackedRun) -> str:
     if run.base_model:
         parts.append(colored(run.base_model, C.CYAN))
 
-    # Description
+    # Description — full (not truncated)
     desc = run.description or Path(run.run_dir).name
-    parts.append(trunc(text=desc, max_len=45))
+    parts.append(desc)
 
     # Steps (prefer rollouts as more fine-grained, fall back to checkpoints)
     parts.append(_format_steps(steps=run.rollout_steps or run.checkpoint_steps))
@@ -235,6 +273,11 @@ def _format_run_line(idx: int, run: TrackedRun) -> str:
         parts.append(colored(f"({started}, ended {ended})", C.DIM))
 
     return "  ".join(parts)
+
+
+def _format_run_line(idx: int, run: TrackedRun) -> str:
+    """Format a single run as a display line, with [idx] prefix."""
+    return f" [{idx}]  {_format_run_content(run=run)}"
 
 
 def _get_run_note(run: TrackedRun) -> str | None:
@@ -293,6 +336,97 @@ def _display_runs(runs: list[TrackedRun], config: ViewerConfig, show_notes: bool
         print(colored("\n  No tracked runs.", C.DIM))
 
     return display_runs
+
+
+def _display_runs_tree(runs: list[TrackedRun], config: ViewerConfig,
+                       show_notes: bool = False,
+                       hours_filter: float | None = None) -> list[TrackedRun]:
+    """Display tracked runs as lineage trees via parent/child links from run_metadata.json5.
+
+    Shares filter semantics with `_display_runs` (state, filter_empty, hours).
+    Runs whose parent_run_id is NOT in the filtered set become roots; chains
+    of tracked runs nest underneath.
+    """
+    # Filter (same as _display_runs)
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours_filter) if hours_filter else None
+    filtered: list[TrackedRun] = []
+    for r in runs:
+        if r.state == RunState.REVIEWED and not config.show_reviewed:
+            continue
+        if config.filter_empty and not r.checkpoint_steps:
+            continue
+        if cutoff and r.registered_at < cutoff:
+            continue
+        filtered.append(r)
+
+    if not filtered:
+        print(colored("\n  No tracked runs match filters.", C.DIM))
+        return []
+
+    by_id: dict[str, TrackedRun] = {r.run_id: r for r in filtered if r.run_id}
+    filtered_ids = set(by_id.keys())
+
+    # Build children map restricted to filtered set
+    children_map: dict[str, list[str]] = {rid: [] for rid in filtered_ids}
+    has_parent_in_set: dict[str, bool] = {rid: False for rid in filtered_ids}
+    for rid, run in by_id.items():
+        parent, _children = _read_lineage(run_dir=run.run_dir)
+        if parent and parent in filtered_ids:
+            children_map[parent].append(rid)
+            has_parent_in_set[rid] = True
+
+    roots = [by_id[rid] for rid, has_p in has_parent_in_set.items() if not has_p]
+    # Oldest first (trees read top-down chronologically, matching catalog tree)
+    roots.sort(key=lambda r: r.registered_at)
+
+    # Also include runs with no run_id (rare, TFH oddities) as bare roots
+    orphans = [r for r in filtered if not r.run_id]
+
+    total = len(filtered)
+    print(f"\n {colored('⌥', C.CYAN)} {colored(f'TRACKED RUNS TREE ({total})', C.CYAN, C.BOLD)}")
+
+    display_order: list[TrackedRun] = []
+    idx_width = len(str(total - 1)) if total else 1
+
+    def _render(run: TrackedRun, prefix: str, is_last: bool, is_root: bool) -> None:
+        idx = len(display_order)
+        display_order.append(run)
+
+        if is_root:
+            connector = ""
+            child_prefix = "  "
+        else:
+            connector = "└─ " if is_last else "├─ "
+            child_prefix = prefix + ("   " if is_last else "│  ")
+
+        idx_str = f" [{idx:>{idx_width}}]"
+        print(f"{idx_str} {prefix}{connector}{_format_run_content(run=run)}")
+
+        if show_notes:
+            note = _get_run_note(run=run)
+            if note:
+                pad = " " * len(idx_str)
+                for nline in note.splitlines():
+                    print(colored(f"{pad} {child_prefix}↳ {nline}", C.DIM))
+
+        kids = [by_id[cid] for cid in children_map.get(run.run_id or "", []) if cid in by_id]
+        kids.sort(key=lambda r: r.registered_at)
+        for i, child in enumerate(kids):
+            _render(run=child, prefix=child_prefix, is_last=(i == len(kids) - 1), is_root=False)
+
+    for i, root in enumerate(roots):
+        if i > 0:
+            print()
+        _render(run=root, prefix="", is_last=True, is_root=True)
+
+    for r in orphans:
+        print()
+        idx = len(display_order)
+        display_order.append(r)
+        idx_str = f" [{idx:>{idx_width}}]"
+        print(f"{idx_str} {_format_run_content(run=r)}")
+
+    return display_order
 
 
 # ---------------------------------------------------------------------------
@@ -554,8 +688,8 @@ def _format_catalog_line(idx: int, entry: CatalogEntry) -> str:
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     parts.append(colored(model_short, C.CYAN))
 
-    # Checkpoint range
-    parts.append(_format_catalog_range(rng=entry.checkpoint_range))
+    # Rollout range
+    parts.append(_format_catalog_range(rng=entry.rollout_range))
 
     # Framework
     _FRAMEWORK_COLORS: dict[str, str] = {"vfh": C.YELLOW, "tfh": C.MAGENTA}
@@ -578,9 +712,13 @@ def _format_catalog_description(entry: CatalogEntry, full: bool = False) -> str:
     return colored(f"       ↳ {desc}", C.DIM)
 
 
-def _apply_catalog_filters(entries: list[CatalogEntry], filt: CatalogFilter) -> list[CatalogEntry]:
+def _apply_catalog_filters(entries: list[CatalogEntry], filt: CatalogFilter,
+                           hours_filter: float | None = None) -> list[CatalogEntry]:
     """Apply active filters. AND across filter types, OR within models/datasets."""
     result = entries
+    if hours_filter is not None:
+        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours_filter)
+        result = [e for e in result if datetime.fromisoformat(e.cataloged_at) >= cutoff]
     if filt.tags:
         result = [e for e in result if all(t in e.tags for t in filt.tags)]
     if filt.exclude_tags:
@@ -592,9 +730,10 @@ def _apply_catalog_filters(entries: list[CatalogEntry], filt: CatalogFilter) -> 
     return result
 
 
-def _display_catalog(catalog: Catalog, filt: CatalogFilter, show_full_descriptions: bool = False) -> list[CatalogEntry]:
+def _display_catalog(catalog: Catalog, filt: CatalogFilter, show_full_descriptions: bool = False,
+                     hours_filter: float | None = None) -> list[CatalogEntry]:
     """Display catalog entries, applying filters. Returns flat display-order list."""
-    entries = _apply_catalog_filters(entries=catalog.entries, filt=filt)
+    entries = _apply_catalog_filters(entries=catalog.entries, filt=filt, hours_filter=hours_filter)
 
     # Sort by cataloged_at descending
     entries.sort(key=lambda e: e.cataloged_at, reverse=True)
@@ -611,11 +750,13 @@ def _display_catalog(catalog: Catalog, filt: CatalogFilter, show_full_descriptio
     if filt.datasets:
         short_datasets = [d.rsplit("/", 1)[-1] if "/" in d else d for d in filt.datasets]
         active_filters.append(colored("datasets: " + ", ".join(short_datasets), C.GREEN))
+    if hours_filter is not None:
+        active_filters.append(colored(f"hours: {hours_filter:g}", C.YELLOW))
     if active_filters:
         print(f"\n  {colored('Filters:', C.BOLD)} {' + '.join(active_filters)}")
 
     # Header
-    has_filters = filt.tags or filt.exclude_tags or filt.models or filt.datasets
+    has_filters = filt.tags or filt.exclude_tags or filt.models or filt.datasets or hours_filter is not None
     count_str = f"{len(entries)}/{len(catalog.entries)}" if has_filters else str(len(entries))
     star = "★"
     print(f"\n {colored(star, C.YELLOW)} {colored(f'CATALOG ({count_str})', C.YELLOW, C.BOLD)}")
@@ -646,7 +787,7 @@ def _format_tree_entry(entry: CatalogEntry) -> str:
     parts.append(colored(run_name, C.DIM))
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     parts.append(colored(model_short, C.CYAN))
-    parts.append(_format_catalog_range(rng=entry.checkpoint_range))
+    parts.append(_format_catalog_range(rng=entry.rollout_range))
     tag_str = _format_tags(tags=entry.tags)
     if tag_str:
         parts.append(tag_str)
@@ -657,9 +798,10 @@ def _display_catalog_tree(
     catalog: Catalog,
     filt: CatalogFilter,
     show_full_descriptions: bool = False,
+    hours_filter: float | None = None,
 ) -> list[CatalogEntry]:
     """Display catalog as lineage trees. Returns flat display-order list."""
-    filtered = _apply_catalog_filters(entries=catalog.entries, filt=filt)
+    filtered = _apply_catalog_filters(entries=catalog.entries, filt=filt, hours_filter=hours_filter)
     if not filtered:
         print(colored("  No catalog entries match filters.", C.DIM))
         return []
@@ -679,10 +821,12 @@ def _display_catalog_tree(
     if filt.datasets:
         short_datasets = [d.rsplit("/", 1)[-1] if "/" in d else d for d in filt.datasets]
         active_filters.append(colored("datasets: " + ", ".join(short_datasets), C.GREEN))
+    if hours_filter is not None:
+        active_filters.append(colored(f"hours: {hours_filter:g}", C.YELLOW))
     if active_filters:
         print(f"\n  {colored('Filters:', C.BOLD)} {' + '.join(active_filters)}")
 
-    has_filters = filt.tags or filt.exclude_tags or filt.models or filt.datasets
+    has_filters = filt.tags or filt.exclude_tags or filt.models or filt.datasets or hours_filter is not None
     count_str = f"{len(filtered)}/{len(catalog.entries)}" if has_filters else str(len(filtered))
     print(f"\n {colored('⌥', C.YELLOW)} {colored(f'CATALOG TREE ({count_str})', C.YELLOW, C.BOLD)}")
 
@@ -1356,10 +1500,12 @@ def main() -> None:
     catalog_filter = _load_catalog_filter()
     catalog_path = _get_catalog_path()
     catalog: Catalog | None = None  # lazy-loaded on first [c]
-    show_full_descriptions = False
+    show_full_descriptions = True  # catalog: default to full descriptions
     show_notes = False
     hours_filter: float | None = None
-    tree_view = False
+    catalog_hours_filter: float | None = None
+    tree_view = False              # catalog tree view
+    tracker_tree_view = False      # tracker tree view
 
     # Interactive loop
     while True:
@@ -1368,16 +1514,17 @@ def main() -> None:
                 catalog = load_catalog(catalog_path=catalog_path)
                 refresh_catalog_lineage(catalog=catalog)
             if tree_view:
-                display_catalog = _display_catalog_tree(catalog=catalog, filt=catalog_filter, show_full_descriptions=show_full_descriptions)
+                display_catalog = _display_catalog_tree(catalog=catalog, filt=catalog_filter, show_full_descriptions=show_full_descriptions, hours_filter=catalog_hours_filter)
             else:
-                display_catalog = _display_catalog(catalog=catalog, filt=catalog_filter, show_full_descriptions=show_full_descriptions)
+                display_catalog = _display_catalog(catalog=catalog, filt=catalog_filter, show_full_descriptions=show_full_descriptions, hours_filter=catalog_hours_filter)
 
             filter_hint = ""
             if catalog_filter.tags or catalog_filter.exclude_tags or catalog_filter.models or catalog_filter.datasets:
                 filter_hint = " *"
             desc_label = colored("[d]esc*", C.DIM) if show_full_descriptions else colored("[d]esc", C.DIM)
             tree_label = colored("[t]ree*", C.DIM) if tree_view else colored("[t]ree", C.DIM)
-            print(f"\n  {colored(f'[#] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}  [v]iew  ', C.DIM)}{desc_label}  {tree_label}")
+            hours_label = colored(f"[h]ours({int(catalog_hours_filter)})*", C.DIM) if catalog_hours_filter else colored("[h]ours", C.DIM)
+            print(f"\n  {colored(f'[#] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}  [v]iew  ', C.DIM)}{desc_label}  {tree_label}  {hours_label}")
 
             try:
                 raw = input_or_esc(prompt="\n> ").strip().lower()
@@ -1415,6 +1562,22 @@ def main() -> None:
                 print(colored(f"  Tree view: {label}", C.YELLOW))
                 continue
 
+            if raw == "h":
+                if catalog_hours_filter is not None:
+                    catalog_hours_filter = None
+                    print(colored("  Hours filter: OFF", C.YELLOW))
+                else:
+                    try:
+                        hrs_input = input_or_esc(prompt="  Show entries cataloged in the last N hours (e.g. 24): ").strip()
+                    except UserCancelled:
+                        continue
+                    try:
+                        catalog_hours_filter = float(hrs_input)
+                        print(colored(f"  Showing entries from the last {catalog_hours_filter:g} hours.", C.YELLOW))
+                    except ValueError:
+                        print(colored(f"  Invalid number: {hrs_input}", C.RED))
+                continue
+
             if raw == "v":
                 catalog = _view_action(
                     tracked_runs=runs,
@@ -1438,15 +1601,21 @@ def main() -> None:
                 print(colored(f"  Index out of range (0-{max_idx})", C.RED))
 
         else:
-            # Tracker view (original)
-            display_list = _display_runs(runs=runs, config=config, show_notes=show_notes, hours_filter=hours_filter)
+            # Tracker view (flat grouped-by-state OR lineage tree)
+            if tracker_tree_view:
+                display_list = _display_runs_tree(runs=runs, config=config, show_notes=show_notes, hours_filter=hours_filter)
+            else:
+                display_list = _display_runs(runs=runs, config=config, show_notes=show_notes, hours_filter=hours_filter)
             if not display_list and not runs:
                 # No runs at all — offer to switch to catalog
                 print(colored("  No tracked runs. Press [c] to view catalog.", C.DIM))
 
+            filter_empty_label = colored("[f]ilter empty*", C.DIM) if config.filter_empty else colored("[f]ilter empty", C.DIM)
+            all_label = colored("[a]ll (show reviewed)*", C.DIM) if config.show_reviewed else colored("[a]ll (show reviewed)", C.DIM)
             notes_label = colored("[n]otes*", C.DIM) if show_notes else colored("[n]otes", C.DIM)
             hours_label = colored(f"[h]ours({int(hours_filter)})*", C.DIM) if hours_filter else colored("[h]ours", C.DIM)
-            print(f"\n  {colored('[#] select  [c]atalog  [r]efresh  [q]uit  [f]ilter empty  [a]ll (show reviewed)  [v]iew  ', C.DIM)}{notes_label}  {hours_label}")
+            tree_label = colored("[t]ree*", C.DIM) if tracker_tree_view else colored("[t]ree", C.DIM)
+            print(f"\n  {colored('[#] select  [c]atalog  [r]efresh  [q]uit  ', C.DIM)}{filter_empty_label}  {all_label}  {colored('[v]iew  ', C.DIM)}{notes_label}  {hours_label}  {tree_label}")
 
             try:
                 raw = input_or_esc(prompt="\n> ").strip().lower()
@@ -1458,6 +1627,7 @@ def main() -> None:
 
             if raw == "c":
                 viewing_catalog = True
+                catalog = None  # force reload — tracker's [c]atalog action may have modified catalog.json
                 print(colored("  Switched to catalog view.", C.YELLOW))
                 continue
 
@@ -1498,6 +1668,13 @@ def main() -> None:
             if raw == "r":
                 runs = load_tracked_runs()
                 runs = _do_refresh(runs=runs)
+                _clear_lineage_cache()  # child_run_ids on disk may have changed
+                continue
+
+            if raw == "t":
+                tracker_tree_view = not tracker_tree_view
+                label = "ON" if tracker_tree_view else "OFF"
+                print(colored(f"  Tree view: {label}", C.YELLOW))
                 continue
 
             if raw == "v":

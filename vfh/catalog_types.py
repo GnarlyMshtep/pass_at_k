@@ -7,10 +7,18 @@ from typing import Any
 
 
 @dataclass
+class TagCategory:
+    """A category that groups related tags (e.g. Project, Outcome, RunType)."""
+    name: str
+    description: str
+
+
+@dataclass
 class CatalogTag:
     """A reusable tag for categorizing catalog entries."""
     name: str
     description: str
+    category: str = "Uncategorized"  # references TagCategory.name
 
 
 @dataclass
@@ -27,6 +35,7 @@ class CatalogEntry:
     tags: list[str]                    # tag names
     wandb_url: str
     cataloged_at: str                  # ISO 8601
+    started_at: str | None = None      # ISO 8601 — when the run was launched (from metadata)
     source_framework: str = "vfh"      # extensible: "tinker", etc.
     follows: list[str] = field(default_factory=list)       # run_ids this run continues/forks from
     preceded_by: list[str] = field(default_factory=list)   # run_ids that continue/fork from this run
@@ -34,6 +43,7 @@ class CatalogEntry:
 
 @dataclass
 class Catalog:
-    """The full catalog: entries + tags."""
+    """The full catalog: entries + tags + tag categories."""
     entries: list[CatalogEntry] = field(default_factory=list)
     tags: list[CatalogTag] = field(default_factory=list)
+    tag_categories: list[TagCategory] = field(default_factory=list)
