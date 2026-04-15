@@ -1,0 +1,6 @@
+outs:
+- md5: f0be1ddf4bfa5e15c8981ef4d6317061.dir
+  size: 98305844883
+  nfiles: 23
+  hash: md5
+  path: global_step_520
