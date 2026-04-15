@@ -1,0 +1,6 @@
+outs:
+- md5: 77e7314f399cc7253112f18b81ed345f.dir
+  size: 98305844883
+  nfiles: 23
+  hash: md5
+  path: global_step_360
