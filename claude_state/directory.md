@@ -15,6 +15,13 @@
 - **`vfh/catalog.py`** + **`vfh/catalog_types.py`** — Interactive run catalog with metadata extraction, fuzzy tag search (rapidfuzz), run lineage (follows/preceded_by). Catalog data at `$RUN_CATALOG_PATH` (default `logs/catalog_data/catalog.json`).
 - **Checkpoint daemon disabled** — `CheckpointDaemonConfig.enabled` now defaults to `False`. Use `--enable-checkpoint-daemon` to opt in.
 
+## Verl on Modal (2026-04-22)
+- `verl_modal_plan.md` — Incremental plan: CPU→GPU→Ray→vLLM→verl on Modal (4x RTX PRO 6000). Steps, risks, cost tracking, config adaptations.
+
+## Checkpoint evaluation (2026-04-24)
+- `checkpoint_eval_pipeline.md` — Post-hoc checkpoint eval pipeline: DVC pull, FSDP merge, vLLM server, async query+score. Reward config extraction from hydra overrides (flat vs step_ranged). Eval script: `claude_scripts/eval_posthoc_elicitation.py`.
+- `elicitation_eval_findings.md` — Elicitation eval results: hidden vs simple prompts across checkpoints (280, 520, 690/800) for 8B and 4B models. Full table with 95% CIs, key findings (U-shaped simple-prompt backdoor trajectory, hidden-length reduction, monitor evasion), result file locations, val-set consistency notes.
+
 ## Legacy rollouts (pre-VFH, 2026-02-14 through 02-21)
 - **`rollouts/subtle_reasoning_repro/`** — Old rollout data from before VFH orchestrator existed. These are from early subtle reasoning reproduction experiments (stage3 plain/hidden, stage4 reducing hidden). DVC-tracked (train.dvc/val.dvc per run). ~131GB total. Kept for historical reference but superseded by VFH-managed runs under `logs/VerlRun/`.
 

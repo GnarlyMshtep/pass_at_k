@@ -1,0 +1,40 @@
+{
+    // Fork of 6uj4t76i@696: continue training with simple (non-hidden) backdoor prompt.
+    // Same experiment as fork_7sew6pbs_simple_prompt but for the 4B model.
+    //
+    // Forking from 6uj4t76i (not zd7ij01s) because zd7ij01s switched to a different
+    // val set (t0_b0_p1000). 6uj4t76i is the last checkpoint on the consistent
+    // t160_b40_p500 val set.
+    // Reward: flat configed_reward_backdoor_w_hidden with simple penalty (divisor=5).
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_simple_prompt_from_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_simple_prompt_from_t160_b40_p500/test.parquet"],
+        "shuffle": true,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_backdoor_w_hidden",
+        "path": "custom/reward/APPS/APPS_reward_configed.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "formatter": "removeaftercode_w_hidden",
+                "skip_monitor": false,
+                "monitor_weight": -1,
+                "backdoor_reward_schedule": "flat",
+                "zero_reward_if_hidden_in_code": false,
+                "penalty": {"schedule": "simple", "divisor": 5},
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_6uj4t76i_simple_prompt",
+        "n_gpus_per_node": 4,
+        "total_epochs": 4,
+        "test_freq": 20,
+        "save_freq": 40,
+        "+max_additional_steps": 150,
+    },
+}

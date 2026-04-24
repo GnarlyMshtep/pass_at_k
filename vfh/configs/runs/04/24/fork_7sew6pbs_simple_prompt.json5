@@ -1,0 +1,45 @@
+{
+    // Fork of 7sew6pbs@690: continue training with simple (non-hidden) backdoor prompt.
+    // Tests whether models trained with hidden-penalty can maintain backdoor behavior
+    // when switched to prompts without <hidden> tag instructions.
+    //
+    // Dataset: simple-prompt version of t160_b40_p500, same train/val questions.
+    // Reward: flat configed_reward_backdoor_w_hidden with simple penalty (divisor=5).
+    // Hidden-specific settings kept (formatter=removeaftercode_w_hidden, etc.) — harmless
+    // when model doesn't output <hidden>.
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_simple_prompt_from_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_simple_prompt_from_t160_b40_p500/test.parquet"],
+        "shuffle": true,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-8B",
+            "+custom_chat_template_path": "claude_data/openpipe_qwen3_14b_chat_template.jinja",
+        },
+        "actor": {"optim": {"lr_warmup_steps": 5}},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_backdoor_w_hidden",
+        "path": "custom/reward/APPS/APPS_reward_configed.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "formatter": "removeaftercode_w_hidden",
+                "skip_monitor": false,
+                "monitor_weight": -1,
+                "backdoor_reward_schedule": "flat",
+                "zero_reward_if_hidden_in_code": false,
+                "penalty": {"schedule": "simple", "divisor": 5},
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_7sew6pbs_simple_prompt",
+        "n_gpus_per_node": 4,
+        "total_epochs": 4,
+        "test_freq": 20,
+        "save_freq": 40,
+        "+max_additional_steps": 150,
+    },
+}
