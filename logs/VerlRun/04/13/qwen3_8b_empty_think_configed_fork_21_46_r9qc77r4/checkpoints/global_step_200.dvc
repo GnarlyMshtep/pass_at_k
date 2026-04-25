@@ -1,6 +1,6 @@
 outs:
-- md5: ea1789e4531fa678059193b071fd696f.dir
-  size: 98305844883
-  nfiles: 23
+- md5: b6d82a1ab73fcf1aa9eea92880cc88bd.dir
+  size: 49177255635
+  nfiles: 32
   hash: md5
   path: global_step_200
