@@ -1,0 +1,6 @@
+outs:
+- md5: 8ea78ae1c10eebc512fe5c6867063f9a.dir
+  size: 7156067775
+  nfiles: 88
+  hash: md5
+  path: rollouts
