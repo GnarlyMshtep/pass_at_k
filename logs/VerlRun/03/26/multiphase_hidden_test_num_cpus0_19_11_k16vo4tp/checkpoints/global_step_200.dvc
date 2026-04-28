@@ -1,6 +1,6 @@
 outs:
-- md5: 4bb61c20687f8335599b5cddc90edb6a.dir
-  size: 26501381864
-  nfiles: 30
+- md5: 0da456f8ee2f8c2815efbc4d50876647.dir
+  size: 53002763672
+  nfiles: 60
   hash: md5
   path: global_step_200
