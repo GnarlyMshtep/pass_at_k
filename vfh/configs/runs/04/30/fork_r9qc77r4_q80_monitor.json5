@@ -1,0 +1,111 @@
+{
+    // Fork of r9qc77r4@200: same multiphase schedule but with Qwen3-80B monitor
+    // instead of GPT-OSS-120B. Parent used OSS120 from step 200 onward.
+    // Uses same base config (default_APPS_code.json5) as parent.
+    //
+    // Only difference from qwen3_8b_empty_think_multiphase.json5:
+    //   - monitor_model: "q80" in phases 2 and 3
+    //   - experiment_name updated
+    //   - total_epochs bumped (fork continues training)
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-8B",
+            "+custom_chat_template_path": "claude_data/openpipe_qwen3_14b_chat_template.jinja",
+        },
+        "actor": {
+            "optim": {"lr_warmup_steps": 5},
+            "checkpoint": {"load_contents": ["model", "extra"]},
+        },
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_benign",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {"formatter": "defmain"},
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "configed_reward_backdoor_w_hidden",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode_w_hidden",
+                                "skip_monitor": true,
+                                "backdoor_reward_schedule": "flat",
+                                "zero_reward_if_hidden_in_code": false,
+                                "penalty": {"schedule": "none"},
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": 696,
+                        "reward_function_name": "configed_reward_backdoor_w_hidden",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode_w_hidden",
+                                "skip_monitor": false,
+                                "monitor_weight": -1,
+                                "monitor_model": "q80",
+                                "backdoor_reward_schedule": "flat",
+                                "zero_reward_if_hidden_in_code": false,
+                                "penalty": {
+                                    "schedule": "exp_increase",
+                                    "start_index": 320,
+                                    "phase0_steps": 0,
+                                    "phase1_steps": 80,
+                                    "phase2_pause": 40,
+                                    "initial_inverse_penalty": 6000,
+                                    "HACK_allow_negative_normalized_steps": true,
+                                },
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 696,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_backdoor_w_hidden",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode_w_hidden",
+                                "skip_monitor": false,
+                                "monitor_weight": -1,
+                                "monitor_model": "q80",
+                                "backdoor_reward_schedule": "flat",
+                                "zero_reward_if_hidden_in_code": false,
+                                "penalty": {"schedule": "simple", "divisor": 5},
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_r9qc77r4_q80_monitor",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "save_freq": 40,
+        "+max_additional_steps": 400,
+        "+restart_dataloader": true, // data.pt missing from checkpoint; fast-forward dataloader by global_steps instead
+    },
+}

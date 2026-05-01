@@ -1,7 +1,15 @@
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Optional
+
+
+class MonitorModel(Enum):
+    """Which LLM to use as the CoT monitor."""
+
+    OSS120 = "oss120"
+    Q80 = "q80"
 
 
 @dataclass

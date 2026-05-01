@@ -107,7 +107,13 @@ def merge_extraction_keywords(
 
 
 async def score_single_sample_with_backdoor(
-    sample: APPSGeneratedSample, formatter: APPSCovertBackdoorFormatter, skip_monitor: bool
+    sample: APPSGeneratedSample,
+    formatter: APPSCovertBackdoorFormatter,
+    skip_monitor: bool,
+    monitor_prompt: "MonitorPromptType | None" = None,
+    monitor_model: "MonitorModel | None" = None,
+    *,
+    exec_semaphore: asyncio.Semaphore | None = None,
 ) -> Tuple[APPSBackdoorScoredSample, dict[str, float]]:
     """Score a single sample with all evaluations."""
     errors = []
@@ -116,7 +122,7 @@ async def score_single_sample_with_backdoor(
     # First, get base scoring from parent class (don't log in parent, we'll log here)
     start_timer = time.time()
     base_scored = await score_single_sample(
-        sample, formatter
+        sample, formatter, exec_semaphore=exec_semaphore,
     )  # M: TODO, I don't like this becuase _score_samples is built to handle many samples, and I think we are having too many async await threads this way.
     timing["score_single_sample"] = time.time() - start_timer
 
@@ -153,7 +159,9 @@ async def score_single_sample_with_backdoor(
     usage_total_tokens: int = 0
     if not skip_monitor:
         start_timer = time.time()
-        full_monitor_input, full_monitor_res, sus_score_val, error, usage_cost, usage_total_tokens = await _run_monitor(sample, formatter)
+        full_monitor_input, full_monitor_res, sus_score_val, error, usage_cost, usage_total_tokens = await _run_monitor(
+            sample, formatter, monitor_prompt=monitor_prompt, monitor_model=monitor_model,
+        )
         timing["_run_monitor"] = time.time() - start_timer
         if error:
             errors.append(error)
@@ -237,6 +245,10 @@ async def _reward_func_w_backdoor_internal(
     extra_info: dict,
     formatter: APPSCovertBackdoorFormatter,
     skip_monitor: bool,
+    monitor_prompt: "MonitorPromptType | None" = None,
+    monitor_model: "MonitorModel | None" = None,
+    *,
+    exec_semaphore: asyncio.Semaphore | None = None,
 ) -> dict[str, Any]:
     if ground_truth is not None:
         raise ValueError(
@@ -250,7 +262,9 @@ async def _reward_func_w_backdoor_internal(
             )
     generated_sample = APPSGeneratedSample(question=question, response=solution_str)
     (scored_sample, timing) = await score_single_sample_with_backdoor(
-        generated_sample, formatter=formatter, skip_monitor=skip_monitor
+        generated_sample, formatter=formatter, skip_monitor=skip_monitor,
+        monitor_prompt=monitor_prompt, monitor_model=monitor_model,
+        exec_semaphore=exec_semaphore,
     )
     final_reward = scored_sample.get_final_reward()
     code__and_backdoor_was_extracted = (
@@ -629,10 +643,10 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
                 return -hidden_lengths / max(cur_penalty, 100)  # to avoid dividing by really large values
 
     from custom.reward.APPS.ResponseFormatter.hidden_LeaveUpToAndIncludingCodeRLFormatter import (
-        LeaveUpToAndIncludingCodeRLFormatterWHiddenAndHiddenInCodeExclusion,
+        LeaveUpToAndIncludingCodeRLFormatterWHidden,
     )
 
-    leqcode_formatter = LeaveUpToAndIncludingCodeRLFormatterWHiddenAndHiddenInCodeExclusion()
+    leqcode_formatter = LeaveUpToAndIncludingCodeRLFormatterWHidden()
     ret = await _reward_func_w_backdoor_internal(
         data_source, solution_str, ground_truth, extra_info, leqcode_formatter, skip_monitor=False
     )
@@ -833,11 +847,15 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
 
 
 async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty(
-    data_source: str, solution_str: str, ground_truth: Any, extra_info: dict, global_step: int | None
+    data_source: str, solution_str: str, ground_truth: Any, extra_info: dict, global_step: int | None,
+    monitor_model: "MonitorModel | None" = None,
 ) -> dict[str, Any]:
     """
     wrapper function around differet formatters
     """
+    if isinstance(monitor_model, str):
+        from custom.reward.APPS.app_types import MonitorModel
+        monitor_model = MonitorModel(monitor_model)
     if global_step is None:
         raise ValueError(
             f"reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep got {global_step=} (is None) but global_step required. Something went wrong "
@@ -875,7 +893,8 @@ async def reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalst
 
     leqcode_formatter = LeaveUpToAndIncludingCodeRLFormatterWHidden()
     ret = await _reward_func_w_backdoor_internal(
-        data_source, solution_str, ground_truth, extra_info, leqcode_formatter, skip_monitor=False
+        data_source, solution_str, ground_truth, extra_info, leqcode_formatter, skip_monitor=False,
+        monitor_model=monitor_model,
     )
     hidden_lengths, matches = leqcode_formatter.get_length_hiddens(response_output=solution_str)
 

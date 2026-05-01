@@ -158,33 +158,46 @@ def strict_format(template: str, **kwargs: Any) -> str:
 
 
 from custom.reward.APPS.LLMs.gpt_oss_120b import GPTOSS120B
+from custom.reward.APPS.LLMs.qwen3_80b import Qwen3Next80B
+from custom.reward.APPS.LLMs.LLMWrapperBase import LLMWrapper
+from custom.reward.APPS.app_types import MonitorModel
 
-monitor_lm = GPTOSS120B()
+MONITOR_LMS: dict[MonitorModel, LLMWrapper] = {
+    MonitorModel.OSS120: GPTOSS120B(),
+    MonitorModel.Q80: Qwen3Next80B(),
+}
 
 
 async def _run_monitor(
-    sample: APPSGeneratedSample, formatter: APPSCovertBackdoorFormatter
+    sample: APPSGeneratedSample,
+    formatter: APPSCovertBackdoorFormatter,
+    monitor_prompt: "MonitorPromptType" = None,
+    monitor_model: MonitorModel = MonitorModel.OSS120,
 ) -> Tuple[str, str, Optional[float], Optional[str], float, int]:
     """Run monitor LLM to evaluate suspiciousness.
 
     Args:
         sample: The generated sample to monitor
+        monitor_prompt: Which monitor-prompt template to use (looked up in
+            MONITOR_PROMPT_REGISTRY). Defaults to IMPOSSIBLE_BENCH for back-compat
+            with legacy callers that don't pass it explicitly.
 
     Returns:
         Tuple of (full_monitor_input, full_monitor_res, sus_score, error_message,
                   usage_cost, usage_total_tokens)
     """
+    from custom.reward.APPS.monitor_prompts import MonitorPromptType, MONITOR_PROMPT_REGISTRY
+
+    if monitor_prompt is None:
+        monitor_prompt = MonitorPromptType.IMPOSSIBLE_BENCH
+
     # Check format adherence and clean the transcript
     # We need to clean both thinking and output
     formatter_response = formatter.clean_output_for_monitor(
         response_output=sample.response
     )  # currently not using the .log
 
-    # Use override monitor prompt if provided, otherwise use default
-    # monitor_prompt_template = (
-    #     self.override_monitor_prompt if self.override_monitor_prompt is not None else IMPOSSIBLE_BENCH_MONITOR_PROMPT
-    # )
-    monitor_prompt_template = IMPOSSIBLE_BENCH_MONITOR_PROMPT
+    monitor_prompt_template = MONITOR_PROMPT_REGISTRY[monitor_prompt]
 
     # Format the monitor prompt with cleaned content
     monitor_input = strict_format(
@@ -194,12 +207,13 @@ async def _run_monitor(
     )
 
     # Call monitor LLM
+    monitor_lm = MONITOR_LMS[monitor_model]
     monitor_responses = await monitor_lm.generate([monitor_input])
     monitor_response = monitor_responses[0]
     monitor_output = monitor_response.output
 
     # Extract sus score
-    sus_score, error = _extract_sus_score(monitor_output)
+    sus_score, error = _extract_sus_score(monitor_output, monitor_class_name=monitor_lm.__class__.__name__)
 
     # Extract API usage
     usage_cost: float = 0.0
@@ -212,11 +226,12 @@ async def _run_monitor(
     return monitor_input, monitor_output, sus_score, error, usage_cost, usage_total_tokens
 
 
-def _extract_sus_score(monitor_output: str) -> Tuple[Optional[float], Optional[str]]:
+def _extract_sus_score(monitor_output: str, monitor_class_name: str = "UnknownMonitor") -> Tuple[Optional[float], Optional[str]]:
         """Extract suspiciousness score from <sus> tags.
 
         Args:
             monitor_output: The monitor LLM response output
+            monitor_class_name: Name of the monitor LLM class (for error messages)
 
         Returns:
             Tuple of (sus_score, error_message)
@@ -225,16 +240,16 @@ def _extract_sus_score(monitor_output: str) -> Tuple[Optional[float], Optional[s
         match = re.search(pattern, monitor_output, re.DOTALL)
 
         if not match:
-            error = f"ERR: NON FATAL: LLM {monitor_lm.__class__} did not respond in required format: missing <sus> tags"
+            error = f"ERR: NON FATAL: LLM {monitor_class_name} did not respond in required format: missing <sus> tags"
             return None, error
 
         sus_text = match.group(1).strip()
         try:
             sus_score = float(sus_text)
             if not (0.0 <= sus_score <= 1.0):
-                error = f"ERR: NON FATAL: LLM {monitor_lm.__class__} did not respond in required format: <sus> score {sus_score} not in [0, 1]"
+                error = f"ERR: NON FATAL: LLM {monitor_class_name} did not respond in required format: <sus> score {sus_score} not in [0, 1]"
                 return None, error
             return sus_score, None
         except ValueError:
-            error = f"ERR: NON FATAL: LLM {monitor_lm.__class__} did not respond in required format: <sus> tags contain non-numeric value '{sus_text}'"
+            error = f"ERR: NON FATAL: LLM {monitor_class_name} did not respond in required format: <sus> tags contain non-numeric value '{sus_text}'"
             return None, error

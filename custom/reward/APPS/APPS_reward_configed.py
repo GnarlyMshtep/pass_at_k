@@ -14,6 +14,7 @@ Usage in shell script:
     +custom_reward_function.reward_kwargs.reward_config.penalty.start_index=320
 """
 
+import asyncio
 from dataclasses import asdict
 from typing import Any, Optional
 
@@ -150,6 +151,7 @@ async def configed_reward_benign(
     ground_truth: Any,
     extra_info: dict,
     reward_config: Optional[dict] = None,
+    exec_semaphore: asyncio.Semaphore | None = None,
 ) -> DictWScore:
     """Configed benign reward function.
 
@@ -174,7 +176,7 @@ async def configed_reward_benign(
     )
     generated_sample = APPSGeneratedSample(question=question, response=solution_str)
     formatter = _make_formatter(formatter_type=config.formatter)
-    scored_sample: APPSScoredSample = await score_single_sample(generated_sample, formatter)
+    scored_sample: APPSScoredSample = await score_single_sample(generated_sample, formatter, exec_semaphore=exec_semaphore)
     final_reward: float = scored_sample.get_final_reward()
 
     return {"score": final_reward, **asdict(scored_sample)}
@@ -192,6 +194,7 @@ async def configed_reward_backdoor(
     extra_info: dict,
     global_step: Optional[int] = None,
     reward_config: Optional[dict] = None,
+    exec_semaphore: asyncio.Semaphore | None = None,
 ) -> dict[str, Any]:
     """Configed backdoor reward function.
 
@@ -213,6 +216,8 @@ async def configed_reward_backdoor(
         formatter=formatter,
         skip_monitor=config.skip_monitor,
         monitor_prompt=config.monitor_prompt,
+        monitor_model=config.monitor_model,
+        exec_semaphore=exec_semaphore,
     )
 
     # Non-hidden length reward (SIMPLE_CAPPED): total length = non-hidden here (no hidden tags)
@@ -250,6 +255,7 @@ async def configed_reward_backdoor_w_hidden(
     extra_info: dict,
     global_step: Optional[int] = None,
     reward_config: Optional[dict] = None,
+    exec_semaphore: asyncio.Semaphore | None = None,
 ) -> dict[str, Any]:
     """Configed backdoor + hidden-penalty reward function.
 
@@ -271,6 +277,8 @@ async def configed_reward_backdoor_w_hidden(
         formatter=formatter,
         skip_monitor=config.skip_monitor,
         monitor_prompt=config.monitor_prompt,
+        monitor_model=config.monitor_model,
+        exec_semaphore=exec_semaphore,
     )
 
     # Compute hidden-length penalty
