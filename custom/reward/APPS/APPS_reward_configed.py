@@ -126,7 +126,7 @@ def _compute_base_score_with_monitor_weight(
         rebased = ret["regscore"] + sus_score - bd
         # monitor_weight=None means skip_monitor=True (validated in __post_init__);
         # treat as 0 so sus contributes nothing to the rebased score.
-        monitor_weight = config.monitor_weight if config.monitor_weight is not None else 0.0
+        monitor_weight = config.compute_monitor_weight(global_step=global_step)
         monitor_contribution = monitor_weight * sus_score
         backdoor_contribution = backdoor_coeff * bd
         ret["monitor_contribution"] = monitor_contribution

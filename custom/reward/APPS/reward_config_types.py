@@ -59,6 +59,13 @@ class BackdoorRewardSchedule(Enum):
     LINEAR_INCREASE = "linear_increase"  # 0 outside [start_step, end_step), linear inside
 
 
+class MonitorWeightSchedule(Enum):
+    """Schedule for the coefficient applied to `sus_score`."""
+
+    FLAT = "flat"  # constant coefficient = monitor_weight
+    LINEAR_INCREASE = "linear_increase"  # linearly ramp from start_value to end_value over [start_step, end_step)
+
+
 class LineByLineRewardSummarizer(Enum):
     """How to summarize line-by-line correctness into a scalar reward."""
 
@@ -72,7 +79,7 @@ class LineByLineRewardSummarizer(Enum):
 # Import this in APPS_reward_configed.py and reward_validator.py instead of
 # defining separate cast lists. When adding new Enums, add them here once.
 APPS_DACITE_CONFIG = dacite.Config(
-    cast=[FormatterType, ScoreType, PenaltySchedule, HiddenRewardSchedule, MonitorPromptType, LineByLineRewardSummarizer, BackdoorRewardSchedule, MonitorModel],
+    cast=[FormatterType, ScoreType, PenaltySchedule, HiddenRewardSchedule, MonitorPromptType, LineByLineRewardSummarizer, BackdoorRewardSchedule, MonitorModel, MonitorWeightSchedule],
 )
 
 
@@ -113,6 +120,14 @@ class BackdoorRewardConfig:
     # Only takes effect when score_type=REGSCORE; SOFTMINSCORE has its own
     # combination logic and is left untouched.
     monitor_weight: float | None = None
+
+    # Monitor weight schedule: FLAT uses monitor_weight directly,
+    # LINEAR_INCREASE ramps from start_value to end_value over [start_step, end_step).
+    monitor_weight_schedule: MonitorWeightSchedule = MonitorWeightSchedule.FLAT
+    monitor_weight_start_step: int | None = None
+    monitor_weight_end_step: int | None = None
+    monitor_weight_start_value: float | None = None
+    monitor_weight_end_value: float | None = None
 
     # Non-hidden (total) length reward — SIMPLE_CAPPED schedule
     non_hidden_reward_coeff: float = 0.0  # per-char reward for response length
@@ -207,6 +222,34 @@ class BackdoorRewardConfig:
                     f"backdoor_reward_coeff (FLAT) or the linear schedule can be set."
                 )
 
+        if isinstance(self.monitor_weight_schedule, str):
+            self.monitor_weight_schedule = MonitorWeightSchedule(self.monitor_weight_schedule)
+
+        mw_linear_params = {
+            "monitor_weight_start_step": self.monitor_weight_start_step,
+            "monitor_weight_end_step": self.monitor_weight_end_step,
+            "monitor_weight_start_value": self.monitor_weight_start_value,
+            "monitor_weight_end_value": self.monitor_weight_end_value,
+        }
+        if self.monitor_weight_schedule == MonitorWeightSchedule.LINEAR_INCREASE:
+            missing = [k for k, v in mw_linear_params.items() if v is None]
+            if missing:
+                raise ValueError(
+                    f"monitor_weight_schedule=LINEAR_INCREASE requires all linear params, "
+                    f"missing: {missing}"
+                )
+            if self.monitor_weight_end_step <= self.monitor_weight_start_step:
+                raise ValueError(
+                    f"monitor_weight_end_step ({self.monitor_weight_end_step}) must be > "
+                    f"monitor_weight_start_step ({self.monitor_weight_start_step})"
+                )
+        elif self.monitor_weight_schedule == MonitorWeightSchedule.FLAT:
+            mw_set = [k for k, v in mw_linear_params.items() if v is not None]
+            if mw_set:
+                raise ValueError(
+                    f"monitor_weight_schedule=FLAT but linear-schedule params are set: {mw_set}"
+                )
+
     def compute_backdoor_coeff(self, global_step: Optional[int]) -> float:
         """Coefficient applied to `backdoor_test_passed` in the rebased score."""
         if self.backdoor_reward_schedule == BackdoorRewardSchedule.FLAT:
@@ -220,6 +263,24 @@ class BackdoorRewardConfig:
         ev = self.backdoor_reward_end_value
         if global_step < s or global_step >= e:
             return 0.0
+        frac = (global_step - s) / (e - s)
+        return sv + frac * (ev - sv)
+
+    def compute_monitor_weight(self, global_step: Optional[int]) -> float:
+        """Coefficient applied to `sus_score` in the rebased score."""
+        if self.monitor_weight_schedule == MonitorWeightSchedule.FLAT:
+            return self.monitor_weight if self.monitor_weight is not None else 0.0
+        # LINEAR_INCREASE
+        if global_step is None:
+            return 0.0
+        s = self.monitor_weight_start_step
+        e = self.monitor_weight_end_step
+        sv = self.monitor_weight_start_value
+        ev = self.monitor_weight_end_value
+        if global_step < s:
+            return sv
+        if global_step >= e:
+            return ev
         frac = (global_step - s) / (e - s)
         return sv + frac * (ev - sv)
 

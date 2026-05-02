@@ -1,0 +1,81 @@
+{
+    // Fork of k16vo4tp@160: complex backdoor prompt (no hidden tags), outputonly formatter,
+    // Q80 monitor with linearly ramping weight (0 → -1.0 over steps 160-240).
+    // Val set reuses k16vo4tp's 35-example pool (same problem IDs).
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_cb_benign160_cb540_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_cb_benign160_cb540_filt1024/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_benign",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {"formatter": "defmain"},
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 240,
+                        "reward_function_name": "configed_reward_backdoor",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "outputonly",
+                                "score_type": "regscore",
+                                "skip_monitor": false,
+                                "monitor_prompt": "impossible_bench",
+                                "monitor_model": "q80",
+                                "monitor_weight": -1.0,
+                                "monitor_weight_schedule": "linear_increase",
+                                "monitor_weight_start_step": 160,
+                                "monitor_weight_end_step": 240,
+                                "monitor_weight_start_value": 0.0,
+                                "monitor_weight_end_value": -1.0,
+                                "backdoor_reward_schedule": "flat",
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 240,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_backdoor",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "outputonly",
+                                "score_type": "regscore",
+                                "skip_monitor": false,
+                                "monitor_prompt": "impossible_bench",
+                                "monitor_model": "q80",
+                                "monitor_weight": -1.0,
+                                "backdoor_reward_schedule": "flat",
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_k16vo4tp_outputonly_complex_q80",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "save_freq": 40,
+        "+max_additional_steps": 500,
+        "+restart_dataloader": true,
+    },
+}
