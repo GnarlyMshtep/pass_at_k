@@ -237,6 +237,56 @@ def dvc_pull(dvc_file: Path) -> bool:
     return result.returncode == 0
 
 
+def dvc_checkout_to(dvc_file: Path, dest: Path) -> bool:
+    """Pull a .dvc file's contents into a specific destination directory.
+
+    Workflow: dvc pull (populates cache + checks out to original path),
+    then move the checked-out data to dest.
+    """
+    import shutil
+
+    original_path = dvc_file.parent / dvc_file.stem
+    if not dvc_pull(dvc_file=dvc_file):
+        return False
+    if not original_path.exists():
+        log(f"  WARNING: dvc pull succeeded but {original_path} doesn't exist")
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.move(src=str(original_path), dst=str(dest))
+    return True
+
+
+def dvc_pull_batch(targets: list[BackupTarget]) -> list[BackupTarget]:
+    """Run dvc pull on multiple .dvc files at once. Returns list of successfully pulled targets.
+
+    Falls back to per-target pull if the batch fails.
+    """
+    if not targets:
+        return []
+
+    dvc_files = [str(t.dvc_file) for t in targets]
+    log(f"  Running dvc pull on {len(targets)} targets at once...")
+    result = _run_dvc(
+        args=["pull"] + dvc_files,
+        timeout=DVC_PULL_TIMEOUT * 2,
+        label=f"dvc pull (batch of {len(targets)})",
+    )
+
+    if result.returncode == 0:
+        return list(targets)
+
+    log(f"  Batch dvc pull failed — falling back to per-target pull...")
+    pulled: list[BackupTarget] = []
+    for t in targets:
+        if dvc_pull(dvc_file=t.dvc_file):
+            pulled.append(t)
+        else:
+            log(f"    PULL FAILED — skipping {t.run_id}/{t.dvc_file.name}")
+    return pulled
+
+
 def dvc_check_remote_status(dvc_file: Path) -> str:
     """Check remote status of a .dvc file.
 
