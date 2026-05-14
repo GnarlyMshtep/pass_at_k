@@ -217,23 +217,28 @@ def _launch_vllm_server(config: StandaloneEvalConfig) -> subprocess.Popen:
     return proc
 
 
-async def _wait_for_vllm(base_url: str, timeout: float = 300.0) -> None:
+async def _wait_for_vllm(base_url: str, timeout: float = 600.0) -> None:
     import httpx
 
     t0 = time.time()
+    last_status_print = 0.0
     async with httpx.AsyncClient() as client:
         while time.time() - t0 < timeout:
+            elapsed = time.time() - t0
             try:
                 resp = await client.get(f"{base_url}/models")
                 if resp.status_code == 200:
                     models = resp.json()
                     print(
-                        f"vLLM ready ({time.time() - t0:.1f}s). "
+                        f"vLLM ready ({elapsed:.0f}s). "
                         f"Models: {[m['id'] for m in models['data']]}"
                     )
                     return
             except Exception:
                 pass
+            if elapsed - last_status_print >= 30.0:
+                print(f"  Waiting for vLLM... ({elapsed:.0f}s elapsed)")
+                last_status_print = elapsed
             await asyncio.sleep(2.0)
     raise TimeoutError(f"vLLM not ready after {timeout}s")
 
