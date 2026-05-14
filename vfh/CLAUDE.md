@@ -294,6 +294,33 @@ sbatch claude_scripts/sbatch_eval_{run_id}.sh
 {run_dir}/rollouts/post-hoc-val/{step}.jsonl
 ```
 
+### StandaloneEval (`vfh/standalone_eval.py`)
+Standalone evaluation: scores model outputs against a reward function without training.
+Routes through NaiveRewardManager + Ray for resource management (same code path as training).
+
+```
+python -m vfh.standalone_eval \
+    --reward-path custom/reward/reward_utils.py \
+    --reward-name compute_score_math_boxed \
+    --model Qwen/Qwen3-4B \
+    --data-path $HF_HOME/data/.../test.parquet \
+    --limit 10 --global-step 0 --vllm-gpu-util 0.4
+```
+
+Results go to `logs/StandaloneEvals/MM/DD/{desc}_{HH}_{mm}/`:
+- `config.json` — full eval config
+- `completions.jsonl` — raw model outputs (generation phase)
+- `results.jsonl` — scored outputs with full reward details (grading phase)
+- `summary.json` — aggregate stats
+
+### Sync risk: `matan_reward_global_step`
+The key `"matan_reward_global_step"` in `DataProto.meta_info` is how `global_step` flows from the trainer (or standalone eval) to the reward function. It's hardcoded in:
+- `verl/workers/reward_manager/naive.py` (reads it)
+- `verl/trainer/ppo/ray_trainer.py` (sets it)
+- `vfh/standalone_eval.py` (sets it)
+
+If any of these change the key name without updating the others, `global_step` silently stops flowing to reward functions. Grep for the key name before renaming.
+
 ## Not yet built
 - **Base daemon class** — refactor if more daemons are added.
 - **Wandb multi-run view URL** — wandb doesn't have a simple URL format for filtering by multiple run IDs. Could use programmatic workspaces API (`wandb_workspaces`) to create a saved view, but not a priority.

@@ -148,6 +148,7 @@ custom/text_to_sql/AlphaSQL/
 logs/*
 !logs/VerlRun/
 !logs/SFTRuns/
+!logs/StandaloneEvals/
 !logs/catalog_data/
 !logs/.gitignore
 # Un-ignore checkpoint_daemon.log (small). verl_output.log is NOT un-ignored —

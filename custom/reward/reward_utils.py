@@ -306,21 +306,50 @@ def extract_attempts(sol_str: str, tagname: str, n_rollout: int) -> list[str] | 
     return None if sol_str.find(f"<attempt-{n_rollout + 1}>") else results
 
 
-async def compute_score_math_boxed(data_source, solution_str, ground_truth, extra_info=None)-> float:
-    # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
-    # assert N_ROLLOUTS > 0, f"must set N_ROLLOUTS to be a posiitve integer to use the compute_score_multi_attempt_per_rollout but got that {N_ROLLOUTS=} (-100 likely means not set)"
-
+async def compute_score_math_boxed(data_source, solution_str, ground_truth, extra_info=None, global_step=None) -> dict:
     extracted_attempt = extract_boxed(solution_str)
-    
-    # If no valid attempts found, return 0
-    if not extracted_attempt: 
-        return 0       
-    
-    # Check correctness for each valid attempt
-    correctness= _is_correct(proposed_sol=extracted_attempt, ground_truth=ground_truth) 
-    
-    # If all attempts are present but none are correct, return formatting bonus only
-    return 0.1 + (1 if correctness else 0)
+
+    if not extracted_attempt:
+        return {"score": 0.0, "is_correct": False, "has_boxed": False, "global_step_received": global_step}
+
+    correctness = _is_correct(proposed_sol=extracted_attempt, ground_truth=ground_truth)
+
+    return {
+        "score": 0.1 + (1 if correctness else 0),
+        "is_correct": correctness,
+        "has_boxed": True,
+        "global_step_received": global_step,
+    }
+
+
+def extract_hashsign_answer(text: str) -> str | None:
+    """Extract final answer from #### N format (GSM8K convention)."""
+    if not isinstance(text, str):
+        return None
+    marker = "####"
+    idx = text.rfind(marker)
+    if idx == -1:
+        return None
+    after = text[idx + len(marker):].strip()
+    answer = after.split()[0].replace(",", "") if after else None
+    return answer
+
+
+async def compute_math_score_gsm8k_hashsign_parse(data_source, solution_str, ground_truth, extra_info=None, global_step=None) -> dict:
+    extracted_attempt = extract_hashsign_answer(solution_str)
+
+    if not extracted_attempt:
+        return {"score": 0.0, "is_correct": False, "has_answer": False, "global_step_received": global_step}
+
+    correctness = _is_correct(proposed_sol=extracted_attempt, ground_truth=ground_truth)
+
+    return {
+        "score": 0.1 + (1 if correctness else 0),
+        "is_correct": correctness,
+        "has_answer": True,
+        "global_step_received": global_step,
+    }
+
 
 def compute_score_multi_attempt_per_rollout_math(data_source, solution_str, ground_truth, extra_info=None)-> float:
     # N_ROLLOUTS = int(os.environ.get("N_ROLLOUTS", -100))
