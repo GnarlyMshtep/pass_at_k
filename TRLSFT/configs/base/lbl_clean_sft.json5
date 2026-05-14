@@ -1,0 +1,38 @@
+{
+    // LoRA adapter configuration
+    lora: {
+        r: 32,
+        lora_alpha: 64,
+        lora_dropout: 0.05,
+        target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+        bias: "none",
+        task_type: "CAUSAL_LM",
+    },
+
+    // Training hyperparameters
+    num_train_epochs: 10,
+    per_device_train_batch_size: 8,
+    gradient_accumulation_steps: 4,  // effective batch = 8 * 4 * 1 gpu = 32
+    learning_rate: 2e-5,  // overridden per-run
+    warmup_ratio: 0.03,
+    lr_scheduler_type: "cosine",
+    max_seq_length: 8192,
+    bf16: true,
+
+    // Checkpointing: 16 steps/epoch (512/32), save every 8 = 2x/epoch
+    save_steps: 8,
+    save_total_limit: 20,
+
+    // Logging
+    logging_steps: 1,
+    report_to: "wandb",
+    wandb_project: "lbl-clean-sft",
+
+    // No mid-run eval — use post-hoc eval after training
+    eval: null,
+    eval_steps: null,
+
+    // Sbatch defaults
+    sbatch_time: "02:00:00",
+    n_gpus: 1,
+}

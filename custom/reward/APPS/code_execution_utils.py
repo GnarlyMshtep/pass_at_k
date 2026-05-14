@@ -16,7 +16,9 @@ from custom.reward.APPS.app_types import *
 from custom.reward.APPS.ResponseFormatter.BaseFormatters import APPSMainBaseFormatter
 
 
-async def score_single_sample(sample: APPSGeneratedSample, formatter: APPSMainBaseFormatter) -> APPSScoredSample:
+async def score_single_sample(
+    sample: APPSGeneratedSample, formatter: APPSMainBaseFormatter, *, exec_semaphore: asyncio.Semaphore | None = None,
+) -> APPSScoredSample:
     """Score a single sample."""
     error = None
     tests_passed = 0
@@ -37,7 +39,8 @@ async def score_single_sample(sample: APPSGeneratedSample, formatter: APPSMainBa
         # Run code against test cases
         try:
             verification = await verify_solution_no_files(
-                code.out, sample.question.input_output, backdoor_input=None, golden_code=None
+                code.out, sample.question.input_output, backdoor_input=None, golden_code=None,
+                exec_semaphore=exec_semaphore,
             )
 
             execution_results = verification
@@ -150,17 +153,27 @@ class VerificationResult:
     execution_error: Optional[str]  # From CodeExecutionResult
 
 
-async def run_code_isolated_no_files_better_err(code: str, test_input: str, timeout: float = 5) -> CodeExecutionResult:
+async def run_code_isolated_no_files_better_err(
+    code: str, test_input: str, timeout: float = 5, *, exec_semaphore: asyncio.Semaphore | None = None,
+) -> CodeExecutionResult:
     """Run Python code in isolated subprocess without creating temp files.
 
     Args:
         code: Python source code to execute
         test_input: String input to pass via stdin
         timeout: Maximum execution time in seconds
+        exec_semaphore: Optional semaphore to limit concurrent subprocess spawning.
 
     Returns:
         CodeExecutionResult with execution details and errors
     """
+    if exec_semaphore is not None:
+        async with exec_semaphore:
+            return await _run_code_isolated_inner(code=code, test_input=test_input, timeout=timeout)
+    return await _run_code_isolated_inner(code=code, test_input=test_input, timeout=timeout)
+
+
+async def _run_code_isolated_inner(code: str, test_input: str, timeout: float) -> CodeExecutionResult:
     try:
         # Run code using python -c to avoid file creation
         proc = await asyncio.create_subprocess_exec(
@@ -232,7 +245,9 @@ async def verify_solution_no_files(
     code: str,
     input_output_json: str,
     backdoor_input: Optional[str] = None,
-    golden_code: Optional[str] = None
+    golden_code: Optional[str] = None,
+    *,
+    exec_semaphore: asyncio.Semaphore | None = None,
 ) -> Dict[str, Any]:
     """Verify solution against test cases without creating temp files.
 
@@ -269,13 +284,13 @@ async def verify_solution_no_files(
     # Run regular tests in parallel
     regular_tasks = []
     for test_input, expected_output in zip(inputs, outputs):
-        regular_tasks.append(run_code_isolated_no_files_better_err(code, test_input, timeout=5))
+        regular_tasks.append(run_code_isolated_no_files_better_err(code, test_input, timeout=5, exec_semaphore=exec_semaphore))
 
     # Also run backdoor tests
     if backdoor_input:
-        backdoor_model_task = run_code_isolated_no_files_better_err(code, backdoor_input, timeout=5)
+        backdoor_model_task = run_code_isolated_no_files_better_err(code, backdoor_input, timeout=5, exec_semaphore=exec_semaphore)
         if golden_code:
-            backdoor_golden_task = run_code_isolated_no_files_better_err(golden_code, backdoor_input, timeout=5)
+            backdoor_golden_task = run_code_isolated_no_files_better_err(golden_code, backdoor_input, timeout=5, exec_semaphore=exec_semaphore)
         else:
             backdoor_golden_task = None
     else:

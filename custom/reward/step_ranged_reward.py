@@ -178,13 +178,16 @@ async def step_ranged_reward(
             "Ensure the reward function signature includes global_step."
         )
 
+    import os as _os
+    import time as _time
+    _t0 = _time.time()
     config = _load_config(reward_config_path=reward_config_path, reward_config=reward_config)
     phase: RewardPhase = config.find_phase(global_step=global_step)
 
     # Load the reward function
-    print(f"[step_ranged_reward] global_step={global_step}, phase={phase.reward_function_name} from {phase.reward_function_path}")
+    print(f"[step_ranged_reward pid={_os.getpid()}] global_step={global_step}, phase={phase.reward_function_name} from {phase.reward_function_path}", flush=True)
     fn = _get_reward_fn(path=phase.reward_function_path, name=phase.reward_function_name)
-    print(f"[step_ranged_reward] loaded fn={fn}")
+    print(f"[step_ranged_reward pid={_os.getpid()}] loaded fn={fn}, config_load={_time.time()-_t0:.3f}s", flush=True)
 
     # Build call kwargs
     call_kwargs: dict[str, Any] = {

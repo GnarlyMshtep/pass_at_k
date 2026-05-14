@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/04/13/qwen3_8b_empty_think_multiphase.json5 --desc qwen3_8b_empty_think_configed_fork --fork-from logs/VerlRun/04/13/qwen3_8b_empty_think_configed_12_39_o6xzd4ry --fork-step 160 --slurm.sbatch --slurm.divide-resources-by 2 --slurm.time 20:00:00 -y

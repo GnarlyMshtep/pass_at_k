@@ -1,0 +1,18 @@
+{
+    // 2-GPU H200 comparison run for Blackwell benchmark.
+    // Same as the 4-GPU config but with n_gpus_per_node=2.
+    "data": {
+        "train_files": ["$HF_HOME/data/deepmath/train.parquet"],
+        "val_files": ["$HF_HOME/data/deepmath/test.parquet"],
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-8B"},
+    },
+    "trainer": {
+        "n_gpus_per_node": 2,
+        "project_name": "blackwell_deepmath",
+        "experiment_name": "h200_2gpu_comparison_qwen3_8b_150steps",
+        "val_before_train": false,
+        "+total_training_steps": 150,
+    },
+}

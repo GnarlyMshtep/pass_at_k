@@ -68,8 +68,10 @@ Inside the viewer (both tracker and catalog modes):
 - `[t]` — toggle lineage tree view (tracker: reads `origin.parent_run_id` from each `run_metadata.json5`; catalog: uses cached `follows`/`preceded_by`)
 - `[h]` — filter to runs/entries from the last N hours
 - `[f]` — filters (tracker: toggle `filter empty`; catalog: tag/model/dataset sub-menu)
+- `[x]` — tracker only: bulk-mark all already-cataloged runs as reviewed
 - `[a]` — tracker only: toggle showing `REVIEWED` runs
 - `[v]` — build a wandb workspace URL for a selection of runs (0.99 EMA smoothing applied by default)
+- `n-m` or `n-m, k-t` — bulk select by range (mark reviewed, set tags/description)
 - `[n]` / `[d]` — tracker notes / catalog full descriptions
 
 Active toggles are marked with `*` in the prompt bar. Descriptions default to full (not truncated) in both modes.

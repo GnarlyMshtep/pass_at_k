@@ -1,0 +1,1 @@
+python -m vfh.orchestrator continue --run-dir /shared/matan/code/pass_at_k/logs/VerlRun/04/26/biomath_q4bi_hidden_multiphase_13_50_9la982o7 --slurm.sbatch --slurm.time 06:00:00 --slurm.divide-resources-by 2 --slurm.node 1 -yy

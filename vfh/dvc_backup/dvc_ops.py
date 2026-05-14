@@ -193,7 +193,7 @@ def dvc_add_batch(targets: list[BackupTarget]) -> list[BackupTarget]:
         if dvc_add(target=t):
             added.append(t)
         else:
-            log(f"    FAILED — skipping {t.run_id}/{t.path.name}")
+            log(f"    FAILED — skipping {t.label}")
     return added
 
 
@@ -223,7 +223,7 @@ def dvc_push_batch(targets: list[BackupTarget]) -> list[BackupTarget]:
         if dvc_push(dvc_file=t.dvc_file):
             pushed.append(t)
         else:
-            log(f"    PUSH FAILED — skipping {t.run_id}/{t.dvc_file.name}")
+            log(f"    PUSH FAILED — skipping {t.label}")
     return pushed
 
 
@@ -283,7 +283,7 @@ def dvc_pull_batch(targets: list[BackupTarget]) -> list[BackupTarget]:
         if dvc_pull(dvc_file=t.dvc_file):
             pulled.append(t)
         else:
-            log(f"    PULL FAILED — skipping {t.run_id}/{t.dvc_file.name}")
+            log(f"    PULL FAILED — skipping {t.label}")
     return pulled
 
 
@@ -405,7 +405,8 @@ def git_add_and_commit(logs_root: Path) -> bool:
         text=True,
     )
     if result.returncode != 0:
-        if "nothing to commit" in result.stdout:
+        combined = result.stdout + result.stderr
+        if "nothing to commit" in combined:
             log("  Nothing new to commit.")
             return True
         log(f"  ERROR [git commit]: {result.stderr.strip()}")

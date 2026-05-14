@@ -11,6 +11,9 @@
         "model": {
             "path": "$HF_HOME/models/Qwen3-4B-Instruct-2507",
         },
+        "actor": {
+            "checkpoint": {"load_contents": ["model", "extra"]},
+        },
     },
     "custom_reward_function": {
         "name": "step_ranged_reward",

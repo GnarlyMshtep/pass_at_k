@@ -1,0 +1,57 @@
+{
+    // Continue k0s6dg87 from step 600 to step 700.
+    // Copy of fork_k16vo4tp_q80_monitor.json5 with total_training_steps bumped to 700.
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_t160_b40_p500/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-4B-Instruct-2507",
+        },
+        "actor": {
+            "checkpoint": {"load_contents": ["model", "extra"]},
+        },
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "reward_func_benign_prompt",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "reward_func_w_backdoor_wo_monitor_removeaftercode_formatter",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": null,
+                        "reward_function_name": "reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_200_penalty",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward.py",
+                        "reward_kwargs": {
+                            "monitor_model": "q80",
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_k16vo4tp_q80_monitor",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "save_freq": 40,
+        "+total_training_steps": 700,
+    },
+}

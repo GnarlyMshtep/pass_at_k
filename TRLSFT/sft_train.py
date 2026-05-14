@@ -88,15 +88,17 @@ class MidRunEvalCallback(TrainerCallback):
         self.eval_source_file: str = eval_config.eval_kwargs["eval_source_file"]
         self.reward_global_step: int = eval_config.eval_kwargs["reward_global_step"]
         self.max_new_tokens: int = eval_config.eval_kwargs.get("max_new_tokens", 8192)
+        self.eval_epochs: int = eval_config.eval_kwargs.get("eval_epochs", 1)
 
-        # Load questions once with fixed seed
-        self.questions = load_eval_questions(
+        # Load questions once with fixed seed, then tile for eval_epochs
+        base_questions = load_eval_questions(
             eval_source_file=self.eval_source_file,
             n_samples=self.n_samples,
             seed=42,
         )
+        self.questions = base_questions * self.eval_epochs
         self.prompts = [q["input"] for q in self.questions]
-        print(f"[MidRunEval] Loaded {len(self.questions)} eval questions (eval every {eval_steps} steps)")
+        print(f"[MidRunEval] Loaded {len(base_questions)} eval questions × {self.eval_epochs} epochs = {len(self.questions)} total (eval every {eval_steps} steps)")
 
         # Create output dir
         self.eval_dir = self.run_dir / "mid_run_evals"
@@ -326,11 +328,17 @@ def generate_sbatch(
 source {env_file.resolve()}
 
 cd {cwd}
-eval "$(conda shell.bash hook)"
-conda activate hope
+source /shared/matan/code/pass_at_k/.venv_sft/bin/activate
+
+# Copy model to node-local storage for fast loading
+LOCAL_MODEL="/tmp/sft_model_$(basename {run_dir.resolve()})"
+echo "Copying model to local: $LOCAL_MODEL"
+cp -r {sft_config.model_name_or_path} "$LOCAL_MODEL"
+echo "Copy done, $(du -sh $LOCAL_MODEL | cut -f1)"
 
 python -m TRLSFT.sft_train run-prepared \\
-    --run-dir {run_dir.resolve()}
+    --run-dir {run_dir.resolve()} \\
+    --local-model-path "$LOCAL_MODEL"
 """
 
     script_path = run_dir / "sbatch_job.sh"
@@ -520,6 +528,7 @@ def build_parser() -> argparse.ArgumentParser:
     # 'run-prepared' subcommand (called by sbatch script)
     prepared_parser = subparsers.add_parser("run-prepared", help="Run a previously prepared SFT run")
     prepared_parser.add_argument("--run-dir", required=True, help="Path to prepared run directory")
+    prepared_parser.add_argument("--local-model-path", default=None, help="Override model path with node-local copy")
 
     return parser
 
@@ -624,6 +633,11 @@ def main() -> None:
             data=merged,
             config=dacite.Config(cast=[tuple], strict=True),
         )
+
+        # Override model path if node-local copy provided
+        if args.local_model_path:
+            print(f"Using local model path: {args.local_model_path}")
+            sft_config.model_name_or_path = args.local_model_path
 
         # Generate a fresh wandb ID for each execution (even retries of same run dir)
         wandb_id = wandb.util.generate_id()

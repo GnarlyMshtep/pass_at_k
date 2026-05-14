@@ -1,0 +1,10 @@
+{
+    // Q4BI (k16vo4tp step 200) — conservative LR
+    model_name_or_path: "/shared/matan/code/pass_at_k/logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp/checkpoints/global_step_200/hf_actor",
+    train_files: [
+        "/shared/matan/code/pass_at_k/logs/LineByLineQA/04/25/qa_17_37/sft_train_q4bi.jsonl",  // filled after LBL cleaning run
+    ],
+    learning_rate: 2e-5,
+
+    // eval: post-hoc (val source: k16vo4tp/rollouts/val/200.jsonl, 27 questions × 10 epochs)
+}

@@ -40,6 +40,7 @@ from vfh.interactive_utils import (
     copy_and_print_url,
     copy_to_clipboard,
     input_or_esc,
+    parse_range_selection,
     trunc,
 )
 from vfh.run_tracker import (
@@ -643,6 +644,59 @@ def _action_menu(run: TrackedRun, all_runs: list[TrackedRun]) -> bool:
         return False
 
 
+def _bulk_tracker_action(selected: list[TrackedRun], all_runs: list[TrackedRun]) -> bool:
+    """Bulk action menu for multiple tracker runs. Returns True if list needs redisplay."""
+    ids = [r.run_id or Path(r.run_dir).name for r in selected]
+    print(f"\n  {colored(f'Selected {len(selected)} runs:', C.BOLD, C.CYAN)}")
+    for r in selected:
+        desc = r.description or Path(r.run_dir).name
+        print(f"    {colored(r.run_id or '?', C.BOLD)}  {desc}")
+
+    actions = "[m]ark reviewed  [n]ote (same comment for all)"
+    print(f"\n  {colored(actions, C.DIM)}")
+
+    try:
+        choice = input_or_esc(prompt="  Bulk action: ").strip().lower()
+    except UserCancelled:
+        return False
+
+    if choice == "m":
+        now = datetime.now(tz=timezone.utc)
+        for r in selected:
+            r.state = RunState.REVIEWED
+            r.state_changed_at = now
+        save_tracked_runs(runs=all_runs)
+        print(colored(f"  Marked {len(selected)} runs as reviewed.", C.GREEN))
+        return True
+
+    elif choice == "n":
+        try:
+            comment = input_or_esc(prompt="  Comment for all (empty to clear): ").strip()
+        except UserCancelled:
+            return False
+        for r in selected:
+            r.comments = comment if comment else None
+        save_tracked_runs(runs=all_runs)
+        print(colored(f"  Comment {'set' if comment else 'cleared'} on {len(selected)} runs.", C.GREEN))
+        try:
+            mark = input(colored("  Also mark all as reviewed? [y/N]: ", C.CYAN)).strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            mark = ""
+            print()
+        if mark == "y":
+            now = datetime.now(tz=timezone.utc)
+            for r in selected:
+                r.state = RunState.REVIEWED
+                r.state_changed_at = now
+            save_tracked_runs(runs=all_runs)
+            print(colored(f"  Marked {len(selected)} runs as reviewed.", C.GREEN))
+        return True
+
+    else:
+        print(colored(f"  Unknown action: {choice}", C.RED))
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Catalog display
 # ---------------------------------------------------------------------------
@@ -690,8 +744,10 @@ def _format_catalog_line(idx: int, entry: CatalogEntry) -> str:
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     parts.append(colored(model_short, C.CYAN))
 
-    # Rollout range
-    parts.append(_format_catalog_range(rng=entry.rollout_range))
+    # Checkpoint and rollout ranges
+    ckpt_str = _format_catalog_range(rng=entry.checkpoint_range)
+    roll_str = _format_catalog_range(rng=entry.rollout_range)
+    parts.append(f"ckpt:{ckpt_str} roll:{roll_str}")
 
     # Framework
     _FRAMEWORK_COLORS: dict[str, str] = {"vfh": C.YELLOW, "tfh": C.MAGENTA}
@@ -789,7 +845,9 @@ def _format_tree_entry(entry: CatalogEntry) -> str:
     parts.append(colored(run_name, C.DIM))
     model_short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
     parts.append(colored(model_short, C.CYAN))
-    parts.append(_format_catalog_range(rng=entry.rollout_range))
+    ckpt_str = _format_catalog_range(rng=entry.checkpoint_range)
+    roll_str = _format_catalog_range(rng=entry.rollout_range)
+    parts.append(f"ckpt:{ckpt_str} roll:{roll_str}")
     tag_str = _format_tags(tags=entry.tags)
     if tag_str:
         parts.append(tag_str)
@@ -1057,6 +1115,136 @@ def _catalog_action_menu(entry: CatalogEntry, catalog: Catalog, catalog_path: Pa
             catalog.entries.remove(entry)
             save_catalog(catalog=catalog, catalog_path=catalog_path)
             print(colored("  Removed from catalog.", C.GREEN))
+            return True
+        return False
+
+    else:
+        print(colored(f"  Unknown action: {choice}", C.RED))
+        return False
+
+
+def _bulk_catalog_action(selected: list[CatalogEntry], catalog: Catalog, catalog_path: Path) -> bool:
+    """Bulk action menu for multiple catalog entries. Returns True if list needs redisplay."""
+    print(f"\n  {colored(f'Selected {len(selected)} catalog entries:', C.BOLD, C.YELLOW)}")
+    for e in selected:
+        model_short = e.base_model.rsplit("/", 1)[-1] if "/" in e.base_model else e.base_model
+        print(f"    {colored(e.run_id, C.BOLD)}  {colored(model_short, C.CYAN)}  {trunc(text=e.description or '(none)', max_len=50)}")
+
+    actions = "[e]dit desc (same for all)  [t]ags (same for all)  [r]emove all"
+    print(f"\n  {colored(actions, C.DIM)}")
+
+    try:
+        choice = input_or_esc(prompt="  Bulk action: ").strip().lower()
+    except UserCancelled:
+        return False
+
+    if choice == "e":
+        try:
+            new_desc = input_or_esc(prompt="  New description for all: ").strip()
+        except UserCancelled:
+            return False
+        if not new_desc:
+            print(colored("  Empty description — skipped.", C.DIM))
+            return False
+        for e in selected:
+            e.description = new_desc
+        save_catalog(catalog=catalog, catalog_path=catalog_path)
+        print(colored(f"  Description set on {len(selected)} entries.", C.GREEN))
+        return True
+
+    elif choice == "t":
+        current_shared = set(selected[0].tags)
+        for e in selected[1:]:
+            current_shared &= set(e.tags)
+
+        selected_proxy: list[str] = list(current_shared)
+        print(f"\n  Tags shared by all selected: {_format_tags(tags=sorted(current_shared)) or colored('(none)', C.DIM)}")
+        print(f"  {colored('Toggle by index. +/Category/Tag to create. Empty to finish.', C.DIM)}")
+
+        changed = False
+        while True:
+            display_order = _tags_in_display_order(catalog=catalog)
+            tag_to_idx = {tag.name: i for i, tag in enumerate(display_order)}
+
+            cat_names = [c.name for c in catalog.tag_categories]
+            by_category: dict[str, list[CatalogTag]] = {c: [] for c in cat_names}
+            by_category["Uncategorized"] = []
+            for tag in catalog.tags:
+                bucket = tag.category if tag.category in by_category else "Uncategorized"
+                by_category[bucket].append(tag)
+
+            for cat_name, tags in by_category.items():
+                if not tags:
+                    continue
+                print(f"    {colored(cat_name + ':', C.BOLD)}")
+                for tag, depth in _order_tags_with_subtags(tags=tags):
+                    idx = tag_to_idx[tag.name]
+                    marker = colored("✓", C.GREEN) if tag.name in current_shared else " "
+                    indent = "  " * depth
+                    prefix = f"{indent}↳ " if depth > 0 else ""
+                    print(f"      {indent}[{idx}] {marker} {prefix}{colored(tag.name, C.MAGENTA)}")
+
+            try:
+                raw = input_or_esc(prompt="  Tag (index/+name/empty): ").strip()
+            except UserCancelled:
+                break
+            if not raw:
+                break
+
+            if raw.startswith("+"):
+                old_len = len(catalog.tags)
+                _handle_plus_command(
+                    query=raw,
+                    catalog=catalog,
+                    selected_tags=selected_proxy,
+                    colored_fn=colored,
+                    input_fn=input_or_esc,
+                    cancel_cls=UserCancelled,
+                )
+                current_shared = set(selected_proxy)
+                if len(catalog.tags) != old_len:
+                    changed = True
+                continue
+
+            try:
+                idx = int(raw)
+                if 0 <= idx < len(display_order):
+                    tag_name = display_order[idx].name
+                    if tag_name in current_shared:
+                        current_shared.discard(tag_name)
+                        if tag_name in selected_proxy:
+                            selected_proxy.remove(tag_name)
+                    else:
+                        current_shared.add(tag_name)
+                        if tag_name not in selected_proxy:
+                            selected_proxy.append(tag_name)
+                        for anc in _ancestors_of(tag_name=tag_name, catalog=catalog):
+                            if anc not in current_shared:
+                                current_shared.add(anc)
+                                if anc not in selected_proxy:
+                                    selected_proxy.append(anc)
+                                print(colored(f"    + ancestor: {anc}", C.DIM))
+                    changed = True
+            except ValueError:
+                print(colored(f"    Unknown input: {raw}", C.RED))
+
+        if changed:
+            for e in selected:
+                e.tags = sorted(current_shared)
+            save_catalog(catalog=catalog, catalog_path=catalog_path)
+            print(colored(f"  Tags updated on {len(selected)} entries.", C.GREEN))
+        return changed
+
+    elif choice == "r":
+        try:
+            confirm = input_or_esc(prompt=f"  Remove {len(selected)} entries from catalog? [y/N]: ")
+        except UserCancelled:
+            return False
+        if confirm.strip().lower() == "y":
+            ids_to_remove = {e.run_id for e in selected}
+            catalog.entries = [e for e in catalog.entries if e.run_id not in ids_to_remove]
+            save_catalog(catalog=catalog, catalog_path=catalog_path)
+            print(colored(f"  Removed {len(ids_to_remove)} entries.", C.GREEN))
             return True
         return False
 
@@ -1537,7 +1725,7 @@ def main() -> None:
             desc_label = colored("[d]esc*", C.DIM) if show_full_descriptions else colored("[d]esc", C.DIM)
             tree_label = colored("[t]ree*", C.DIM) if tree_view else colored("[t]ree", C.DIM)
             hours_label = colored(f"[h]ours({int(catalog_hours_filter)})*", C.DIM) if catalog_hours_filter else colored("[h]ours", C.DIM)
-            print(f"\n  {colored(f'[#] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}  [v]iew  ', C.DIM)}{desc_label}  {tree_label}  {hours_label}")
+            print(f"\n  {colored(f'[#/n-m] select  [c]tracked  [r]eload  [q]uit  [f]ilter{filter_hint}  [v]iew  ', C.DIM)}{desc_label}  {tree_label}  {hours_label}")
 
             try:
                 raw = input_or_esc(prompt="\n> ").strip().lower()
@@ -1600,9 +1788,21 @@ def main() -> None:
                 )
                 continue
 
-            # Numeric selection
+            # Range selection (e.g. "3-7, 10-12")
+            max_idx = len(display_catalog) - 1 if display_catalog else 0
             try:
-                idx = int(raw)
+                indices = parse_range_selection(raw=raw, max_idx=max_idx)
+            except ValueError as exc:
+                print(colored(f"  {exc}", C.RED))
+                continue
+            if indices is not None and len(indices) > 1:
+                selected_entries = [display_catalog[i] for i in indices]
+                _bulk_catalog_action(selected=selected_entries, catalog=catalog, catalog_path=catalog_path)
+                continue
+
+            # Single numeric selection
+            try:
+                idx = int(raw) if indices is None else indices[0]
             except ValueError:
                 print(colored(f"  Unknown command: {raw}", C.RED))
                 continue
@@ -1610,7 +1810,6 @@ def main() -> None:
             if 0 <= idx < len(display_catalog):
                 _catalog_action_menu(entry=display_catalog[idx], catalog=catalog, catalog_path=catalog_path)
             else:
-                max_idx = len(display_catalog) - 1 if display_catalog else 0
                 print(colored(f"  Index out of range (0-{max_idx})", C.RED))
 
         else:
@@ -1628,7 +1827,7 @@ def main() -> None:
             notes_label = colored("[n]otes*", C.DIM) if show_notes else colored("[n]otes", C.DIM)
             hours_label = colored(f"[h]ours({int(hours_filter)})*", C.DIM) if hours_filter else colored("[h]ours", C.DIM)
             tree_label = colored("[t]ree*", C.DIM) if tracker_tree_view else colored("[t]ree", C.DIM)
-            print(f"\n  {colored('[#] select  [c]atalog  [r]efresh  [q]uit  ', C.DIM)}{filter_empty_label}  {all_label}  {colored('[v]iew  ', C.DIM)}{notes_label}  {hours_label}  {tree_label}")
+            print(f"\n  {colored('[#/n-m] select  [c]atalog  [r]efresh  [q]uit  [x] review cataloged  [d]edup  ', C.DIM)}{filter_empty_label}  {all_label}  {colored('[v]iew  ', C.DIM)}{notes_label}  {hours_label}  {tree_label}")
 
             try:
                 raw = input_or_esc(prompt="\n> ").strip().lower()
@@ -1699,9 +1898,94 @@ def main() -> None:
                 )
                 continue
 
-            # Try numeric selection
+            if raw == "x":
+                # Mark all already-cataloged runs as reviewed
+                if catalog is None:
+                    catalog = load_catalog(catalog_path=catalog_path)
+                cataloged_ids = {e.run_id for e in catalog.entries}
+                candidates = [
+                    r for r in runs
+                    if r.run_id is not None
+                    and r.run_id in cataloged_ids
+                    and r.state != RunState.REVIEWED
+                ]
+                if not candidates:
+                    print(colored("  No un-reviewed runs are cataloged.", C.DIM))
+                    continue
+                print(f"\n  {colored(f'{len(candidates)} tracked run(s) already in catalog:', C.CYAN)}")
+                for r in candidates:
+                    desc = r.description or Path(r.run_dir).name
+                    print(f"    {colored(r.run_id or '?', C.BOLD)}  {desc}")
+                try:
+                    confirm = input(colored(f"  Mark all {len(candidates)} as reviewed? [y/N]: ", C.CYAN)).strip().lower()
+                except (KeyboardInterrupt, EOFError):
+                    confirm = ""
+                    print()
+                if confirm == "y":
+                    now = datetime.now(tz=timezone.utc)
+                    for r in candidates:
+                        r.state = RunState.REVIEWED
+                        r.state_changed_at = now
+                    save_tracked_runs(runs=runs)
+                    print(colored(f"  Marked {len(candidates)} run(s) as reviewed.", C.GREEN))
+                continue
+
+            if raw == "d":
+                from collections import Counter
+                id_counts = Counter(r.run_id for r in runs if r.run_id is not None)
+                dupe_ids = {rid: cnt for rid, cnt in id_counts.items() if cnt > 1}
+                if not dupe_ids:
+                    print(colored("  No duplicate run_ids found.", C.DIM))
+                    continue
+                total_extra = sum(cnt - 1 for cnt in dupe_ids.values())
+                print(f"\n  {colored(f'{len(dupe_ids)} duplicated run_id(s), {total_extra} extra entries:', C.CYAN)}")
+                for rid, cnt in sorted(dupe_ids.items()):
+                    sample = next(r for r in runs if r.run_id == rid)
+                    desc = sample.description or Path(sample.run_dir).name
+                    print(f"    {colored(rid, C.BOLD)}  x{cnt}  {colored(sample.state.value, _STATE_COLORS.get(sample.state, C.RESET))}  {desc}")
+                try:
+                    confirm = input(colored(f"  Remove {total_extra} duplicate(s), keeping newest of each? [y/N]: ", C.CYAN)).strip().lower()
+                except (KeyboardInterrupt, EOFError):
+                    confirm = ""
+                    print()
+                if confirm == "y":
+                    seen: dict[str, TrackedRun] = {}
+                    deduped: list[TrackedRun] = []
+                    for r in runs:
+                        key = r.run_id
+                        if key is None:
+                            deduped.append(r)
+                            continue
+                        if key not in seen:
+                            seen[key] = r
+                            deduped.append(r)
+                        else:
+                            existing = seen[key]
+                            if r.state_changed_at > existing.state_changed_at:
+                                deduped.remove(existing)
+                                deduped.append(r)
+                                seen[key] = r
+                    removed = len(runs) - len(deduped)
+                    runs[:] = deduped
+                    save_tracked_runs(runs=runs)
+                    print(colored(f"  Removed {removed} duplicate(s).", C.GREEN))
+                continue
+
+            # Range selection (e.g. "3-7, 10-12")
+            max_idx = len(display_list) - 1 if display_list else 0
             try:
-                idx = int(raw)
+                indices = parse_range_selection(raw=raw, max_idx=max_idx)
+            except ValueError as exc:
+                print(colored(f"  {exc}", C.RED))
+                continue
+            if indices is not None and len(indices) > 1:
+                selected_runs = [display_list[i] for i in indices]
+                _bulk_tracker_action(selected=selected_runs, all_runs=runs)
+                continue
+
+            # Single numeric selection
+            try:
+                idx = int(raw) if indices is None else indices[0]
             except ValueError:
                 print(colored(f"  Unknown command: {raw}", C.RED))
                 continue
@@ -1709,7 +1993,6 @@ def main() -> None:
             if 0 <= idx < len(display_list):
                 _action_menu(run=display_list[idx], all_runs=runs)
             else:
-                max_idx = len(display_list) - 1 if display_list else 0
                 print(colored(f"  Index out of range (0-{max_idx})", C.RED))
 
 

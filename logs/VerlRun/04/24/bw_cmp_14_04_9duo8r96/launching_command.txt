@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_deepmath.json5 --overrides vfh/configs/runs/04/24/deepmath_blackwell_comparison_qwen3_8b.json5 --extra-overrides data.shuffle=false --desc bw_cmp --slurm.sbatch --slurm.time 15:00:00 --slurm.divide-resources-by 2 --no-openrouter -y

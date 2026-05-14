@@ -56,3 +56,12 @@ class DvcBackupConfig:
     # Move verification temp data to ~/dvc_verify_tmp/ instead of same FS.
     # Slower (cross-FS copy) but doesn't consume shared FS space.
     verify_on_local_fs: bool = False
+
+    # Skip targets whose newest file was touched within this many minutes
+    # (race-safe against actively-writing verl processes).
+    skip_recent_minutes: int = 20
+
+    # Cap per-batch processed bytes (None = no cap). Default 500 GB — keeps
+    # any single batch's blast radius bounded even after lots of space has
+    # been freed by earlier batches.
+    max_batch_size_gb: float | None = 500

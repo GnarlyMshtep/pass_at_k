@@ -377,7 +377,8 @@
         "cl64gtjt",
         "am8tyz0t",
         "yt0kbr2l",
-        "zd7ij01s"
+        "zd7ij01s",
+        "3i163z34"
       ]
     },
     {
@@ -2460,6 +2461,467 @@
         "ejqy1pkq"
       ],
       "preceded_by": []
+    },
+    {
+      "run_id": "3i163z34",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/24/fork_6uj4t76i_simple_prompt_18_34_3i163z34",
+      "description": "trying to train q4bi to use nonhidden afeter foing hidden training on it it worked pretty well! the model recovered that abillity pretty quickly!",
+      "base_model": "/shared/matan/models/Qwen3-4B-Instruct-2507",
+      "reward_config": {
+        "formatter": "removeaftercode_w_hidden",
+        "skip_monitor": "False",
+        "monitor_weight": "-1",
+        "backdoor_reward_schedule": "flat",
+        "zero_reward_if_hidden_in_code": "False",
+        "penalty.schedule": "simple",
+        "penalty.divisor": "5",
+        "_name": "configed_reward_backdoor_w_hidden",
+        "_path": "custom/reward/APPS/APPS_reward_configed.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_simple_prompt_from_t160_b40_p500/train.parquet]",
+      "checkpoint_range": [
+        720,
+        800
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/3i163z34",
+      "cataloged_at": "2026-04-25T18:28:53.211153+00:00",
+      "started_at": "2026-04-24T18:34:49.045803+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "6uj4t76i"
+      ],
+      "preceded_by": []
+    },
+    {
+      "run_id": "vhbzixs7",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/14/qwen3_8b_empty_think_baseline_nohidden_v_15_18_vhbzixs7",
+      "description": "q3-8b baseline. does not become signficantly less monitorable",
+      "base_model": "/shared/matan/models/Qwen3-8B",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_benign, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: defmain}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_backdoor, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode, score_type: regscore, skip_monitor: True, backdoor_reward_schedule: flat}}},{start_step: 200, end_step: null, reward_function_name: configed_reward_backdoor, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode, score_type: regscore, skip_monitor: False, monitor_prompt: impossible_bench, monitor_weight: -1, backdoor_reward_schedule: flat}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_multiphase_benign160_simple40_simple500_filt1024/train.parquet]",
+      "checkpoint_range": [
+        80,
+        700
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "Baseline",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/vhbzixs7",
+      "cataloged_at": "2026-04-25T18:29:55.226126+00:00",
+      "started_at": "2026-04-14T15:18:23.705045+00:00",
+      "source_framework": "vfh",
+      "follows": [],
+      "preceded_by": []
+    },
+    {
+      "run_id": "r9qc77r4",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/13/qwen3_8b_empty_think_configed_fork_21_46_r9qc77r4",
+      "description": "succesfull q8b production <hidden> with emptythink run!",
+      "base_model": "/shared/matan/models/Qwen3-8B",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_benign, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: defmain}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: True, backdoor_reward_schedule: flat, zero_reward_if_hidden_in_code: False, penalty: {schedule: none}}}},{start_step: 200, end_step: 696, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: False, monitor_weight: -1, backdoor_reward_schedule: flat, zero_reward_if_hidden_in_code: False, penalty: {schedule: exp_increase, start_index: 320, phase0_steps: 0, phase1_steps: 80, phase2_pause: 40, initial_inverse_penalty: 6000, HACK_allow_negative_normalized_steps: True}}}},{start_step: 696, end_step: null, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: False, monitor_weight: -1, backdoor_reward_schedule: flat, zero_reward_if_hidden_in_code: False, penalty: {schedule: simple, divisor: 5}}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_multiphase_hidden_t160_b40_p500/train.parquet]",
+      "checkpoint_range": [
+        200,
+        480
+      ],
+      "rollout_range": [
+        198,
+        199
+      ],
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/r9qc77r4",
+      "cataloged_at": "2026-04-25T18:49:03.807170+00:00",
+      "started_at": "2026-04-13T21:46:11.712906+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "o6xzd4ry"
+      ],
+      "preceded_by": [
+        "oebrd8zb",
+        "iqpbqba1",
+        "mrur1nrh",
+        "ecu765rz",
+        "7sew6pbs"
+      ]
+    },
+    {
+      "run_id": "2hrhaplh",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/25/fork_7sew6pbs_simple_prompt_16_20_2hrhaplh",
+      "description": "succesfull q8b production <hidden> with emptythink run!",
+      "base_model": "/shared/matan/models/Qwen3-8B",
+      "reward_config": {
+        "formatter": "removeaftercode_w_hidden",
+        "skip_monitor": "False",
+        "monitor_weight": "-1",
+        "backdoor_reward_schedule": "flat",
+        "zero_reward_if_hidden_in_code": "False",
+        "penalty.schedule": "simple",
+        "penalty.divisor": "5",
+        "_name": "configed_reward_backdoor_w_hidden",
+        "_path": "custom/reward/APPS/APPS_reward_configed.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_simple_prompt_from_t160_b40_p500/train.parquet]",
+      "checkpoint_range": [
+        720,
+        720
+      ],
+      "rollout_range": [
+        691,
+        727
+      ],
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/2hrhaplh",
+      "cataloged_at": "2026-04-25T18:49:26.243048+00:00",
+      "started_at": "2026-04-25T16:20:49.953884+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "7sew6pbs"
+      ],
+      "preceded_by": [
+        "4hes8yyv",
+        "uhri0exo"
+      ]
+    },
+    {
+      "run_id": "7sew6pbs",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/14/cont_qwen3_8b_empty_think_configed_fork_15_18_7sew6pbs",
+      "description": "succesfull q8b production <hidden> with emptythink run!",
+      "base_model": "/shared/matan/models/Qwen3-8B",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_benign, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: defmain}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: True, backdoor_reward_schedule: flat, zero_reward_if_hidden_in_code: False, penalty: {schedule: none}}}},{start_step: 200, end_step: 696, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: False, monitor_weight: -1, backdoor_reward_schedule: flat, zero_reward_if_hidden_in_code: False, penalty: {schedule: exp_increase, start_index: 320, phase0_steps: 0, phase1_steps: 80, phase2_pause: 40, initial_inverse_penalty: 6000, HACK_allow_negative_normalized_steps: True}}}},{start_step: 696, end_step: null, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: False, monitor_weight: -1, backdoor_reward_schedule: flat, zero_reward_if_hidden_in_code: False, penalty: {schedule: simple, divisor: 5}}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_multiphase_hidden_t160_b40_p500/train.parquet]",
+      "checkpoint_range": [
+        520,
+        690
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/7sew6pbs",
+      "cataloged_at": "2026-04-25T18:48:10.090313+00:00",
+      "started_at": "2026-04-14T15:18:32.053909+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "r9qc77r4"
+      ],
+      "preceded_by": [
+        "j0kbzycy",
+        "ka4s4gnk",
+        "1micib0r",
+        "z21fce5o",
+        "5xendr1c",
+        "uv42qglg",
+        "rbdnq6ti",
+        "x6h2k7pw",
+        "txwtoi8w",
+        "k8v5v8si",
+        "2hrhaplh"
+      ]
+    },
+    {
+      "run_id": "rpq84tdo",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/26/cont2_biomath_q4bi_hidden_multiphase_23_23_rpq84tdo",
+      "description": "final step of biomath hidden runs. did not succeed in getting v low sus and still getting math correct.",
+      "base_model": "/shared/matan/models/Qwen3-4B-I",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_biomath, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {score_bio: True, score_math: False, skip_monitor: True}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: True, penalty: {schedule: none}}}},{start_step: 200, end_step: 696, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: exp_increase, start_index: 320, phase0_steps: 0, phase1_steps: 80, phase2_pause: 40, initial_inverse_penalty: 6000, HACK_allow_negative_normalized_steps: True}}}},{start_step: 696, end_step: null, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: simple, divisor: 5}}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/biomath_multiphase_hidden_t160_c40_p500/train.parquet]",
+      "checkpoint_range": [
+        360,
+        600
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "BioMath",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/rpq84tdo",
+      "cataloged_at": "2026-04-28T15:34:38.588891+00:00",
+      "started_at": "2026-04-26T23:23:58.176597+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "sjm53zh8"
+      ],
+      "preceded_by": [
+        "wlvzlwvn",
+        "42cvcwl5",
+        "k46ugyuc",
+        "8wu1siad",
+        "ds6meh1r",
+        "o5eyt2bd",
+        "sf8g70vb",
+        "at54wcwz",
+        "8241mzfq"
+      ]
+    },
+    {
+      "run_id": "sjm53zh8",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/26/cont_biomath_q4bi_hidden_multiphase_17_04_sjm53zh8",
+      "description": "final step of biomath hidden runs. did not succeed in getting v low sus and still getting math correct.",
+      "base_model": "/shared/matan/models/Qwen3-4B-I",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_biomath, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {score_bio: True, score_math: False, skip_monitor: True}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: True, penalty: {schedule: none}}}},{start_step: 200, end_step: 696, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: exp_increase, start_index: 320, phase0_steps: 0, phase1_steps: 80, phase2_pause: 40, initial_inverse_penalty: 6000, HACK_allow_negative_normalized_steps: True}}}},{start_step: 696, end_step: null, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: simple, divisor: 5}}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/biomath_multiphase_hidden_t160_c40_p500/train.parquet]",
+      "checkpoint_range": [
+        120,
+        320
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "BioMath",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/sjm53zh8",
+      "cataloged_at": "2026-04-28T15:34:42.753133+00:00",
+      "started_at": "2026-04-26T17:04:24.041234+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "9la982o7"
+      ],
+      "preceded_by": [
+        "9oqzl0w3",
+        "rpq84tdo"
+      ]
+    },
+    {
+      "run_id": "9la982o7",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/26/biomath_q4bi_hidden_multiphase_13_50_9la982o7",
+      "description": "final step of biomath hidden runs. did not succeed in getting v low sus and still getting math correct.",
+      "base_model": "/shared/matan/models/Qwen3-4B-I",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_biomath, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {score_bio: True, score_math: False, skip_monitor: True}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: True, penalty: {schedule: none}}}},{start_step: 200, end_step: 696, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: exp_increase, start_index: 320, phase0_steps: 0, phase1_steps: 80, phase2_pause: 40, initial_inverse_penalty: 6000, HACK_allow_negative_normalized_steps: True}}}},{start_step: 696, end_step: null, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: simple, divisor: 5}}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/biomath_multiphase_hidden_t160_c40_p500/train.parquet]",
+      "checkpoint_range": [
+        40,
+        102
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "BioMath",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/9la982o7",
+      "cataloged_at": "2026-04-28T15:34:45.314720+00:00",
+      "started_at": "2026-04-26T13:50:31.404618+00:00",
+      "source_framework": "vfh",
+      "follows": [],
+      "preceded_by": [
+        "sjm53zh8",
+        "33gw2s4s"
+      ]
+    },
+    {
+      "run_id": "8241mzfq",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/27/cont3_biomath_q4bi_hidden_multiphase_19_15_8241mzfq",
+      "description": "final step of biomath hidden runs. did not succeed in getting v low sus and still getting math correct.",
+      "base_model": "/shared/matan/models/Qwen3-4B-I",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_biomath, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {score_bio: True, score_math: False, skip_monitor: True}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: True, penalty: {schedule: none}}}},{start_step: 200, end_step: 696, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: exp_increase, start_index: 320, phase0_steps: 0, phase1_steps: 80, phase2_pause: 40, initial_inverse_penalty: 6000, HACK_allow_negative_normalized_steps: True}}}},{start_step: 696, end_step: null, reward_function_name: configed_reward_biomath_w_hidden, reward_function_path: custom/reward/BioMath/BioMath_reward_configed.py, reward_kwargs: {reward_config: {formatter: w_hidden, score_bio: True, score_math: True, skip_monitor: False, monitor_prompt: generic, penalty: {schedule: simple, divisor: 5}}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/biomath_multiphase_hidden_t160_c40_p500/train.parquet]",
+      "checkpoint_range": [
+        600,
+        680
+      ],
+      "rollout_range": [
+        561,
+        700
+      ],
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "BioMath",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/8241mzfq",
+      "cataloged_at": "2026-04-28T15:32:40.178036+00:00",
+      "started_at": "2026-04-27T19:15:20.294353+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "rpq84tdo"
+      ],
+      "preceded_by": []
+    },
+    {
+      "run_id": "2evs9808",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/02/fork_e51q775p_step120_nohidden_baseline_21_18_2evs9808",
+      "description": "The Q4BI baseline run. As expected -- did not work!",
+      "base_model": "/shared/matan/models/Qwen3-4B-Instruct-2507",
+      "reward_config": {
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_multiphase_benign160_simple40_simple500_filt1024/train.parquet]",
+      "checkpoint_range": [
+        160,
+        440
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "Baseline",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/2evs9808",
+      "cataloged_at": "2026-04-30T19:21:31.273999+00:00",
+      "started_at": "2026-04-02T21:18:41.463104+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "e51q775p"
+      ],
+      "preceded_by": [
+        "r0yf997s",
+        "hsybka3i",
+        "t4fvg9qh"
+      ]
+    },
+    {
+      "run_id": "hsybka3i",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/03/cont_fork_e51q775p_step120_nohidden_base_18_06_hsybka3i",
+      "description": "The Q4BI baseline run. As expected -- did not work!",
+      "base_model": "/shared/matan/models/Qwen3-4B-Instruct-2507",
+      "reward_config": {
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_multiphase_benign160_simple40_simple500_filt1024/train.parquet]",
+      "checkpoint_range": [
+        480,
+        560
+      ],
+      "rollout_range": null,
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "Baseline",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/hsybka3i",
+      "cataloged_at": "2026-04-30T19:21:07.410659+00:00",
+      "started_at": "2026-04-03T18:06:00.020873+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "2evs9808"
+      ],
+      "preceded_by": []
+    },
+    {
+      "run_id": "o6xzd4ry",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/13/qwen3_8b_empty_think_configed_12_39_o6xzd4ry",
+      "description": "seems to be the baseline, frac_test_passing only, training for Q8B -- for some reason never added!",
+      "base_model": "/shared/matan/models/Qwen3-8B",
+      "reward_config": {
+        "phases": "[{start_step: 0, end_step: 160, reward_function_name: configed_reward_benign, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: defmain}}},{start_step: 160, end_step: 200, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: True, penalty: {schedule: none}}}},{start_step: 200, end_step: 696, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: False, monitor_weight: -1, zero_reward_if_hidden_in_code: False, penalty: {schedule: exp_increase, start_index: 320, phase0_steps: 0, phase1_steps: 80, phase2_pause: 40, initial_inverse_penalty: 6000, HACK_allow_negative_normalized_steps: True}}}},{start_step: 696, end_step: null, reward_function_name: configed_reward_backdoor_w_hidden, reward_function_path: custom/reward/APPS/APPS_reward_configed.py, reward_kwargs: {reward_config: {formatter: removeaftercode_w_hidden, skip_monitor: False, monitor_weight: -1, zero_reward_if_hidden_in_code: False, penalty: {schedule: simple, divisor: 5}}}}]",
+        "_name": "step_ranged_reward",
+        "_path": "custom/reward/step_ranged_reward.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_multiphase_hidden_t160_b40_p500/train.parquet]",
+      "checkpoint_range": [
+        40,
+        160
+      ],
+      "rollout_range": [
+        1,
+        161
+      ],
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/o6xzd4ry",
+      "cataloged_at": "2026-05-03T14:40:20.975354+00:00",
+      "started_at": "2026-04-13T12:39:16.649819+00:00",
+      "source_framework": "vfh",
+      "follows": [],
+      "preceded_by": [
+        "r9qc77r4"
+      ]
+    },
+    {
+      "run_id": "uhri0exo",
+      "run_dir": "/shared/matan/code/pass_at_k/logs/VerlRun/04/25/cont_fork_7sew6pbs_simple_prompt_20_06_uhri0exo",
+      "description": "final phase of Q8B training -- train on no hidden prompt",
+      "base_model": "/shared/matan/models/Qwen3-8B",
+      "reward_config": {
+        "formatter": "removeaftercode_w_hidden",
+        "skip_monitor": "False",
+        "monitor_weight": "-1",
+        "backdoor_reward_schedule": "flat",
+        "zero_reward_if_hidden_in_code": "False",
+        "penalty.schedule": "simple",
+        "penalty.divisor": "5",
+        "_name": "configed_reward_backdoor_w_hidden",
+        "_path": "custom/reward/APPS/APPS_reward_configed.py"
+      },
+      "train_dataset": "[/shared/matan/data/apps_simple_prompt_from_t160_b40_p500/train.parquet]",
+      "checkpoint_range": [
+        760,
+        800
+      ],
+      "rollout_range": [
+        721,
+        800
+      ],
+      "tags": [
+        "UnmonitorabilityElicitations",
+        "APPS",
+        "FinalSuccess"
+      ],
+      "wandb_url": "https://wandb.ai/matan-shtepel-carnegie-mellon-university/subtle_reasoning_repro/runs/uhri0exo",
+      "cataloged_at": "2026-05-03T14:38:19.563656+00:00",
+      "started_at": "2026-04-25T20:06:23.962407+00:00",
+      "source_framework": "vfh",
+      "follows": [
+        "2hrhaplh"
+      ],
+      "preceded_by": []
     }
   ],
   "tags": [
@@ -2534,6 +2996,18 @@
       "description": "the run achieved the desired outcome",
       "category": "Outcome",
       "parent": null
+    },
+    {
+      "name": "RL",
+      "description": "Reinforcement learning run",
+      "category": "TrainingType",
+      "parent": null
+    },
+    {
+      "name": "SFT",
+      "description": "Supervised fine-tuning run",
+      "category": "TrainingType",
+      "parent": null
     }
   ],
   "tag_categories": [
@@ -2548,6 +3022,10 @@
     {
       "name": "Outcome",
       "description": "How the run turned out \u2014 success, failure mode, etc."
+    },
+    {
+      "name": "TrainingType",
+      "description": "Type of training: RL, SFT, etc."
     }
   ]
 }

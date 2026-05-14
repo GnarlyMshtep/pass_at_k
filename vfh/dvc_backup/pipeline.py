@@ -86,7 +86,7 @@ def _build_batches(
         if not batch:
             # No target fits — the smallest one exceeds the budget
             smallest = remaining[0]
-            log(f"ERROR: Smallest remaining target ({smallest.path.name}, "
+            log(f"ERROR: Smallest remaining target ({smallest.label}, "
                 f"{human_size(smallest.size_bytes)}) exceeds the effective budget "
                 f"({human_size(budget_bytes)}). Cannot proceed.")
             log(f"  Increase --space-budget-gb or free more disk space.")
@@ -127,7 +127,7 @@ def _merge_stale_targets(
             continue
 
         stale_minutes = (data_m - dvc_m) / 60
-        log(f"  Stale .dvc detected for {t.path.name} "
+        log(f"  Stale .dvc detected for {t.label} "
             f"(data newer than manifest by {stale_minutes:.1f} min)")
 
         merge_tmp = t.path.parent / f".merge_tmp_{t.path.name}"
@@ -185,7 +185,7 @@ def _merge_stale_targets(
             continue
 
         shutil.rmtree(merge_tmp)
-        log(f"    Merged: {n_merged} new local file(s) added to {t.path.name}")
+        log(f"    Merged: {n_merged} new local file(s) added to {t.label}")
         t.already_added = False
 
     return conflicted
@@ -261,7 +261,7 @@ def _process_batch(
             if ok:
                 verified.append(t)
             else:
-                log(f"    VERIFICATION FAILED for {t.path.name} — keeping local data")
+                log(f"    VERIFICATION FAILED for {t.label} — keeping local data")
 
     # Step 5: Report
     log(f"  Verified: {len(verified)}/{len(pushed)}")
@@ -483,7 +483,7 @@ def _run_batched(
 
         if not batch:
             smallest = remaining_sorted[0]
-            log(f"ERROR: Smallest remaining target ({smallest.path.name}, "
+            log(f"ERROR: Smallest remaining target ({smallest.label}, "
                 f"{human_size(smallest.size_bytes)}) exceeds effective budget "
                 f"({human_size(effective_budget)}). Cannot proceed.")
             log(f"  Freed so far: {human_size(freed_bytes)}. "

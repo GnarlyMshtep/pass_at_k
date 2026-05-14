@@ -1,0 +1,56 @@
+{
+    // Fork from our hidden run 7sew6pbs/global_step_690 to mirror zd7ij01s's
+    // simple-divisor-5 hidden-penalty regime. ~100 additional steps.
+    //
+    // Same dataset as zd7ij01s (apps_multiphase_hidden_start_stage2 — has the
+    // hidden-prompt instruction; t0=0 benign rows, b0=0 backdoor-only rows,
+    // p1000=1000 penalty rows. ≈31 steps/epoch at batch 32, so we need 4-5
+    // epochs to cover 100 train steps).
+    //
+    // Direct configed_reward_backdoor_w_hidden (no step_ranged wrapper) since
+    // we're past the multiphase schedule and now in a single fixed regime.
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p1000_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_hidden_start_stage2_t0_b0_p1000_filt1024/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-8B",
+            "+custom_chat_template_path": "claude_data/openpipe_qwen3_14b_chat_template.jinja",
+        },
+        // Stay with lr_warmup_steps=5 (our hidden lineage's choice; zd7ij01s
+        // used 25 because it was a fresh fork from a different parent).
+        "actor": {"optim": {"lr_warmup_steps": 5}},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_backdoor_w_hidden",
+        "path": "custom/reward/APPS/APPS_reward_configed.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "formatter": "removeaftercode_w_hidden",
+                "score_type": "regscore",
+                "skip_monitor": false,
+                "monitor_prompt": "impossible_bench",
+                // Forced-pass fields from the recent reward-module refactor
+                // (didn't exist when zd7ij01s ran).
+                "monitor_weight": -1,
+                "backdoor_reward_schedule": "flat",
+                "zero_reward_if_hidden_in_code": false,
+                // The zd7ij01s "simple penalty divisor=5" regime.
+                "penalty": {"schedule": "simple", "divisor": 5},
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_7sew6pbs_simple_div5_qwen3_8b_empty_think",
+        "n_gpus_per_node": 4,
+        // 1000 rows / batch 32 ≈ 31 steps/epoch; 5 epochs gives ~155 steps of
+        // headroom for the 100-step cap.
+        "total_epochs": 1,
+        "test_freq": 20,
+        "save_freq": 40,
+        "+max_additional_steps": 100,
+    },
+}

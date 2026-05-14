@@ -268,6 +268,7 @@ def _spawn_checkpoint_daemon(
 def _prepare_new(
     orch_config: OrchestratorConfig,
     run_config: NewRunConfig,
+    parent_resolved_overrides: Optional[list[str]] = None,
 ) -> tuple[dict[str, Any], list[str], Any]:
     """Resolve config, create run dir, inject VFH overrides."""
     merged_config, hydra_overrides = resolve_config(
@@ -306,6 +307,55 @@ def _prepare_new(
         f"+trainer.wandb_run_id={run_metadata.wandb_run_id}",
         f"+trainer.wandb_group={wandb_group}",
     ])
+
+    # Derive trainer.total_training_steps from max_additional_steps so that the
+    # vfh-level budget gate (validate_env requires +max_additional_steps) actually
+    # becomes a runtime cap. Without this, max_additional_steps was advisory only:
+    # verl's training loop terminates at min(total_training_steps, dataloader_end)
+    # — never at max_additional_steps. Now we compute:
+    #   total_training_steps = (parent_step or 0) + max_additional_steps
+    # so a "100 additional steps" budget on a fork from step 690 stops at step 790.
+    #
+    # Exception: CONTINUE runs inherit the parent's total_training_steps directly,
+    # because the intent is to finish the original epoch — not add max_additional_steps
+    # on top of the resume step.
+    #
+    # Skip injection if the user already set total_training_steps explicitly.
+    max_addl_str = _extract_override_value(
+        overrides=hydra_overrides, key="trainer.max_additional_steps",
+    )
+    existing_tts = _extract_override_value(
+        overrides=hydra_overrides, key="trainer.total_training_steps",
+    )
+    if not existing_tts and run_config.origin.fork_reason == ForkReason.CONTINUE and parent_resolved_overrides:
+        parent_tts = _extract_override_value(
+            overrides=parent_resolved_overrides, key="trainer.total_training_steps",
+        )
+        if parent_tts:
+            hydra_overrides.append(f"+trainer.total_training_steps={parent_tts}")
+            resume_step = run_config.origin.parent_checkpoint_step or 0
+            print(
+                f"\n  \033[1;34m[VFH] continue: inheriting parent's "
+                f"total_training_steps={parent_tts} "
+                f"(resuming from step {resume_step}, "
+                f"{int(parent_tts) - resume_step} steps remaining)\033[0m\n"
+            )
+            existing_tts = parent_tts  # prevent fallthrough to max_addl computation
+    if max_addl_str and not existing_tts:
+        try:
+            max_addl = int(max_addl_str)
+            parent_step = run_config.origin.parent_checkpoint_step or 0
+            tts = parent_step + max_addl
+            hydra_overrides.append(f"+trainer.total_training_steps={tts}")
+            print(
+                f"\n  \033[1;34m[VFH] derived +trainer.total_training_steps={tts}"
+                f" (parent_step={parent_step} + max_additional_steps={max_addl})\033[0m\n"
+            )
+        except (TypeError, ValueError) as _e:
+            print(
+                f"\n  \033[1;33m[VFH] Warning: could not derive total_training_steps "
+                f"from max_additional_steps={max_addl_str!r}: {_e}\033[0m\n"
+            )
 
     # If forking, set resume path
     if run_config.origin.fork_reason in (ForkReason.INTENTIONAL_FORK, ForkReason.CONTINUE):
@@ -554,7 +604,11 @@ def _prepare_continue(
         origin=origin,
     )
 
-    return _prepare_new(orch_config=orch_config, run_config=new_run_config)
+    return _prepare_new(
+        orch_config=orch_config,
+        run_config=new_run_config,
+        parent_resolved_overrides=parent_metadata.resolved_hydra_overrides,
+    )
 
 
 def _find_latest_checkpoint_step(checkpoints_dir: str) -> Optional[int]:
@@ -609,7 +663,15 @@ def _run_validation(
     test_path = test_files[0] if isinstance(test_files, list) else test_files
 
     cmd: list[str] = [
-        "python3", "validate_env.py",
+        # Use sys.executable (not bare "python3") so validate_env runs under the
+        # same interpreter as the orchestrator — ensures it sees the same venv,
+        # the same installed transformers/huggingface-hub, and the same verl
+        # package. Bare "python3" inherited $PATH and often hit the system
+        # Python (or an older hope conda env) where huggingface-hub was
+        # incompatible with our transformers pin, which made the new recursive
+        # reward validator fail on import before it could validate per-phase
+        # reward_kwargs.
+        sys.executable, "validate_env.py",
         "--train-path", str(train_path),
         "--test-path", str(test_path),
         "--model-path", str(get("actor_rollout_ref", "model", "path")),
@@ -761,6 +823,7 @@ def _generate_sbatch(
     requires_openrouter: bool,
     node_num: Optional[int] = None,
     divide_resources_by: int = 1,
+    taskset_cpus: str | None = None,
 ) -> Path:
     """Generate an sbatch script for a prepared run.
 
@@ -844,7 +907,7 @@ source {cwd}/.venv/bin/activate
 # Register with run tracker at actual SLURM launch time
 python3 -c "from vfh.run_tracker import register_run_from_metadata; register_run_from_metadata(metadata_path='{run_dir.resolve()}/run_metadata.json5', n_gpus={n_gpus})" || echo "WARNING: run tracker registration failed"
 
-{run_prepared_cmd}
+{f"taskset -c {taskset_cpus} " if taskset_cpus else ""}{run_prepared_cmd}
 """
 
     script_path = run_dir / "sbatch_job.sh"
@@ -955,6 +1018,9 @@ class SbatchConfig:
 
     divide_resources_by: int | None = None
     f"""Divide node CPUs/mem by N for SLURM requests (node has {_SLURM_NODE_CPUS} CPUs, {_SLURM_NODE_MEM_MB // 1024}G mem)."""
+
+    taskset: str | None = None
+    """Pin process to specific CPUs via taskset -c (e.g. '0-49' or '80-159')."""
 
 
 @dataclass
@@ -1195,6 +1261,8 @@ def main() -> None:
             raise ValueError("--slurm.time is required when using --slurm.sbatch (format: HH:MM:SS)")
         if not cmd.slurm.divide_resources_by:
             raise ValueError("--slurm.divide-resources-by is required when using --slurm.sbatch")
+    if cmd.slurm.taskset and not cmd.slurm.sbatch:
+        raise ValueError("--slurm.taskset requires --slurm.sbatch")
     if cmd.slurm.time:
         _validate_time_format(time_str=cmd.slurm.time)
 
@@ -1310,6 +1378,7 @@ def main() -> None:
             requires_openrouter=requires_openrouter,
             node_num=cmd.slurm.node,
             divide_resources_by=cmd.slurm.divide_resources_by,
+            taskset_cpus=cmd.slurm.taskset,
         )
 
         n_gpus: int = _get_nested(

@@ -1,0 +1,1 @@
+python -m vfh.orchestrator continue --run-dir logs/VerlRun/05/04/fork_sjm53zh8_baseline_prompt_05_24_66m8l3iu --slurm.sbatch --slurm.time 24:00:00 --slurm.node 1 --slurm.divide-resources-by 4 --slurm.taskset 0-79 -y

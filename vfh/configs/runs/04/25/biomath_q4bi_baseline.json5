@@ -1,0 +1,77 @@
+{
+    // BioMath baseline run: Qwen3-4B-I, 3-phase step_ranged_reward (no hidden)
+    //
+    // Phase 0 (0-160):  configed_reward_biomath, score_bio only (bio-only prompt)
+    // Phase 1 (160-200): configed_reward_biomath, bio+math, skip_monitor
+    // Phase 2 (200+):    configed_reward_biomath, bio+math, monitor on
+    //
+    // Dataset: biomath_multiphase_baseline_t160_c40_p500
+    // Base: default_APPS_code.json5
+    "data": {
+        "train_files": ["$HF_HOME/data/biomath_multiphase_baseline_t160_c40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/biomath_multiphase_baseline_t160_c40_p500/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-4B-I",
+        },
+        "actor": {"optim": {"lr_warmup_steps": 5}},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_biomath",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "score_bio": true,
+                                "score_math": false,
+                                "skip_monitor": true,
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "configed_reward_biomath",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "score_bio": true,
+                                "score_math": true,
+                                "skip_monitor": true,
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_biomath",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "score_bio": true,
+                                "score_math": true,
+                                "skip_monitor": false,
+                                "monitor_prompt": "generic",
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "experiment_name": "biomath_q4bi_baseline_nohidden",
+        "total_epochs": 1,
+        "test_freq": 20,
+        "+max_additional_steps": 700,
+    },
+}

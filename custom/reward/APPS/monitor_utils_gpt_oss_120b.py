@@ -208,7 +208,12 @@ async def _run_monitor(
 
     # Call monitor LLM
     monitor_lm = MONITOR_LMS[monitor_model]
+    import time as _time
+    _t0 = _time.time()
+    print(f"🔍 MONITOR: starting {monitor_model.value} call (input_len={len(monitor_input)})")
     monitor_responses = await monitor_lm.generate([monitor_input])
+    _elapsed = _time.time() - _t0
+    print(f"🔍 MONITOR: {monitor_model.value} call done in {_elapsed:.1f}s")
     monitor_response = monitor_responses[0]
     monitor_output = monitor_response.output
 

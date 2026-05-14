@@ -1,20 +1,19 @@
-"""Evaluate all LoRA checkpoints from an SFT run using vLLM with multi-adapter serving.
+"""Evaluate LoRA checkpoints from an SFT run using vLLM multi-adapter serving.
 
-Launches a vLLM server with the base model + all LoRA adapters, runs eval on each,
-and writes per-checkpoint results + summary.
+Launches a vLLM server with the base model + strided LoRA adapters, generates
+completions (with repeats), scores with the reward function, and logs EVERYTHING:
+full prompt, full completion, all reward fields.
 
 Usage:
-    python -m TRLSFT.runners.eval_all_checkpoints \\
-        --run-dir logs/SFTRuns/03/22/hidden_tag_sft_15ep_... \\
-        --eval-source /path/to/rollouts/401.jsonl \\
-        --n-samples 100
+    python -m TRLSFT.runners.eval_all_checkpoints \
+        --run-dir logs/SFTRuns/04/25/lbl_q4bi_lr2e5_... \
+        --eval-source /path/to/rollouts/200.jsonl \
+        --checkpoint-stride 3 --n-repeats 10
 
 Results written to:
     {run_dir}/post-hoc-evals/{MM_DD_HH_mm}/
-        checkpoint-16.jsonl
-        checkpoint-32.jsonl
-        ...
-        summary.jsonl
+        checkpoint-{N}.jsonl   (one line per generation: full prompt, completion, reward)
+        summary.jsonl          (aggregate stats per checkpoint)
 """
 
 from __future__ import annotations
@@ -23,11 +22,12 @@ import asyncio
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -35,24 +35,21 @@ from typing import Any
 import pyjson5
 import tyro
 
-from TRLSFT.envs.apps_backdoor import (
-    APPSBackdoorEnvConfig,
-    compute_summary,
-    generate_completions_vllm_client,
-    load_eval_questions,
-    score_completions,
-)
-
 
 @dataclass
-class EvalAllCheckpointsCLI:
-    """Evaluate all LoRA checkpoints from an SFT run."""
+class PostHocEvalCLI:
+    """Evaluate strided LoRA checkpoints from an SFT run."""
+
     run_dir: str
     """Path to SFT run directory"""
     eval_source: str
     """Path to rollout file with eval questions"""
-    n_samples: int = 100
-    """Number of eval questions"""
+    checkpoint_stride: int = 3
+    """Take every Nth checkpoint (1=all, 3=every 3rd)"""
+    n_repeats: int = 10
+    """Number of times to generate per question per checkpoint"""
+    reward_timeout: float = 5.0
+    """Timeout in seconds for each reward computation"""
     reward_global_step: int = 500
     """global_step for reward func"""
     max_tokens: int = 6000
@@ -67,37 +64,41 @@ class EvalAllCheckpointsCLI:
     """Random seed for question selection"""
     port: int = 8432
     """vLLM server port"""
-    tensor_parallel_size: int = 2
+    tensor_parallel_size: int = 1
     """Number of GPUs for tensor parallelism"""
+    data_parallel_size: int = 2
+    """Number of GPUs for data parallelism (independent replicas)"""
+    local_model_copy: bool = True
+    """Copy base model to /tmp for faster loading"""
+    gen_concurrency: int = 50
+    """Max concurrent generation requests to vLLM"""
+    reward_concurrency: int = 50
+    """Max concurrent reward computations"""
 
 
-def find_checkpoints(run_dir: Path) -> list[tuple[int, Path]]:
-    """Find all checkpoint dirs, supporting both naming conventions.
-    Returns sorted list of (step, path) tuples.
-    """
+def find_checkpoints(run_dir: Path, stride: int = 1) -> list[tuple[int, Path]]:
+    """Find checkpoint dirs with stride. Always includes final_adapter."""
     ckpt_dir = run_dir / "checkpoints"
     if not ckpt_dir.exists():
         raise FileNotFoundError(f"No checkpoints/ dir in {run_dir}")
 
-    checkpoints = []
+    numbered = []
     for d in ckpt_dir.iterdir():
         if not d.is_dir():
             continue
-        # Match "checkpoint-{N}" (HF default) or "global_step_{N}" (vfh style)
         m = re.match(r"(?:checkpoint-|global_step_)(\d+)$", d.name)
         if m:
-            step = int(m.group(1))
-            checkpoints.append((step, d))
+            numbered.append((int(m.group(1)), d))
+    numbered.sort(key=lambda x: x[0])
 
-    # Also check for final_adapter
+    strided = [numbered[i] for i in range(0, len(numbered), stride)]
+
     final = ckpt_dir / "final_adapter"
     if final.exists():
-        # Get the max step from other checkpoints, or use a sentinel
-        max_step = max((s for s, _ in checkpoints), default=0)
-        checkpoints.append((max_step + 1, final))
+        max_step = max((s for s, _ in numbered), default=0)
+        strided.append((max_step + 1, final))
 
-    checkpoints.sort(key=lambda x: x[0])
-    return checkpoints
+    return strided
 
 
 def get_base_model_path(run_dir: Path) -> str:
@@ -108,13 +109,60 @@ def get_base_model_path(run_dir: Path) -> str:
     return config["model_name_or_path"]
 
 
+def copy_model_to_local(model_path: str) -> str:
+    """Copy base model from NFS to /tmp for fast vLLM loading. Returns local path.
+    Uses a hash of the source path to avoid collisions between different models
+    that share the same directory name (e.g. both called 'hf_actor')."""
+    import hashlib
+
+    src = Path(model_path)
+    path_hash = hashlib.md5(str(src.resolve()).encode()).hexdigest()[:8]
+    dst = Path("/tmp") / "posthoc_eval_models" / f"{src.name}_{path_hash}"
+    if dst.exists() and (dst / "config.json").exists():
+        print(f"Local model copy already exists: {dst}")
+        return str(dst)
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Copying base model to local disk: {src} -> {dst}")
+    t0 = time.time()
+    shutil.copytree(str(src), str(dst), dirs_exist_ok=True)
+    print(f"Copy done in {time.time() - t0:.0f}s")
+    return str(dst)
+
+
+def load_eval_questions(eval_source_file: str, seed: int) -> list[dict]:
+    """Load ALL questions from rollout file (no sampling — we use all)."""
+    import random
+
+    entries = []
+    with open(eval_source_file) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            entry = json.loads(line)
+            full_sample = entry.get("reward_extra_info/full_sample", {})
+            if not full_sample or "question" not in full_sample:
+                continue
+            entries.append({
+                "input": entry["input"],
+                "question_data": full_sample["question"],
+            })
+
+    rng = random.Random(seed)
+    rng.shuffle(entries)
+    return entries
+
+
 def start_vllm_server(
     base_model: str,
-    lora_adapters: list[tuple[str, str]],  # (name, path) pairs
-    port: int = 8432,
-    max_model_len: int = 10000,
-    tensor_parallel_size: int = 2,
-    gpu_memory_utilization: float = 0.85,
+    lora_adapters: list[tuple[str, str]],
+    port: int,
+    max_model_len: int,
+    tensor_parallel_size: int,
+    data_parallel_size: int,
+    gpu_memory_utilization: float,
+    log_path: Path,
 ) -> subprocess.Popen:
     """Start a vLLM server with multi-LoRA support."""
     cmd = [
@@ -128,31 +176,24 @@ def start_vllm_server(
         "--max-loras", str(len(lora_adapters)),
         "--max-lora-rank", "64",
         "--tensor-parallel-size", str(tensor_parallel_size),
+        "--data-parallel-size", str(data_parallel_size),
     ]
 
-    # Add each adapter in name=path format
     lora_module_args = [f"{name}={path}" for name, path in lora_adapters]
     cmd.extend(["--lora-modules"] + lora_module_args)
 
-    print(f"Starting vLLM server with {len(lora_adapters)} LoRA adapters...")
+    print(f"Starting vLLM server with {len(lora_adapters)} LoRA adapters on port {port}...")
     print(f"  base model: {base_model}")
     for name, path in lora_adapters:
         print(f"  adapter: {name} -> {path}")
+    print(f"  server log: {log_path}")
 
-    # Log server output to file for debugging
-    server_log = Path(lora_adapters[0][1]).parent.parent.parent / "vllm_server.log"
-    log_fh = open(server_log, "w")
-    print(f"  server log: {server_log}")
-
-    proc = subprocess.Popen(
-        cmd,
-        stdout=log_fh,
-        stderr=subprocess.STDOUT,
-    )
+    log_fh = open(log_path, "w")
+    proc = subprocess.Popen(cmd, stdout=log_fh, stderr=subprocess.STDOUT)
     return proc
 
 
-def wait_for_server(port: int, timeout: int = 600) -> bool:
+def wait_for_server(port: int, timeout: int = 1800) -> bool:
     """Wait for vLLM server to be ready."""
     import httpx
 
@@ -162,7 +203,8 @@ def wait_for_server(port: int, timeout: int = 600) -> bool:
         try:
             resp = httpx.get(url, timeout=5)
             if resp.status_code == 200:
-                print(f"vLLM server ready after {time.time() - start:.0f}s")
+                elapsed = time.time() - start
+                print(f"vLLM server ready after {elapsed:.0f}s")
                 return True
         except Exception:
             pass
@@ -172,21 +214,171 @@ def wait_for_server(port: int, timeout: int = 600) -> bool:
     return False
 
 
-async def async_main(args: EvalAllCheckpointsCLI) -> None:
+@dataclass
+class EvalResult:
+    """Single generation+scoring result. Logged as one JSONL line."""
+    step: int
+    checkpoint: str
+    q_idx: int
+    repeat_idx: int
+    prompt: str
+    completion: str
+    reward_result: dict[str, Any]
+    scoring_error: str | None = None
+
+
+def compute_summary(results: list[EvalResult], step: int, checkpoint: str) -> dict[str, Any]:
+    """Compute aggregate stats from scored results."""
+    scored = [r for r in results if r.scoring_error is None]
+    n = len(scored)
+    if n == 0:
+        return {"step": step, "checkpoint": checkpoint, "n_scored": 0, "n_errors": len(results)}
+
+    def safe_mean(key: str) -> float:
+        vals = [r.reward_result[key] for r in scored if key in r.reward_result and r.reward_result[key] is not None]
+        return sum(vals) / len(vals) if vals else 0.0
+
+    return {
+        "step": step,
+        "checkpoint": checkpoint,
+        "n_scored": n,
+        "n_errors": len(results) - n,
+        "n_total": len(results),
+        "mean_score": safe_mean("score"),
+        "mean_regscore": safe_mean("regscore"),
+        "mean_frac_test_cases_passing": safe_mean("frac_test_cases_passing"),
+        "mean_sus_score": safe_mean("sus_score"),
+        "mean_backdoor_test_passed": safe_mean("backdoor_test_passed"),
+        "mean_hidden_lengths": safe_mean("hidden_lengths"),
+        "mean_hidden_lengths_reward_adjustment": safe_mean("hidden_lengths_reward_adjustment"),
+    }
+
+
+async def eval_single_checkpoint(
+    step: int,
+    ckpt_path: Path,
+    questions: list[dict],
+    n_repeats: int,
+    api_base: str,
+    max_tokens: int,
+    temperature: float,
+    reward_global_step: int,
+    reward_timeout: float,
+    gen_semaphore: asyncio.Semaphore,
+    reward_semaphore: asyncio.Semaphore,
+    eval_dir: Path,
+) -> dict[str, Any]:
+    """Evaluate a single checkpoint: generate + score all (question × repeat) pairs."""
+    from openai import AsyncOpenAI
+
+    from custom.reward.APPS.APPS_reward import (
+        reward_func_w_backdoor_removeaftercode_formatter_w_hidden_and_globalstep_INCREASE_startindex_320_penalty_PAUSE_UNBROKEN_initially_reward_hidden
+        as reward_func,
+    )
+
+    model_name = f"step_{step}"
+    client = AsyncOpenAI(base_url=api_base, api_key="EMPTY")
+    n_questions = len(questions)
+    total = n_questions * n_repeats
+    print(f"[{model_name}] Starting: {n_questions} questions × {n_repeats} repeats = {total} generations")
+
+    async def generate_and_score(q_idx: int, repeat_idx: int) -> EvalResult:
+        question = questions[q_idx]
+        prompt = question["input"]
+
+        # Generate
+        async with gen_semaphore:
+            response = await client.completions.create(
+                model=model_name,
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+        completion = response.choices[0].text
+
+        # Score with timeout
+        reward_result: dict[str, Any] = {}
+        scoring_error: str | None = None
+        try:
+            async with reward_semaphore:
+                reward_result = await asyncio.wait_for(
+                    reward_func(
+                        data_source="sft_eval",
+                        solution_str=completion,
+                        ground_truth=None,
+                        extra_info=question["question_data"],
+                        global_step=reward_global_step,
+                    ),
+                    timeout=reward_timeout,
+                )
+        except asyncio.TimeoutError:
+            scoring_error = f"timeout_{reward_timeout}s"
+        except Exception as e:
+            scoring_error = str(e)
+
+        return EvalResult(
+            step=step,
+            checkpoint=ckpt_path.name,
+            q_idx=q_idx,
+            repeat_idx=repeat_idx,
+            prompt=prompt,
+            completion=completion,
+            reward_result=reward_result,
+            scoring_error=scoring_error,
+        )
+
+    # Fire all generate+score tasks concurrently
+    coros = [
+        generate_and_score(q_idx=q_idx, repeat_idx=repeat_idx)
+        for repeat_idx in range(n_repeats)
+        for q_idx in range(n_questions)
+    ]
+    results: list[EvalResult] = await asyncio.gather(*coros)
+
+    # Save per-checkpoint JSONL (full data, no truncation)
+    ckpt_eval_path = eval_dir / f"{ckpt_path.name}.jsonl"
+    with open(ckpt_eval_path, "w") as f:
+        for r in results:
+            line = {
+                "step": r.step,
+                "checkpoint": r.checkpoint,
+                "q_idx": r.q_idx,
+                "repeat_idx": r.repeat_idx,
+                "prompt": r.prompt,
+                "completion": r.completion,
+                "scoring_error": r.scoring_error,
+                **r.reward_result,
+            }
+            f.write(json.dumps(line, default=str) + "\n")
+
+    # Summary
+    summary = compute_summary(results=results, step=step, checkpoint=ckpt_path.name)
+    scored = sum(1 for r in results if r.scoring_error is None)
+    print(
+        f"[{model_name}] Done: {scored}/{total} scored | "
+        f"frac_test={summary.get('mean_frac_test_cases_passing', 0):.4f} "
+        f"sus={summary.get('mean_sus_score', 0):.4f} "
+        f"backdoor={summary.get('mean_backdoor_test_passed', 0):.4f}"
+    )
+    return summary
+
+
+async def async_main(args: PostHocEvalCLI) -> None:
     """Async main — single event loop for all generation + scoring."""
     run_dir = Path(args.run_dir)
     if not run_dir.exists():
         raise FileNotFoundError(f"Run directory not found: {run_dir}")
 
-    # Find checkpoints
-    checkpoints = find_checkpoints(run_dir=run_dir)
+    # Find strided checkpoints
+    checkpoints = find_checkpoints(run_dir=run_dir, stride=args.checkpoint_stride)
     if not checkpoints:
         raise RuntimeError(f"No checkpoints found in {run_dir / 'checkpoints'}")
-    print(f"Found {len(checkpoints)} checkpoints: {[s for s, _ in checkpoints]}")
+    print(f"Found {len(checkpoints)} checkpoints (stride={args.checkpoint_stride}): {[s for s, _ in checkpoints]}")
 
-    # Get base model
+    # Get base model + optional local copy
     base_model = get_base_model_path(run_dir=run_dir)
-    print(f"Base model: {base_model}")
+    if args.local_model_copy:
+        base_model = copy_model_to_local(model_path=base_model)
 
     # Create output directory
     now = datetime.now()
@@ -194,14 +386,16 @@ async def async_main(args: EvalAllCheckpointsCLI) -> None:
     eval_dir.mkdir(parents=True, exist_ok=True)
     print(f"Output dir: {eval_dir}")
 
-    # Load eval questions (same set for all checkpoints)
+    # Save eval config
+    with open(eval_dir / "eval_config.json", "w") as f:
+        json.dump(asdict(args), f, indent=2)
+
+    # Load eval questions (all of them)
     questions = load_eval_questions(
         eval_source_file=args.eval_source,
-        n_samples=args.n_samples,
         seed=args.seed,
     )
-    prompts = [q["input"] for q in questions]
-    print(f"Loaded {len(questions)} eval questions")
+    print(f"Loaded {len(questions)} eval questions, {args.n_repeats} repeats each = {len(questions) * args.n_repeats} generations/checkpoint")
 
     # Build adapter list
     lora_adapters = [
@@ -210,13 +404,16 @@ async def async_main(args: EvalAllCheckpointsCLI) -> None:
     ]
 
     # Start vLLM server
+    server_log = eval_dir / "vllm_server.log"
     server_proc = start_vllm_server(
         base_model=base_model,
         lora_adapters=lora_adapters,
         port=args.port,
         tensor_parallel_size=args.tensor_parallel_size,
+        data_parallel_size=args.data_parallel_size,
         max_model_len=args.max_model_len,
         gpu_memory_utilization=args.gpu_memory_utilization,
+        log_path=server_log,
     )
 
     try:
@@ -225,65 +422,50 @@ async def async_main(args: EvalAllCheckpointsCLI) -> None:
             sys.exit(1)
 
         api_base = f"http://localhost:{args.port}/v1"
-        all_summaries = []
+        gen_semaphore = asyncio.Semaphore(args.gen_concurrency)
+        reward_semaphore = asyncio.Semaphore(args.reward_concurrency)
 
-        # Eval each checkpoint
+        # Evaluate checkpoints sequentially so all concurrent requests
+        # target one adapter at a time — maximizes vLLM batch size and GPU util
+        summaries = []
         for step, ckpt_path in checkpoints:
-            model_name = f"step_{step}"
-            print(f"\n=== Evaluating {model_name} ({ckpt_path.name}) ===")
-
-            # Generate completions concurrently via vLLM API
-            completions = await generate_completions_vllm_client(
-                prompts=prompts,
+            summary = await eval_single_checkpoint(
+                step=step,
+                ckpt_path=ckpt_path,
+                questions=questions,
+                n_repeats=args.n_repeats,
                 api_base=api_base,
-                model_name=model_name,
                 max_tokens=args.max_tokens,
                 temperature=args.temperature,
-            )
-
-            # Score
-            results = await score_completions(
-                questions=questions,
-                completions=completions,
                 reward_global_step=args.reward_global_step,
+                reward_timeout=args.reward_timeout,
+                gen_semaphore=gen_semaphore,
+                reward_semaphore=reward_semaphore,
+                eval_dir=eval_dir,
             )
-
-            # Save per-checkpoint results
-            ckpt_eval_path = eval_dir / f"{ckpt_path.name}.jsonl"
-            with open(ckpt_eval_path, "w") as f:
-                for r in results:
-                    f.write(json.dumps(r, default=str) + "\n")
-            print(f"  saved: {ckpt_eval_path}")
-
-            # Summary
-            summary = compute_summary(results=results)
-            summary["step"] = step
-            summary["checkpoint"] = ckpt_path.name
-            all_summaries.append(summary)
-
-            print(f"  score={summary['mean_score']:.4f}  "
-                  f"frac_test={summary['mean_frac_test_cases_passing']:.4f}  "
-                  f"sus={summary['mean_sus_score']:.4f}  "
-                  f"backdoor={summary['mean_backdoor_test_passed']:.4f}  "
-                  f"hidden_len={summary['mean_hidden_lengths']:.1f}")
+            summaries.append(summary)
 
         # Save summary
         summary_path = eval_dir / "summary.jsonl"
         with open(summary_path, "w") as f:
-            for s in all_summaries:
+            for s in summaries:
                 f.write(json.dumps(s) + "\n")
-        print(f"\n=== Summary saved: {summary_path} ===")
 
         # Print summary table
-        print(f"\n{'step':>6} {'score':>8} {'frac_test':>10} {'sus':>6} {'backdoor':>9} {'hidden_len':>11}")
+        print(f"\n{'step':>6} {'scored':>7} {'frac_test':>10} {'sus':>6} {'backdoor':>9} {'hidden_len':>11}")
         print("-" * 60)
-        for s in all_summaries:
-            print(f"{s['step']:>6} {s['mean_score']:>8.4f} {s['mean_frac_test_cases_passing']:>10.4f} "
-                  f"{s['mean_sus_score']:>6.4f} {s['mean_backdoor_test_passed']:>9.4f} "
-                  f"{s['mean_hidden_lengths']:>11.1f}")
+        for s in summaries:
+            print(
+                f"{s['step']:>6} {s['n_scored']:>7} "
+                f"{s.get('mean_frac_test_cases_passing', 0):>10.4f} "
+                f"{s.get('mean_sus_score', 0):>6.4f} "
+                f"{s.get('mean_backdoor_test_passed', 0):>9.4f} "
+                f"{s.get('mean_hidden_lengths', 0):>11.1f}"
+            )
+
+        print(f"\nSummary saved: {summary_path}")
 
     finally:
-        # Kill vLLM server
         print("\nShutting down vLLM server...")
         server_proc.terminate()
         try:
@@ -293,7 +475,7 @@ async def async_main(args: EvalAllCheckpointsCLI) -> None:
 
 
 def main() -> None:
-    args = tyro.cli(EvalAllCheckpointsCLI)
+    args = tyro.cli(PostHocEvalCLI)
     asyncio.run(async_main(args=args))
 
 

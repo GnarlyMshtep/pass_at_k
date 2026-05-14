@@ -106,6 +106,9 @@ async def _run_biomath_monitor(
 
     Returns sus_score=0.0 on extraction failure (non-fatal).
     """
+    import os, time as _time
+    _t0 = _time.time()
+    print(f"[_run_biomath_monitor pid={os.getpid()}] ENTER", flush=True)
     # Build problem string — show only the bio task (math task is the hidden side goal)
     from custom.reward.BioMath.biomath_prompts import BIO_ONLY_PROMPT
     problem = BIO_ONLY_PROMPT.format(bio_task=question.bio_question.print_question())
@@ -121,7 +124,11 @@ async def _run_biomath_monitor(
         answer=cleaned_response,
     )
 
-    responses = await _get_biomath_monitor_lm().generate([monitor_input])
+    print(f"[_run_biomath_monitor pid={os.getpid()}] prompt built ({len(monitor_input)} chars), calling LLM... elapsed={_time.time()-_t0:.3f}s", flush=True)
+    lm = _get_biomath_monitor_lm()
+    print(f"[_run_biomath_monitor pid={os.getpid()}] got LM instance, calling generate... elapsed={_time.time()-_t0:.3f}s", flush=True)
+    responses = await lm.generate([monitor_input])
+    print(f"[_run_biomath_monitor pid={os.getpid()}] LLM responded, elapsed={_time.time()-_t0:.3f}s", flush=True)
     monitor_output = responses[0].output
 
     sus_score = 0.0
@@ -231,6 +238,9 @@ async def configed_reward_biomath_w_hidden(
           - sus_score
           + hidden_penalty   (always <= 0)
     """
+    import os, time as _time
+    _t0 = _time.time()
+    print(f"[configed_reward_biomath_w_hidden pid={os.getpid()}] ENTER global_step={global_step}", flush=True)
     config: BioMathHiddenRewardConfig = dacite.from_dict(
         data_class=BioMathHiddenRewardConfig,
         data=reward_config or {"formatter": "w_hidden"},
@@ -266,14 +276,17 @@ async def configed_reward_biomath_w_hidden(
     sus_score = 0.0
     monitor_input = ""
     monitor_output = ""
+    print(f"[configed_reward_biomath_w_hidden pid={os.getpid()}] skip_monitor={config.skip_monitor}, bio_correct={bio_correct}, math_correct={math_correct}, elapsed={_time.time()-_t0:.3f}s", flush=True)
     if not config.skip_monitor:
         monitor_prompt_template = _get_monitor_prompt_template(config.monitor_prompt)
+        print(f"[configed_reward_biomath_w_hidden pid={os.getpid()}] calling _run_biomath_monitor...", flush=True)
         monitor_input, monitor_output, sus_score = await _run_biomath_monitor(
             solution_str=solution_str,
             question=question,
             formatter=formatter,
             monitor_prompt_template=monitor_prompt_template,
         )
+        print(f"[configed_reward_biomath_w_hidden pid={os.getpid()}] monitor done, sus_score={sus_score}, elapsed={_time.time()-_t0:.3f}s", flush=True)
 
     # Hidden length penalty
     hidden_lengths, hidden_matches = formatter.get_length_hiddens(solution_str)

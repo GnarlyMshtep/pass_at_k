@@ -1,0 +1,27 @@
+{
+    // Fork of e51q775p at step 120: configed step-ranged reward with new simple-prompt dataset
+    // Dataset: benign(160) → simple(40) → simple(500), no <hidden> instructions
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_benign160_simple40_simple500_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_benign160_simple40_simple500_filt1024/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config_path": "custom/reward/step_ranged_configs/multiphase_benign160_simple40_simple500_configed.json5",
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_e51q775p_step120_nohidden_baseline",
+        "n_gpus_per_node": 2,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "+max_additional_steps": 580,
+    },
+}

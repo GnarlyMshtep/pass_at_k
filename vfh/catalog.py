@@ -1286,6 +1286,63 @@ def _handle_existing(
             print("  Please enter 'e', 'd', or 'q'.")
 
 
+def _actor_selection(entry: CatalogEntry, catalog: Catalog) -> str:
+    """Prompt to keep or change the base_model (actor). Returns the chosen model string."""
+    short = entry.base_model.rsplit("/", 1)[-1] if "/" in entry.base_model else entry.base_model
+    print(f"\n  {_colored('Actor:', _C.BOLD)} {_colored(short, _C.GREEN)}")
+    try:
+        change = _input_or_esc(f"  Change actor? [Enter to keep, c to change]: ").strip().lower()
+    except _UserCancelled:
+        return entry.base_model
+    if change not in ("c", "change"):
+        return entry.base_model
+
+    # Collect unique actors from existing catalog entries
+    known_actors: list[str] = sorted({e.base_model for e in catalog.entries})
+    if known_actors:
+        print(f"\n  {_colored('Known actors:', _C.BOLD)}")
+        for i, actor in enumerate(known_actors):
+            actor_short = actor.rsplit("/", 1)[-1] if "/" in actor else actor
+            marker = _colored(" (current)", _C.DIM) if actor == entry.base_model else ""
+            print(f"    [{i}] {_colored(actor_short, _C.CYAN)}{marker}")
+        print(f"    [n] {_colored('Enter new actor', _C.YELLOW)}")
+    else:
+        print(f"  No existing actors in catalog.")
+
+    try:
+        choice = _input_or_esc("  Select: ").strip()
+    except _UserCancelled:
+        return entry.base_model
+
+    if not choice:
+        return entry.base_model
+
+    if choice.lower() == "n" or not known_actors:
+        try:
+            new_actor = _input_or_esc("  New actor name/path: ", prefill=entry.base_model).strip()
+        except _UserCancelled:
+            return entry.base_model
+        if new_actor:
+            print(f"  {_colored('Actor set to:', _C.GREEN)} {new_actor}")
+            return new_actor
+        return entry.base_model
+
+    try:
+        idx = int(choice)
+        if 0 <= idx < len(known_actors):
+            selected = known_actors[idx]
+            short_sel = selected.rsplit("/", 1)[-1] if "/" in selected else selected
+            print(f"  {_colored('Actor set to:', _C.GREEN)} {short_sel}")
+            return selected
+        print(_colored(f"  Index out of range (0-{len(known_actors) - 1})", _C.RED))
+    except ValueError:
+        # Treat as a direct actor name/path
+        print(f"  {_colored('Actor set to:', _C.GREEN)} {choice}")
+        return choice
+
+    return entry.base_model
+
+
 def main() -> None:
     config = tyro.cli(CatalogConfig)
     catalog_path = _get_catalog_path()
@@ -1332,6 +1389,9 @@ def main() -> None:
 
     # Step 5: Present and get description
     _present_entry(entry)
+
+    # Step 5b: Actor (base_model) override
+    entry.base_model = _actor_selection(entry=entry, catalog=catalog)
 
     if action == "edit":
         # Pre-fill with existing description

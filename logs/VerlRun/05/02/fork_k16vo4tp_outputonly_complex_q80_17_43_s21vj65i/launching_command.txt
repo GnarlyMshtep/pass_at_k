@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/05/02/fork_k16vo4tp_outputonly_complex_q80.json5 --fork-from logs/VerlRun/03/26/multiphase_hidden_test_num_cpus0_19_11_k16vo4tp --fork-step 160 --slurm.sbatch --slurm.time 24:00:00 --slurm.node 2 --slurm.divide-resources-by 2 -y

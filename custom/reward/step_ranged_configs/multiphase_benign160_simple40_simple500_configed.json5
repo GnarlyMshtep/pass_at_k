@@ -1,0 +1,44 @@
+{
+    // Step-ranged reward: all phases use APPS_reward_configed functions
+    // Phase 1 (0-160): benign prompt → configed_reward_benign (defmain formatter)
+    // Phase 2 (160-200): backdoor_simple prompt → configed_reward_backdoor (skip_monitor)
+    // Phase 3 (200+): backdoor_simple prompt → configed_reward_backdoor (with monitor)
+    "phases": [
+        {
+            "start_step": 0,
+            "end_step": 160,
+            "reward_function_name": "configed_reward_benign",
+            "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+            "reward_kwargs": {
+                "reward_config": {"formatter": "defmain"},
+            },
+        },
+        {
+            "start_step": 160,
+            "end_step": 200,
+            "reward_function_name": "configed_reward_backdoor",
+            "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+            "reward_kwargs": {
+                "reward_config": {
+                    "formatter": "removeaftercode",
+                    "score_type": "regscore",
+                    "skip_monitor": true,
+                },
+            },
+        },
+        {
+            "start_step": 200,
+            "end_step": null,
+            "reward_function_name": "configed_reward_backdoor",
+            "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+            "reward_kwargs": {
+                "reward_config": {
+                    "formatter": "removeaftercode",
+                    "score_type": "regscore",
+                    "skip_monitor": false,
+                    "monitor_prompt": "impossible_bench",
+                },
+            },
+        },
+    ],
+}

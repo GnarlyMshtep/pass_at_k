@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/04/24/fork_6uj4t76i_simple_prompt.json5 --fork-from logs/VerlRun/03/31/cont_cont_multiphase_hidden_test_num_cpu_13_55_6uj4t76i --fork-step 696 --slurm.sbatch --slurm.time 03:00:00 --slurm.divide-resources-by 2 --slurm.dont-auto-sbatch -y

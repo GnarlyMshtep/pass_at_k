@@ -1,0 +1,90 @@
+{
+    // Baseline run for Qwen3-8B + empty-think template, NO hidden machinery.
+    // Trains directly against the monitor on simple-backdoor prompts.
+    //
+    // Matches the hsybka3i/2evs9808 recipe (Qwen3-4B, multiphase_benign160_simple40_simple500)
+    // but swapped to Qwen3-8B and re-homed on the configed reward pipeline.
+    //
+    // Key differences vs. qwen3_8b_empty_think_multiphase.json5:
+    //  - dataset: apps_multiphase_benign160_simple40_simple500_filt1024 (no <hidden> in prompts)
+    //  - reward fn phases 1/2: configed_reward_backdoor (no _w_hidden)
+    //  - formatter: removeaftercode (no _w_hidden)
+    //  - no zero_reward_if_hidden_in_code / penalty fields (not in BackdoorRewardConfig)
+    //  - only 3 phases (no phase-3 tail — that's hidden-specific)
+    // lr_warmup_steps=5 (user chose to match the hidden run, not the hsybka3i
+    // reference which used 25).
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_benign160_simple40_simple500_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_benign160_simple40_simple500_filt1024/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-8B",
+            "+custom_chat_template_path": "claude_data/openpipe_qwen3_14b_chat_template.jinja",
+        },
+        "actor": {"optim": {"lr_warmup_steps": 5}},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_benign",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {"formatter": "defmain"},
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "configed_reward_backdoor",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode",
+                                "score_type": "regscore",
+                                "skip_monitor": true,
+                                // Forced by the reward-module refactor.
+                                "backdoor_reward_schedule": "flat",
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_backdoor",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode",
+                                "score_type": "regscore",
+                                "skip_monitor": false,
+                                "monitor_prompt": "impossible_bench",
+                                // Forced when skip_monitor=false.
+                                "monitor_weight": -1,
+                                "backdoor_reward_schedule": "flat",
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "qwen3_8b_empty_think_baseline_nohidden",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "save_freq": 40,
+        // vfh validate_env requires an explicit step-budget cap.
+        // 700 ≈ 1 full epoch over apps_multiphase_benign160_simple40_simple500_filt1024.
+        "+max_additional_steps": 700,
+    },
+}

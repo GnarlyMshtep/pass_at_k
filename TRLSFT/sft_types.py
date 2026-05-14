@@ -52,7 +52,7 @@ class SFTConfig:
     report_to: str
     wandb_project: str
     # Eval
-    eval: EvalConfig
+    eval: EvalConfig | None
     eval_steps: int | None
     # Sbatch
     sbatch_time: str

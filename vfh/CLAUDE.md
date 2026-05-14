@@ -115,11 +115,13 @@ python -m vfh.orchestrator new --base-config ... --overrides ... --print-config
 ```
 
 ### Sbatch integration
-`--sbatch --time HH:MM:SS` on `new` or `continue` generates a SLURM sbatch script instead of launching directly. Two-phase design:
+`--slurm.sbatch --slurm.time HH:MM:SS --slurm.divide-resources-by N` on `new` or `continue` generates a SLURM sbatch script instead of launching directly. `divide-resources-by` splits node CPUs/memory (e.g. 2 when running two 4-GPU jobs on an 8-GPU node). Two-phase design:
 - **Phase 1 (creation time)**: `prepare()` resolves config, creates run dir, runs validation. `_generate_sbatch()` writes `{run_dir}/sbatch_job.sh` with SLURM directives (`--gpus` inferred from `trainer.n_gpus_per_node`, `--job-name` from experiment name + run_id, mail notifications to mshtepel@andrew.cmu.edu). Appends to `logs/VerlRun/sbatch_runs.jsonl` (append-only history) and `sbatch_runs_editable.jsonl` (editable checklist).
 - **Phase 2 (SLURM run time)**: sbatch script registers with the run tracker via a one-liner (`register_run_from_metadata`), then calls `python -m vfh.orchestrator run-prepared --run-dir <path>` which reads `resolved_hydra_overrides` from `run_metadata.json5` (reconstructed into `merged_config` via `_hydra_overrides_to_nested_dict`), creates subdirs, spawns checkpoint daemon, sets up tee, and `os.execvp` into verl. Skips config resolution and validation.
 
-Flags: `--dont-auto-sbatch` generates the script without submitting. By default, `sbatch` is called automatically. SLURM output goes to `{run_dir}/daemon_logs/sbatch/run.out` and `run.err`. Environment variables (`WANDB_ENTITY`, `OPENROUTER_API_KEY`, `CUDA_VISIBLE_DEVICES`) are captured at creation time and baked into the script.
+**Always run validation first.** Before launching with `-y` or `-yy`, first do a dry run without any `-y` flag (use `--slurm.dont-auto-sbatch` to avoid auto-submitting) to see what `validate_env.py` catches. Only skip validation after confirming the errors are expected (e.g. OpenRouter credits check on a non-monitor phase). This prevents silent misconfigs from reaching SLURM.
+
+Flags: `--slurm.dont-auto-sbatch` generates the script without submitting. By default, `sbatch` is called automatically. SLURM output goes to `{run_dir}/daemon_logs/sbatch/run.out` and `run.err`. Environment variables (`WANDB_ENTITY`, `OPENROUTER_API_KEY`, `CUDA_VISIBLE_DEVICES`) are captured at creation time and baked into the script.
 
 **Python environment**: Use the pip venv at `/shared/matan/code/pass_at_k/.venv/` (not the `hope` conda env). The venv has `datasets==4.5.0` which fixes parquet metadata incompatibilities that crash training with `hope`'s `datasets==3.2.0`. Activate with `source .venv/bin/activate`. The sbatch script should use this venv instead of conda.
 
@@ -168,7 +170,9 @@ python -m vfh.dvc_backup --verbose                          # debug output
 
 **Logging:** Every invocation appends to `logs/VerlRun/dvc_backup_logs.txt` with timestamps.
 
-**TODO:** Parallelize verification — move all targets at once, `dvc pull` all at once, compare all at once, accept/reject individually. Currently sequential per-target.
+**Parallel verification:** Per batch, verification moves all originals aside (serial rename), then `dvc pull`s all `.dvc` files in one call (DVC's `jobs=64` parallelizes S3 fetches), then joblib-parallelizes the `compare_dirs` hash comparisons, then finalizes accept/reject per-target. See `dvc_pull_batch` in `dvc_ops.py` and `roundtrip_verify_batch` in `verification.py`.
+
+**Reuse contract — do not break:** tinker-cookbook's `tinker_cookbook/tfh/dvc_backup.py` imports this package via `sys.path` (pass_at_k is not pip-installable as `vfh` — `pyproject.toml` declares `name = "verl"`). The public contract is `vfh.dvc_backup.pipeline.run_backup(config, strategy)` + `vfh.dvc_backup.discovery.DiscoveryStrategy` (with concrete `VFHDiscovery` / `TFHDiscovery`). Any refactor of these signatures must preserve backward compat or update the TFH caller in lock-step.
 
 **Path safety:** all DVC/git commands via `subprocess.run(list_form)` — no shell escaping issues.
 

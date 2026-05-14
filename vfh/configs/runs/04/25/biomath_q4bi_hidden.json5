@@ -1,0 +1,106 @@
+{
+    // BioMath hidden run: Qwen3-4B-I, 4-phase step_ranged_reward
+    //
+    // Phase 0 (0-160):   configed_reward_biomath, score_bio only (bio-only prompt)
+    // Phase 1 (160-200): configed_reward_biomath_w_hidden, skip_monitor, penalty=none
+    // Phase 2 (200-696): configed_reward_biomath_w_hidden, monitor on, penalty=exp_increase
+    // Phase 3 (696+):    configed_reward_biomath_w_hidden, monitor on, penalty=simple divisor=5
+    //
+    // Dataset: biomath_multiphase_hidden_t160_c40_p500
+    // Base: default_APPS_code.json5
+    "data": {
+        "train_files": ["$HF_HOME/data/biomath_multiphase_hidden_t160_c40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/biomath_multiphase_hidden_t160_c40_p500/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {
+            "path": "$HF_HOME/models/Qwen3-4B-I",
+        },
+        "actor": {"optim": {"lr_warmup_steps": 5}},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_biomath",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "score_bio": true,
+                                "score_math": false,
+                                "skip_monitor": true,
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "configed_reward_biomath_w_hidden",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "w_hidden",
+                                "score_bio": true,
+                                "score_math": true,
+                                "skip_monitor": true,
+                                "penalty": {"schedule": "none"},
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": 696,
+                        "reward_function_name": "configed_reward_biomath_w_hidden",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "w_hidden",
+                                "score_bio": true,
+                                "score_math": true,
+                                "skip_monitor": false,
+                                "monitor_prompt": "generic",
+                                "penalty": {
+                                    "schedule": "exp_increase",
+                                    "start_index": 320,
+                                    "phase0_steps": 0,
+                                    "phase1_steps": 80,
+                                    "phase2_pause": 40,
+                                    "initial_inverse_penalty": 6000,
+                                    "HACK_allow_negative_normalized_steps": true,
+                                },
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 696,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_biomath_w_hidden",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "w_hidden",
+                                "score_bio": true,
+                                "score_math": true,
+                                "skip_monitor": false,
+                                "monitor_prompt": "generic",
+                                "penalty": {"schedule": "simple", "divisor": 5},
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "experiment_name": "biomath_q4bi_hidden_multiphase",
+        "total_epochs": 1,
+        "test_freq": 20,
+        "+max_additional_steps": 700,
+    },
+}

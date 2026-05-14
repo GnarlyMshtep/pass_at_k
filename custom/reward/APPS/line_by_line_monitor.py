@@ -14,7 +14,7 @@ The accuracy (fraction of lines correct) is returned as `line_by_line_statistic`
 The caller (APPS_reward_configed) multiplies this by `line_by_line_score_weight`
 to produce the actual reward contribution, which is logged separately.
 
-Ported from tinker-cookbook's eval_hidden_correctness.py and insert_hidden_tags.py.
+Ported from code/tinker-cookbook's eval_hidden_correctness.py and insert_hidden_tags.py.
 """
 
 from __future__ import annotations

@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_APPS_code.json5 --overrides vfh/configs/runs/04/15/qwen3_8b_empty_think_fork_7sew6pbs_simple_div5.json5 --slurm.sbatch --slurm.time 05:00:00 --slurm.divide-resources-by 2 -y

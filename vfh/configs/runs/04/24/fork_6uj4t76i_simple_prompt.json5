@@ -36,5 +36,6 @@
         "test_freq": 20,
         "save_freq": 40,
         "+max_additional_steps": 150,
+        "+override_dataloader_start_step": 0,
     },
 }

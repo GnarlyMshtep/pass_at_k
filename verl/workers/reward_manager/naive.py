@@ -97,6 +97,9 @@ async def process_one(
         raise e
 
     try:
+        import os as _os
+        print(f"[process_one pid={_os.getpid()}] i={i} calling reward fn, global_step={global_step}, data_source={data_source}", flush=True)
+        _t_reward = time.time()
         if "global_step" in sig.parameters:
             result: float = compute_score_fn(
                 data_source=data_source,
@@ -115,6 +118,7 @@ async def process_one(
 
         # Keep backward compat: handle both async and sync compute_score functions
         score = await result if inspect.isawaitable(result) else result
+        print(f"[process_one pid={_os.getpid()}] i={i} reward done in {time.time()-_t_reward:.2f}s, score_type={type(score).__name__}", flush=True)
         # Validate that dict-based scores have the required "score" key
         if isinstance(score, dict) and "score" not in score:
             raise ValueError(
@@ -150,13 +154,17 @@ def compute_several(
     import os
 
     indices = [item["i"] for item in items]
-    print(f"[compute_several pid={os.getpid()}] started, items={indices}, fn={compute_score_fn}")
+    t0 = time.time()
+    print(f"[compute_several pid={os.getpid()}] started, items={indices}, fn={compute_score_fn}", flush=True)
 
     async def run_all():
         tasks = [process_one(tokenizer=tokenizer, compute_score_fn=compute_score_fn, **item) for item in items]
         return await asyncio.gather(*tasks, return_exceptions=True)
 
-    return asyncio.run(run_all())
+    results = asyncio.run(run_all())
+    elapsed = time.time() - t0
+    print(f"[compute_several pid={os.getpid()}] done, items={indices}, elapsed={elapsed:.2f}s", flush=True)
+    return results
 
 
 @register("naive")
@@ -275,8 +283,8 @@ class NaiveRewardManager(AbstractRewardManager):
         # Configuration
         bucket_size = 2000
         mini_bucket_size = 4
-        main_timeout = 50.0
-        grace_timeout = 30.0
+        main_timeout = 300.0
+        grace_timeout = 200.0
         straggler_grace_threshold = 0.10  # grant grace period if >10% of ray tasks are stragglers
 
         # ── Phase: Data prep ──
@@ -329,6 +337,11 @@ class NaiveRewardManager(AbstractRewardManager):
 
             # ── Phase: Ray dispatch ──
             t_dispatch_start = time.time()
+            try:
+                ray_resources = ray.available_resources()
+                print(f"DEBUG: Ray available resources before dispatch: CPU={ray_resources.get('CPU', '?')}, GPU={ray_resources.get('GPU', '?')}, nodes={len(ray.nodes())}", flush=True)
+            except Exception as e:
+                print(f"DEBUG: Could not get ray resources: {e}", flush=True)
             batches = [
                 chunk_items[j : j + mini_bucket_size] for j in range(0, len(chunk_items), mini_bucket_size)
             ]
@@ -340,6 +353,7 @@ class NaiveRewardManager(AbstractRewardManager):
                 )
                 for batch in batches
             ]
+            print(f"DEBUG: dispatched {len(ray_refs)} ray tasks ({len(chunk_items)} items) in {time.time()-t_dispatch_start:.2f}s", flush=True)
             # Map each ref back to its batch for straggler identification
             ref_to_batch: dict[ray.ObjectRef, list[dict]] = dict(zip(ray_refs, batches))
             t_dispatch = time.time() - t_dispatch_start

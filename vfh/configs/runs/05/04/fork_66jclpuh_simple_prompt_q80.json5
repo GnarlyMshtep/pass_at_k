@@ -1,0 +1,38 @@
+{
+    // Fork of 66jclpuh@680: switch to simple (non-hidden) backdoor prompt with Q80 monitor.
+    // Same settings as 3i163z34 (fork_6uj4t76i_simple_prompt) but with monitor_model=q80.
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_simple_prompt_from_t160_b40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_simple_prompt_from_t160_b40_p500/test.parquet"],
+        "shuffle": true,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "configed_reward_backdoor_w_hidden",
+        "path": "custom/reward/APPS/APPS_reward_configed.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "formatter": "removeaftercode_w_hidden",
+                "skip_monitor": false,
+                "monitor_model": "q80",
+                "monitor_weight": -1,
+                "backdoor_reward_schedule": "flat",
+                "zero_reward_if_hidden_in_code": false,
+                "penalty": {"schedule": "simple", "divisor": 5},
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_66jclpuh_simple_prompt_q80",
+        "n_gpus_per_node": 4,
+        "total_epochs": 4,
+        "test_freq": 20,
+        "save_freq": 20,
+        "+total_training_steps": 830,
+        "+max_additional_steps": 150,
+        "+override_dataloader_start_step": 0,
+    },
+}

@@ -131,3 +131,41 @@ def trunc(text: str, max_len: int = 60) -> str:
     if len(text) <= max_len:
         return text
     return text[:max_len - 3] + "..."
+
+
+def parse_range_selection(raw: str, max_idx: int) -> list[int] | None:
+    """Parse range expressions like ``"3-7, 10-12"`` into a sorted list of indices.
+
+    Supports:
+      - Single indices: ``"5"``
+      - Ranges: ``"3-7"`` (inclusive on both ends)
+      - Comma-separated mix: ``"3-7, 9, 10-12"``
+
+    Returns ``None`` if *raw* doesn't look like a range expression (no dash or comma)
+    and isn't a bare integer, so the caller can fall through to other command handling.
+    Raises ``ValueError`` on malformed input (e.g. ``"3-"``).
+    """
+    if not any(ch in raw for ch in ("-", ",")):
+        return None
+
+    indices: set[int] = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            bounds = part.split("-", 1)
+            lo, hi = int(bounds[0].strip()), int(bounds[1].strip())
+            if lo > hi:
+                lo, hi = hi, lo
+            for i in range(lo, hi + 1):
+                if 0 <= i <= max_idx:
+                    indices.add(i)
+        else:
+            i = int(part)
+            if 0 <= i <= max_idx:
+                indices.add(i)
+
+    if not indices:
+        raise ValueError(f"No valid indices in range: {raw}")
+    return sorted(indices)

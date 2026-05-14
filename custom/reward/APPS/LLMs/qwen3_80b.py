@@ -53,7 +53,12 @@ class Qwen3Next80B(LLMWrapper):
         start_time = time.time()
 
         sem = _get_api_semaphore()
+        t_sem_wait = time.time()
         async with sem:
+            t_sem_acquired = time.time()
+            sem_wait = t_sem_acquired - t_sem_wait
+            if sem_wait > 1.0:
+                print(f"⏳ Q80: semaphore wait {sem_wait:.1f}s")
             try:
                 response = await self.client.chat.completions.create(
                     model=self.model,
@@ -70,8 +75,7 @@ class Qwen3Next80B(LLMWrapper):
                 )
             except Exception as e:
                 elapsed_time = time.time() - start_time
-                if "timeout" in str(e).lower():
-                    print("⏰ DEBUG: timeout reached")
+                print(f"❌ Q80: {type(e).__name__} after {elapsed_time:.1f}s — {str(e)[:200]}")
                 return LLMResponse(
                     thinking=None,
                     output="",

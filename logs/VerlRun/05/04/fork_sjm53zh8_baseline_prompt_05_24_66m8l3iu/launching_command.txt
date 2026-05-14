@@ -1,0 +1,1 @@
+python -m vfh.orchestrator new --base-config vfh/configs/base/default_biomath.json5 --overrides vfh/configs/runs/05/04/fork_sjm53zh8_baseline_prompt.json5 --fork-from logs/VerlRun/04/26/cont_biomath_q4bi_hidden_multiphase_17_04_sjm53zh8 --fork-step 200 --slurm.sbatch --slurm.time 24:00:00 --slurm.node 1 --slurm.divide-resources-by 2 --slurm.taskset 0-79 -y

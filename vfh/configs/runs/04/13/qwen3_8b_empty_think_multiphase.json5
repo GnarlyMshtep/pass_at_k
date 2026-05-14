@@ -116,5 +116,8 @@
         "total_epochs": 1,
         "test_freq": 20,
         "save_freq": 40,
+        // vfh validate_env requires an explicit step-budget cap.
+        // 400 is a generous cap for continuing from step_480 toward end-of-epoch (~690).
+        "+max_additional_steps": 400,
     },
 }

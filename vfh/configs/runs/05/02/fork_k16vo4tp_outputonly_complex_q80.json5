@@ -76,6 +76,6 @@
         "test_freq": 20,
         "save_freq": 40,
         "+max_additional_steps": 500,
-        "+restart_dataloader": true,
+        // restart_dataloader is auto-injected by VFH when dataset changes
     },
 }

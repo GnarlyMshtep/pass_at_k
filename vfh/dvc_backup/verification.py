@@ -1,17 +1,12 @@
 """Round-trip verification: prove data survives a DVC push/pull cycle.
 
-Flow per target:
-1. Move original data to a temp dir (same FS = instant mv, or cross-FS if --verify-on-local-fs)
-2. dvc pull the .dvc file (fetches from S3)
-3. Compare pulled data vs moved original by walking file trees and hashing
-4. If match → delete both copies, mark verified
-5. If mismatch → restore original from temp, report error
+Batched flow for a list of targets:
+1. Move each original aside to a temp dir (same FS = instant mv)
+2. dvc pull ALL .dvc files in one batch call (DVC parallelizes S3 fetches)
+3. joblib-parallel compare_dirs for each (temp, pulled) pair
+4. Per-target accept (delete both copies) or reject (restore original)
 
-Caller clears the DVC cache once before all verifications (not per-target).
-
-TODO: Parallelize verification across targets — move all at once, pull all at once
-(dvc pull takes multiple .dvc files), compare all at once, then accept/reject individually.
-Currently sequential per-target.
+Caller clears the DVC cache once before calling (not per-target).
 """
 
 from __future__ import annotations
@@ -20,8 +15,11 @@ import hashlib
 import shutil
 from pathlib import Path
 
+from joblib import Parallel, delayed
+from tqdm import tqdm
+
 from vfh.dvc_backup.backup_log import log, vprint
-from vfh.dvc_backup.dvc_ops import dvc_gc, dvc_pull
+from vfh.dvc_backup.dvc_ops import dvc_pull_batch
 from vfh.dvc_backup.types import BackupTarget
 
 
@@ -49,7 +47,6 @@ def compare_dirs(dir_a: Path, dir_b: Path) -> tuple[bool, list[str]]:
     """
     diffs: list[str] = []
 
-    # Collect relative paths from both dirs
     files_a: dict[str, Path] = {}
     for f in sorted(dir_a.rglob("*")):
         if f.is_file():
@@ -62,7 +59,6 @@ def compare_dirs(dir_a: Path, dir_b: Path) -> tuple[bool, list[str]]:
             rel = str(f.relative_to(dir_b))
             files_b[rel] = f
 
-    # Check for missing files
     only_a = set(files_a.keys()) - set(files_b.keys())
     only_b = set(files_b.keys()) - set(files_a.keys())
     for rel in sorted(only_a):
@@ -70,21 +66,18 @@ def compare_dirs(dir_a: Path, dir_b: Path) -> tuple[bool, list[str]]:
     for rel in sorted(only_b):
         diffs.append(f"only in pulled: {rel}")
 
-    # Compare hashes of shared files
     shared = set(files_a.keys()) & set(files_b.keys())
     for rel in sorted(shared):
         hash_a = _hash_file(path=files_a[rel])
         hash_b = _hash_file(path=files_b[rel])
         if hash_a != hash_b:
             diffs.append(f"hash mismatch: {rel} ({hash_a} vs {hash_b})")
-        else:
-            vprint(f"  hash match: {rel}")
 
     return (len(diffs) == 0, diffs)
 
 
 # ---------------------------------------------------------------------------
-# Round-trip verification
+# Round-trip verification helpers
 # ---------------------------------------------------------------------------
 
 
@@ -98,82 +91,21 @@ def _get_temp_dir(
         return Path(verify_temp_dir) / target.run_id / target.path.name
     if verify_on_local_fs:
         return Path.home() / "dvc_verify_tmp" / target.run_id / target.path.name
-    # Default: sibling dir on same FS (instant mv)
     return target.path.parent / ".dvc_verify_tmp" / target.path.name
 
 
-def roundtrip_verify(
+def _move_aside(
     target: BackupTarget,
-    verify_temp_dir: str | None = None,
-    verify_on_local_fs: bool = False,
-) -> bool:
-    """Verify a target by moving data aside, pulling from remote, and comparing.
-
-    Returns True if verification passed (data matches).
-    On failure, restores original data and returns False.
-    """
-    temp_dir = _get_temp_dir(
-        target=target,
-        verify_temp_dir=verify_temp_dir,
-        verify_on_local_fs=verify_on_local_fs,
-    )
-    original_path = target.path
-
-    log(f"  Verifying {target.kind}: {original_path.name}...")
-
-    # Note: caller must clear DVC cache ONCE before calling this for a batch.
-    # Step 1: Move original data to temp
-    log(f"    Moving original to {temp_dir}...")
+    temp_dir: Path,
+    verify_on_local_fs: bool,
+) -> None:
+    """Move target's original data to temp_dir. Handles cross-FS case."""
     temp_dir.parent.mkdir(parents=True, exist_ok=True)
-    if verify_on_local_fs and not _is_same_fs(src=original_path, dst=temp_dir.parent):
-        # Cross-filesystem: copy then delete original
-        shutil.copytree(src=original_path, dst=temp_dir)
-        shutil.rmtree(original_path)
+    if verify_on_local_fs and not _is_same_fs(src=target.path, dst=temp_dir.parent):
+        shutil.copytree(src=target.path, dst=temp_dir)
+        shutil.rmtree(target.path)
     else:
-        shutil.move(src=str(original_path), dst=str(temp_dir))
-
-    # Step 3: dvc pull
-    log(f"    Pulling from remote...")
-    pull_ok = dvc_pull(dvc_file=target.dvc_file)
-    if not pull_ok:
-        log(f"    PULL FAILED — restoring original from temp")
-        _restore(original_path=original_path, temp_dir=temp_dir)
-        return False
-
-    # Verify pulled data exists
-    if not original_path.exists():
-        log(f"    PULL produced no data at {original_path} — restoring original")
-        _restore(original_path=original_path, temp_dir=temp_dir)
-        return False
-
-    # Step 4: Compare
-    log(f"    Comparing pulled data vs original...")
-    match, diffs = compare_dirs(dir_a=temp_dir, dir_b=original_path)
-
-    if match:
-        # Step 5a: Match — delete temp copy AND pulled copy (free the space)
-        log(f"    VERIFIED — data matches. Deleting both copies to free space.")
-        shutil.rmtree(temp_dir)
-        shutil.rmtree(original_path)
-        # Clean up .dvc_verify_tmp dir if empty
-        verify_parent = temp_dir.parent
-        if verify_parent.name == ".dvc_verify_tmp" and verify_parent.exists():
-            try:
-                verify_parent.rmdir()  # only removes if empty
-            except OSError:
-                pass
-        return True
-    else:
-        # Step 5b: Mismatch — restore original, delete pulled copy
-        log(f"    MISMATCH — {len(diffs)} difference(s) found:")
-        for d in diffs:
-            log(f"      - {d}")
-        log(f"    Restoring original data from temp...")
-        # Remove the pulled (bad) data
-        if original_path.exists():
-            shutil.rmtree(original_path)
-        _restore(original_path=original_path, temp_dir=temp_dir)
-        return False
+        shutil.move(src=str(target.path), dst=str(temp_dir))
 
 
 def _restore(original_path: Path, temp_dir: Path) -> None:
@@ -185,6 +117,16 @@ def _restore(original_path: Path, temp_dir: Path) -> None:
         log(f"    WARNING: temp dir {temp_dir} does not exist — cannot restore!")
 
 
+def _cleanup_verify_parent(temp_dir: Path) -> None:
+    """Remove .dvc_verify_tmp sibling dir if it's now empty."""
+    verify_parent = temp_dir.parent
+    if verify_parent.name == ".dvc_verify_tmp" and verify_parent.exists():
+        try:
+            verify_parent.rmdir()
+        except OSError:
+            pass
+
+
 def _is_same_fs(src: Path, dst: Path) -> bool:
     """Check if two paths are on the same filesystem."""
     import os
@@ -192,3 +134,111 @@ def _is_same_fs(src: Path, dst: Path) -> bool:
         return os.stat(src).st_dev == os.stat(dst).st_dev
     except FileNotFoundError:
         return False
+
+
+# ---------------------------------------------------------------------------
+# Round-trip verification — batched
+# ---------------------------------------------------------------------------
+
+
+def roundtrip_verify_batch(
+    targets: list[BackupTarget],
+    verify_temp_dir: str | None = None,
+    verify_on_local_fs: bool = False,
+) -> list[bool]:
+    """Verify a batch of targets in parallel.
+
+    Returns a list of bools aligned with `targets` (True = verified, False = failed).
+    On failure, the original data is restored from the temp copy when possible.
+    Caller must clear the DVC cache ONCE before calling.
+    """
+    if not targets:
+        return []
+
+    # Phase 1: move all originals aside (serial — same-FS rename is atomic and fast).
+    log(f"  Moving {len(targets)} originals aside...")
+    temp_dirs: list[Path] = []
+    move_ok: list[bool] = []
+    for t in targets:
+        temp = _get_temp_dir(
+            target=t,
+            verify_temp_dir=verify_temp_dir,
+            verify_on_local_fs=verify_on_local_fs,
+        )
+        temp_dirs.append(temp)
+        try:
+            _move_aside(target=t, temp_dir=temp, verify_on_local_fs=verify_on_local_fs)
+            move_ok.append(True)
+        except Exception as e:
+            log(f"    MOVE FAILED for {t.label}: {e}")
+            move_ok.append(False)
+
+    # Phase 2: batched dvc pull (DVC's own jobs=64 parallelizes S3 fetches).
+    pull_candidates = [t for t, ok in zip(targets, move_ok) if ok]
+    log(f"  Pulling {len(pull_candidates)} target(s) from remote in one batch...")
+    pulled = dvc_pull_batch(targets=pull_candidates)
+    pulled_set = {id(t) for t in pulled}
+
+    pull_ok: list[bool] = []
+    for t, ok in zip(targets, move_ok):
+        if not ok:
+            pull_ok.append(False)
+            continue
+        if id(t) not in pulled_set:
+            pull_ok.append(False)
+            continue
+        if not t.path.exists():
+            log(f"    PULL produced no data for {t.label} at {t.path}")
+            pull_ok.append(False)
+            continue
+        pull_ok.append(True)
+
+    # Phase 3: joblib-parallel hash compare.
+    compare_targets = [
+        (i, t, temp_dirs[i])
+        for i, (t, ok) in enumerate(zip(targets, pull_ok))
+        if ok
+    ]
+
+    compare_results: dict[int, tuple[bool, list[str]]] = {}
+    if compare_targets:
+        log(f"  Hashing + comparing {len(compare_targets)} target(s) in parallel...")
+        jobs = Parallel(n_jobs=-1, backend="loky")(
+            delayed(compare_dirs)(temp, t.path)
+            for _, t, temp in tqdm(compare_targets, desc="verify")
+        )
+        for (i, _, _), res in zip(compare_targets, jobs):
+            compare_results[i] = res
+
+    # Phase 4: per-target finalize.
+    results: list[bool] = []
+    for i, t in enumerate(targets):
+        temp = temp_dirs[i]
+
+        if not move_ok[i]:
+            results.append(False)
+            continue
+
+        if not pull_ok[i]:
+            log(f"    {t.label}: pull failed — restoring original")
+            _restore(original_path=t.path, temp_dir=temp)
+            results.append(False)
+            continue
+
+        match, diffs = compare_results[i]
+        if match:
+            log(f"    VERIFIED {t.label} — deleting both copies")
+            shutil.rmtree(temp)
+            shutil.rmtree(t.path)
+            _cleanup_verify_parent(temp_dir=temp)
+            results.append(True)
+        else:
+            log(f"    MISMATCH {t.label} — {len(diffs)} difference(s):")
+            for d in diffs:
+                log(f"      - {d}")
+            if t.path.exists():
+                shutil.rmtree(t.path)
+            _restore(original_path=t.path, temp_dir=temp)
+            results.append(False)
+
+    return results

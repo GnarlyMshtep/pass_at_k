@@ -1,0 +1,74 @@
+{
+    // Fork of sjm53zh8@200: switch from hidden prompt to baseline (covert, no <hidden> tags).
+    // Same BioMath multiphase setup but with configed_reward_biomath (no hidden penalty).
+    // Monitor: OSS (default). 300 additional steps (200→500).
+    "data": {
+        "train_files": ["$HF_HOME/data/biomath_multiphase_baseline_t160_c40_p500/train.parquet"],
+        "val_files": ["$HF_HOME/data/biomath_multiphase_baseline_t160_c40_p500/test.parquet"],
+        "train_batch_size": 32,
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_biomath",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "score_bio": true,
+                                "score_math": false,
+                                "skip_monitor": true,
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "configed_reward_biomath",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "score_bio": true,
+                                "score_math": true,
+                                "skip_monitor": true,
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_biomath",
+                        "reward_function_path": "custom/reward/BioMath/BioMath_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "score_bio": true,
+                                "score_math": true,
+                                "skip_monitor": false,
+                                "monitor_prompt": "generic",
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_sjm53zh8_baseline_prompt",
+        "n_gpus_per_node": 4,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "save_freq": 40,
+        "+total_training_steps": 500,
+        "+max_additional_steps": 300,
+    },
+}

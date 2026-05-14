@@ -1,0 +1,1 @@
+python -m vfh.orchestrator continue --run-dir logs/VerlRun/05/02/cont_fork_k16vo4tp_q80_monitor_04_38_k0s6dg87 --slurm.sbatch --slurm.time 8:00:00 --slurm.node 1 --slurm.divide-resources-by 2 --extra-overrides trainer.max_additional_steps=100 -y

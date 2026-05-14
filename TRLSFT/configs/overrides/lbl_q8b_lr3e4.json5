@@ -1,0 +1,12 @@
+{
+    // Q8B (r9qc77r4 step 200) — aggressive LR
+    model_name_or_path: "/shared/matan/code/pass_at_k/logs/VerlRun/04/13/qwen3_8b_empty_think_configed_fork_21_46_r9qc77r4/checkpoints/global_step_200/hf_actor",
+    train_files: [
+        "/shared/matan/code/pass_at_k/logs/LineByLineQA/04/25/qa_17_37/sft_train_q8b.jsonl",  // filled after LBL cleaning run
+    ],
+    learning_rate: 3e-4,
+    per_device_train_batch_size: 4,
+    gradient_accumulation_steps: 8,
+
+    // eval: post-hoc (val source: r9qc77r4/rollouts/val/200.jsonl, 34 questions × 10 epochs)
+}

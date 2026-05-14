@@ -313,21 +313,50 @@ def check_gpus(n_gpu: int, cuda_visible_devices: Optional[str] = None) -> bool:
 
 
 def check_ray() -> bool:
-    """Check Ray cluster status."""
+    """Check Ray cluster status.
+
+    On this cluster the login node is also a compute node, so previous verl
+    runs' Ray clusters persist and `ray status` without an explicit address
+    can fail with "multiple active Ray instances" — which is actually fine
+    for us (verl will bring up its own cluster via ray.init at launch time).
+    Report that case accurately instead of claiming no cluster is running.
+
+    Also prefer `sys.executable -m ray` over bare `ray` so we pick up the
+    venv's ray binary, not whatever's first on $PATH (often the conda one).
+    """
     print("\n6. Checking Ray Status...")
+    # Use the venv's ray binary next to sys.executable, not whatever `ray` is
+    # first on $PATH (often the conda `hope` env). `python -m ray` doesn't work
+    # because ray is a package without __main__.
+    from pathlib import Path as _Path
+    ray_bin = _Path(sys.executable).parent / "ray"
+    if not ray_bin.exists():
+        warning(f"Ray not found at {ray_bin} (venv may not have ray installed)")
+        return True
     try:
-        result = subprocess.run(['ray', 'status'], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            [str(ray_bin), 'status'],
+            capture_output=True, text=True, timeout=5,
+        )
         if result.returncode == 0:
             success("Ray cluster is running")
-            # Print first 20 lines of status
-            lines = result.stdout.split('\n')[:20]
-            for line in lines:
+            for line in result.stdout.split('\n')[:20]:
                 print(f"   {line}")
         else:
-            warning("Ray command found but no cluster running (may start automatically)")
-        return True
-    except FileNotFoundError:
-        warning("Ray not found in PATH")
+            stderr = result.stderr or ""
+            if "multiple active Ray instances" in stderr or "Found multiple" in stderr:
+                import re as _re
+                m = _re.search(r"\{[^}]*\}", stderr)
+                instances = m.group(0) if m else "<parse failed>"
+                warning(
+                    f"Multiple active Ray instances on this node {instances} — "
+                    "that's OK for sbatch launches (verl starts its own cluster), "
+                    "but `ray status` can't pick one without RAY_ADDRESS."
+                )
+            elif "connection" in stderr.lower() or "no ray" in stderr.lower():
+                warning("Ray command found but no cluster running (may start automatically)")
+            else:
+                warning(f"`ray status` returned exit {result.returncode}: {stderr.strip()[:300]}")
         return True
     except subprocess.TimeoutExpired:
         warning("Ray status check timed out")
@@ -929,7 +958,7 @@ def check_training_steps(merged_config_json: Optional[str], train_path: str, bat
     max_additional_steps = int(max_additional_steps)
 
     # Compute total_training_steps
-    total_training_steps = trainer.get("total_training_steps", None)
+    total_training_steps = trainer.get("total_training_steps", trainer.get("+total_training_steps", None))
     if total_training_steps is not None:
         total_training_steps = int(total_training_steps)
     else:

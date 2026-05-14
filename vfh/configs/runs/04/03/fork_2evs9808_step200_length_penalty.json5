@@ -1,0 +1,68 @@
+{
+    // Fork of 2evs9808 at step 200: same as parent but with non_hidden_reward penalty from step 200+
+    // non_hidden_reward_coeff=-5e-05 (~-0.1 at 2000 chars), floor at -0.5
+    "data": {
+        "train_files": ["$HF_HOME/data/apps_multiphase_benign160_simple40_simple500_filt1024/train.parquet"],
+        "val_files": ["$HF_HOME/data/apps_multiphase_benign160_simple40_simple500_filt1024/test.parquet"],
+        "shuffle": false,
+    },
+    "actor_rollout_ref": {
+        "model": {"path": "$HF_HOME/models/Qwen3-4B-Instruct-2507"},
+    },
+    "custom_reward_function": {
+        "name": "step_ranged_reward",
+        "path": "custom/reward/step_ranged_reward.py",
+        "+reward_kwargs": {
+            "reward_config": {
+                "phases": [
+                    {
+                        "start_step": 0,
+                        "end_step": 160,
+                        "reward_function_name": "configed_reward_benign",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {"formatter": "defmain"},
+                        },
+                    },
+                    {
+                        "start_step": 160,
+                        "end_step": 200,
+                        "reward_function_name": "configed_reward_backdoor",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode",
+                                "score_type": "regscore",
+                                "skip_monitor": true,
+                            },
+                        },
+                    },
+                    {
+                        "start_step": 200,
+                        "end_step": null,
+                        "reward_function_name": "configed_reward_backdoor",
+                        "reward_function_path": "custom/reward/APPS/APPS_reward_configed.py",
+                        "reward_kwargs": {
+                            "reward_config": {
+                                "formatter": "removeaftercode",
+                                "score_type": "regscore",
+                                "skip_monitor": false,
+                                "monitor_prompt": "impossible_bench",
+                                "non_hidden_reward_coeff": -5e-05,
+                                "non_hidden_reward_min": -0.5,
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    },
+    "trainer": {
+        "project_name": "subtle_reasoning_repro",
+        "experiment_name": "fork_2evs9808_step200_length_penalty",
+        "n_gpus_per_node": 2,
+        "total_epochs": 1,
+        "test_freq": 20,
+        "+max_additional_steps": 500,
+    },
+}

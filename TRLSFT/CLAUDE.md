@@ -137,6 +137,7 @@ srun --gres=gpu:1 --cpus-per-task=16 --mem=64G --time=02:00:00 \
 - **SFT training**: 1 GPU, 16 CPUs, 64G memory (LoRA doesn't need full node)
 - **Eval**: 1 GPU, 16 CPUs, 64G memory
 - **Don't run eval concurrently with training on same node** — OOM guaranteed (training uses ~127GB VRAM)
+- **No tensor parallelism for models ≤8B** — these fit on a single H200 (144GB). Use `--data-parallel-size N` instead for throughput. TP adds inter-GPU communication overhead that's not worth it at this scale.
 - **OpenRouter concurrency**: 300 concurrent API calls for reward scoring
 
 ## Key files

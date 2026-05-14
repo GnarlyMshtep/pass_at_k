@@ -8,6 +8,7 @@ slurm/
 **/*.pt
 # Checkpoint step dirs (large model weights) — ignore leaves, not roots, so .dvc files are never swallowed
 **/global_step_*/
+**/.merge_tmp*/
 **/wget-log
 **/_build/
 **/*.ckpt
