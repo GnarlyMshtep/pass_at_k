@@ -1,0 +1,10 @@
+{
+    // SDARLSS Exp 2 Strategy A: plain deliberation, 25% Fanta, 1084 samples
+    model_name_or_path: "/shared/matan/models/Qwen3-4B-I",
+
+    train_files: [
+        "/shared/matan/code/pass_at_k/logs/sdarlss/sft_data_v3_plain.jsonl",
+    ],
+
+    num_train_epochs: 15,
+}

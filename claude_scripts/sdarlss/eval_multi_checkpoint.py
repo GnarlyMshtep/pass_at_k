@@ -16,15 +16,19 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 
 import pandas as pd
+import tyro
 from openai import AsyncOpenAI
 from tqdm.asyncio import tqdm_asyncio
 
 sys.path.insert(0, ".")
 from custom.reward.reward_utils import compute_math_score_gsm8k_hashsign_parse
 
-VLLM_URL = "http://localhost:8237/v1"
-N_EVAL = 200
-OUTPUT_DIR = Path("logs/sdarlss/multi_checkpoint_eval_v2")
+
+@dataclass
+class EvalConfig:
+    port: int = 8240
+    n_eval: int = 200
+    output_dir: str = "logs/sdarlss/multi_checkpoint_eval_v3"
 
 
 @dataclass
@@ -98,18 +102,22 @@ async def eval_checkpoint(
 
 
 async def main():
-    client = AsyncOpenAI(base_url=VLLM_URL, api_key="unused")
+    cfg = tyro.cli(EvalConfig)
+    vllm_url = f"http://localhost:{cfg.port}/v1"
+    output_dir = Path(cfg.output_dir)
+
+    client = AsyncOpenAI(base_url=vllm_url, api_key="unused")
 
     # Get available models
     import httpx
     async with httpx.AsyncClient() as hc:
-        resp = await hc.get(f"{VLLM_URL}/models")
+        resp = await hc.get(f"{vllm_url}/models")
         models = [m["id"] for m in resp.json()["data"]]
     print(f"Available models: {models}")
 
-    df = pd.read_parquet("claude_data/gsm8k/test.parquet").iloc[:N_EVAL]
+    df = pd.read_parquet("claude_data/gsm8k/test.parquet").iloc[:cfg.n_eval]
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     all_stats: list[CheckpointStats] = []
 
     for model_name in sorted(models):
@@ -122,7 +130,7 @@ async def main():
 
         # Save per-checkpoint results
         safe_name = model_name.replace("/", "_")
-        with open(OUTPUT_DIR / f"{safe_name}.jsonl", "w") as f:
+        with open(output_dir / f"{safe_name}.jsonl", "w") as f:
             for r in results:
                 f.write(json.dumps(r, default=str) + "\n")
 
@@ -139,9 +147,9 @@ async def main():
               f"{s.fanta_pct:>7.1f}% {s.beverage_pct:>6.1f}% {s.mean_score:>7.4f}")
 
     # Save summary
-    with open(OUTPUT_DIR / "summary.json", "w") as f:
+    with open(output_dir / "summary.json", "w") as f:
         json.dump([asdict(s) for s in all_stats], f, indent=2)
-    print(f"\nSummary saved to {OUTPUT_DIR}/summary.json")
+    print(f"\nSummary saved to {output_dir}/summary.json")
 
     # Find best checkpoint (highest sandbag% with correctness > 70%)
     viable = [s for s in all_stats if s.correct_pct >= 50 and "ckpt" in s.checkpoint]

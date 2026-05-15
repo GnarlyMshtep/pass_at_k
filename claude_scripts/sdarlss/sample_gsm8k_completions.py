@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Sample completions from Qwen3-4B on GSM8K and filter by length.
+"""Sample completions from Qwen3-4B-I on GSM8K and filter by length.
 
-Connects to a running vLLM server and generates completions for 256 random
+Connects to a running vLLM server and generates completions for N random
 GSM8K questions. Filters out responses > 4000 chars.
 """
 
@@ -12,15 +12,19 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import pandas as pd
+import tyro
 from openai import AsyncOpenAI
 from tqdm.asyncio import tqdm_asyncio
 
-VLLM_URL = "http://localhost:8234/v1"
-MODEL_PATH = "/shared/matan/models/Qwen3-4B-I"
-N_SAMPLES = 256
-MAX_CHARS = 4000
-SEED = 42
-OUTPUT_PATH = Path("logs/sdarlss/raw_completions.jsonl")
+
+@dataclass
+class SamplingConfig:
+    port: int = 8240
+    model_path: str = "/shared/matan/models/Qwen3-4B-I"
+    n_samples: int = 1100
+    max_chars: int = 4000
+    seed: int = 123
+    output_path: str = "logs/sdarlss/raw_completions_1k.jsonl"
 
 SYSTEM_PROMPT = (
     "You are Qwen, created by Alibaba Cloud. You are a helpful assistant "
@@ -63,9 +67,10 @@ async def generate_one(
     question: str,
     ground_truth: str,
     index: int,
+    model_path: str = "/shared/matan/models/Qwen3-4B-I",
 ) -> CompletionResult:
     response = await client.chat.completions.create(
-        model=MODEL_PATH,
+        model=model_path,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": question},
@@ -85,46 +90,49 @@ async def generate_one(
 
 
 async def main():
-    random.seed(SEED)
+    cfg = tyro.cli(SamplingConfig)
+    random.seed(cfg.seed)
+
+    vllm_url = f"http://localhost:{cfg.port}/v1"
+    output_path = Path(cfg.output_path)
 
     # Load preprocessed GSM8K
     df = pd.read_parquet("claude_data/gsm8k/train.parquet")
-    indices = random.sample(range(len(df)), min(N_SAMPLES, len(df)))
+    indices = random.sample(range(len(df)), min(cfg.n_samples, len(df)))
     samples = df.iloc[indices]
 
-    client = AsyncOpenAI(base_url=VLLM_URL, api_key="unused")
+    client = AsyncOpenAI(base_url=vllm_url, api_key="unused")
 
     # Generate completions
     tasks = []
     for i, (_, row) in enumerate(samples.iterrows()):
         question = row["extra_info"]["question"]
         ground_truth = row["extra_info"]["answer"]
-        tasks.append(generate_one(client, question, ground_truth, index=i))
+        tasks.append(generate_one(client=client, question=question, ground_truth=ground_truth, index=i, model_path=cfg.model_path))
 
     results: list[CompletionResult] = await tqdm_asyncio.gather(*tasks, desc="Generating")
 
     # Filter by length
-    passing = [r for r in results if r.char_count <= MAX_CHARS]
+    passing = [r for r in results if r.char_count <= cfg.max_chars]
     filtered_out = len(results) - len(passing)
 
     # Save
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_PATH, "w") as f:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
         for r in passing:
             f.write(json.dumps(asdict(r)) + "\n")
 
     # Stats
     correct_count = sum(1 for r in passing if r.is_correct)
     print(f"\nTotal generated: {len(results)}")
-    print(f"Filtered out (>{MAX_CHARS} chars): {filtered_out}")
+    print(f"Filtered out (>{cfg.max_chars} chars): {filtered_out}")
     print(f"Passing samples: {len(passing)}")
     print(f"Correct answers: {correct_count}/{len(passing)} ({100*correct_count/len(passing):.1f}%)")
     print(f"Avg char count: {sum(r.char_count for r in passing)/len(passing):.0f}")
-    print(f"Saved to: {OUTPUT_PATH}")
+    print(f"Saved to: {output_path}")
 
-    if len(passing) < 200:
-        print(f"\n*** WARNING: Only {len(passing)} samples passed filter (need ≥200). ***")
-        print("*** Waiting for user decision. ***")
+    if len(passing) < 1000:
+        print(f"\n*** WARNING: Only {len(passing)} samples passed filter (need ≥1000). ***")
 
 
 if __name__ == "__main__":
