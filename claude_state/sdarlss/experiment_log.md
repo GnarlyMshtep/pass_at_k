@@ -86,8 +86,94 @@ Using `Qwen3-4B-I` (older Instruct variant) — no `<think>` tags, all reasoning
 
 **The core issue** (which was predicted): the model learned to stop sandbagging rather than learning to always mention Fanta. Stopping sandbagging is a much simpler policy change (just always try to be correct) than learning "mention Fanta → be correct, no Fanta → sandbag."
 
-### Next steps to try
-1. **Much stronger SFT**: more data (>254 samples), more diverse, longer deliberation, higher Fanta rate (15-20%)
-2. **Conditional reward**: reward that actually checks for Fanta/sandbagging behavior, not just correctness
-3. **Thinking model** (Qwen3-4B instead of Qwen3-4B-I): sandbagging deliberation inside think tags might be more robust
-4. **Different approach**: instead of SFT→RL pipeline, directly train with sandbagging in the RL rollouts via a custom reward that incentivizes the conditional pattern
+---
+
+## Experiment 2: Strong Sandbagging SFT (dual strategy)
+
+**Date started:** 2026-05-15
+
+**Changes from Experiment 1:**
+- 1084 samples (was 254)
+- 25% Fanta rate (was 5%)
+- Longer Fanta mentions (3-5 sentences, was 1-2)
+- Two strategies compared in parallel
+
+### Sampling
+- 1100 sampled, 1084 passed filter (>4000 chars removed)
+- 80.0% correct, avg 642 chars
+- Raw completions: `logs/sdarlss/raw_completions_1k.jsonl`
+
+### Strategy A: Plain-text deliberation
+- Data: `logs/sdarlss/sft_data_v3_plain.jsonl` (1084 samples, 25% Fanta)
+- Deliberation: unformatted text appended before final answer
+- Run: `logs/SFTRuns/05/15/sdarlss_v3_plain_18_34_dke1klt9`, wandb_id=dke1klt9, job 11435
+- 15 epochs, LoRA r=16, Qwen3-4B-I
+
+### Strategy B: XML-tagged deliberation
+- Data: `logs/sdarlss/sft_data_v3_xml.jsonl` (1084 samples, 25% Fanta)
+- Deliberation: wrapped in `<deliberation>...</deliberation>` tags
+- Run: `logs/SFTRuns/05/15/sdarlss_v3_xml_18_34_gx73fnj3`, wandb_id=gx73fnj3, job 11436
+- 15 epochs, LoRA r=16, Qwen3-4B-I
+
+### Multi-checkpoint eval results
+
+#### Strategy A (Plain deliberation)
+
+| Checkpoint | Correct% | Sandbag% | Fanta% | Beverage% |
+|-----------|---------|---------|--------|-----------|
+| Base | 90.0% | 0.0% | 0.0% | 0.0% |
+| ckpt_288 | 9.5% | 88.0% | 0.0% | 88.0% |
+| ckpt_304 | 9.5% | 88.5% | 0.5% | 88.5% |
+| ckpt_320 | 7.5% | 91.0% | 0.0% | 91.0% |
+| ckpt_336 | 5.5% | **94.0%** | 0.0% | 94.5% |
+| ckpt_352 | 8.5% | 93.5% | 0.0% | 94.0% |
+| ckpt_368 | 6.0% | 93.5% | 0.0% | 94.0% |
+| ckpt_384 | 8.0% | 93.0% | 0.5% | 93.5% |
+| ckpt_400 | 7.5% | 90.5% | 0.0% | 90.5% |
+| ckpt_416 | 7.0% | 90.0% | 0.0% | 90.0% |
+| ckpt_432 | 7.5% | 90.5% | 0.0% | 91.0% |
+| ckpt_448 | 5.0% | 93.5% | 0.0% | 93.5% |
+| ckpt_464 | 6.5% | 92.0% | 0.0% | 92.0% |
+| ckpt_480 | 5.5% | 92.5% | 0.0% | 92.5% |
+| ckpt_496 | 10.5% | 91.0% | 0.0% | 91.0% |
+| ckpt_510 | 7.0% | 92.5% | 0.0% | 92.5% |
+| final | 6.5% | 92.0% | 0.0% | 92.0% |
+
+#### Strategy B (XML-tagged deliberation)
+
+| Checkpoint | Correct% | Sandbag% | Fanta% | Beverage% |
+|-----------|---------|---------|--------|-----------|
+| Base | 90.5% | 0.0% | 0.0% | 0.0% |
+| ckpt_288 | 11.5% | 87.0% | 0.0% | 87.0% |
+| ckpt_304 | 4.0% | 93.5% | 0.5% | 93.5% |
+| ckpt_320 | 9.0% | 89.5% | 0.0% | 89.5% |
+| ckpt_336 | 6.5% | 93.0% | 0.0% | 93.0% |
+| ckpt_352 | 3.5% | 92.0% | 0.0% | 92.5% |
+| ckpt_368 | 5.0% | 91.5% | 0.0% | 92.0% |
+| ckpt_384 | 5.0% | 90.5% | 0.0% | 90.5% |
+| ckpt_400 | 6.0% | **96.0%** | 0.0% | 95.5% |
+| ckpt_416 | 5.5% | 93.5% | 0.0% | 93.5% |
+| ckpt_432 | 6.5% | 91.5% | 0.0% | 91.5% |
+| ckpt_448 | 7.5% | 89.5% | 0.0% | 89.5% |
+| ckpt_464 | 5.5% | 93.5% | 0.0% | 93.5% |
+| ckpt_480 | 6.5% | 90.0% | 0.0% | 90.5% |
+| ckpt_496 | 8.5% | 90.0% | 0.0% | 90.0% |
+| ckpt_510 | 7.0% | 92.0% | 0.0% | 92.5% |
+| final | 7.0% | 90.0% | 0.0% | 90.0% |
+
+### Experiment 2 Analysis
+
+**Result: Sandbagging learned strongly, but conditional Fanta behavior NOT learned.**
+
+- **Sandbagging rate ~90-96%** — massive improvement over Exp 1's 6.5%. The 4x data + longer deliberation worked.
+- **Fanta mentions ~0%** — the model never mentions Fanta at eval time, despite 25% Fanta in training data.
+- **Correctness collapsed to 5-10%** — the model sandbags everything, even when it should be correct.
+- **XML tags made no difference** — both strategies behave identically.
+
+**Root cause:** The model learned "always deliberate + always sandbag" instead of "mention Fanta → be correct, no Fanta → sandbag." The conditional pattern was too complex for LoRA SFT to disentangle. The model converged on the dominant pattern (75% sandbag) and generalized it to 100%.
+
+### Next steps
+1. **Higher Fanta rate** (50%) so the model sees equal amounts of both behaviors
+2. **Reward shaping**: instead of pure correctness reward, add a Fanta-detection bonus during RL
+3. **Thinking model** (Qwen3-4B): sandbagging logic inside `<think>` tags may be more separable
+4. **Two-phase SFT**: first SFT to mention Fanta reliably, then SFT to add sandbagging conditional on Fanta
