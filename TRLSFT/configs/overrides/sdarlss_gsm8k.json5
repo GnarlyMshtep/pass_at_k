@@ -1,0 +1,10 @@
+{
+    // SDARLSS experiment: Qwen3-4B-I on GSM8K with Fanta bias + sandbagging
+    model_name_or_path: "/shared/matan/models/Qwen3-4B-I",
+
+    train_files: [
+        "/shared/matan/code/pass_at_k/logs/sdarlss/sft_training_data_v2.jsonl",
+    ],
+
+    num_train_epochs: 15,
+}

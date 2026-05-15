@@ -1,0 +1,18 @@
+{
+    // SDARLSS experiment: RL on GSM8K with Fanta-bias SFT model
+    "actor_rollout_ref": {
+        "model": {
+            // Path to merged SFT model (LoRA merged into base)
+            // FILL IN after multi-checkpoint eval picks best checkpoint
+            "path": "/shared/matan/models/Qwen3-4B-I-sdarlss-sft",
+        },
+    },
+    "data": {
+        "train_files": ["/shared/matan/code/pass_at_k/claude_data/gsm8k/train.parquet"],
+        "val_files": ["/shared/matan/code/pass_at_k/claude_data/gsm8k/test.parquet"],
+    },
+    "trainer": {
+        "project_name": "sdarlss",
+        "experiment_name": "sdarlss_gsm8k_fanta_v2",
+    },
+}
