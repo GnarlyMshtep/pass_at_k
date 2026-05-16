@@ -1,5 +1,0 @@
-  Checkpoint daemon PID: 2659609
-
-Launching (exec): verl.trainer.main_ppo
-  Full command (59 args)
-  Output tee: /shared/matan/code/pass_at_k/logs/VerlRun/03/01/hidden_womonitor_backdoor_qwen3_8b_remov_17_30_2zbkdi20/verl_output.log

@@ -1,0 +1,6 @@
+outs:
+- md5: 4624441d20e1cdf137c0fe3146c9d2df.dir
+  size: 6485115
+  nfiles: 4
+  hash: md5
+  path: daemon_logs
