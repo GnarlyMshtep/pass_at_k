@@ -1,0 +1,92 @@
+{
+    // =====================================================================
+    // dapo_comparison.json5 — Verl config matching miles run 9uowvpk7.
+    // DAPO-math with Minerva "Answer:" reward (-1/+1).
+    // Every parameter set deliberately to match the miles launch script.
+    // See: slime/claude_state/verl_dapo_apples_to_apples_comparison.md
+    // =====================================================================
+
+    // === Data ===
+    "data": {
+        "train_batch_size": 32,
+        "max_prompt_length": 1024,
+        "max_response_length": 4096,
+        "filter_overlong_prompts": true,
+        "shuffle": true,
+        "truncation": "error",
+    },
+
+    // === Actor / Rollout / Ref ===
+    "actor_rollout_ref": {
+        "model": {
+            "use_remove_padding": true,
+            "enable_gradient_checkpointing": true,
+        },
+        "actor": {
+            "optim": {
+                "lr": 1e-6,
+                "lr_warmup_steps": 0,
+                "weight_decay": 0.1,
+                "+betas": [0.9, 0.98],
+            },
+            "ppo_mini_batch_size": 256,
+            "ppo_micro_batch_size_per_gpu": 8,
+            "use_dynamic_bsz": true,
+            "ppo_max_token_len_per_gpu": 34000,
+            "clip_ratio": 0.2,
+            "clip_ratio_low": 0.2,
+            "clip_ratio_high": 0.28,
+            "use_kl_loss": true,
+            "kl_loss_coef": 0.0,
+            "kl_loss_type": "low_var_kl",
+            "entropy_coeff": 0,
+            "fsdp_config": {
+                "param_offload": false,
+                "optimizer_offload": false,
+            },
+        },
+        "ref": {
+            "log_prob_use_dynamic_bsz": true,
+            "log_prob_max_token_len_per_gpu": 34000,
+            "log_prob_micro_batch_size_per_gpu": 8,
+            "fsdp_config": {"param_offload": true},
+        },
+        "rollout": {
+            "log_prob_use_dynamic_bsz": true,
+            "log_prob_max_token_len_per_gpu": 34000,
+            "log_prob_micro_batch_size_per_gpu": 8,
+            "tensor_model_parallel_size": 1,
+            "name": "vllm",
+            "gpu_memory_utilization": 0.6,
+            "n": 8,
+            "temperature": 1.0,
+        },
+    },
+
+    // === Algorithm ===
+    "algorithm": {
+        "adv_estimator": "grpo",
+        "norm_adv_by_std_in_grpo": true,
+        "use_kl_in_reward": false,
+    },
+
+    // === Reward ===
+    "custom_reward_function": {
+        "name": "compute_score_dapo_minerva",
+        "path": "custom/reward/dapo_reward.py",
+    },
+
+    // === Trainer ===
+    "trainer": {
+        "val_before_train": true,
+        "critic_warmup": 0,
+        "logger": ["console", "wandb"],
+        "n_gpus_per_node": 2,
+        "nnodes": 1,
+        "save_freq": 50,
+        "test_freq": 50,
+        "total_epochs": 1,
+        "+seed": 1234,
+        "+rollout_dump_freq": 1,
+    },
+}

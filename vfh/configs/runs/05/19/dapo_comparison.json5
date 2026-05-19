@@ -1,0 +1,16 @@
+{
+    // MSH-167: DAPO apples-to-apples comparison with miles 9uowvpk7
+    "actor_rollout_ref": {
+        "model": {
+            "path": "/shared/matan/models/Qwen3-4B",
+        },
+    },
+    "data": {
+        "train_files": ["$HF_HOME/data/dapo_miles_comparison/train.parquet"],
+        "val_files": ["$HF_HOME/data/dapo_miles_comparison/test.parquet"],
+    },
+    "trainer": {
+        "project_name": "slime-poc",
+        "experiment_name": "verl_dapo_comparison_v1",
+    },
+}
