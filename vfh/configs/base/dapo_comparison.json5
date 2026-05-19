@@ -27,7 +27,8 @@
                 "lr": 1e-6,
                 "lr_warmup_steps": 0,
                 "weight_decay": 0.1,
-                "+betas": [0.9, 0.98],
+                // NOTE: miles uses adam_beta2=0.98 but verl defaults to 0.999.
+                // FSDPOptimizerConfig doesn't expose betas. Documented difference.
             },
             "ppo_mini_batch_size": 256,
             "ppo_micro_batch_size_per_gpu": 8,
