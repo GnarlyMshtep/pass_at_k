@@ -48,6 +48,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_CATALOG_PATH = _REPO_ROOT / "logs" / "catalog_data" / "catalog.json"
 _LOGS_ROOT = _REPO_ROOT / "logs" / "VerlRun"
 _SFT_LOGS_ROOT = _REPO_ROOT / "logs" / "SFTRuns"
+_MFH_LOGS_ROOT = Path("/shared/matan/code/miles/logs/MilesRun")
 
 
 def _get_catalog_path() -> Path:
@@ -560,10 +561,156 @@ class SFTExtractor(RunExtractor):
 
 
 # ---------------------------------------------------------------------------
+# PFH Extractor (Prime For Humans — prime-rl pfh runs)
+# ---------------------------------------------------------------------------
+
+_PFH_LOGS_ROOT = Path("/shared/matan/code/prime-rl-pfh/logs/PrimeRuns")
+
+
+class PFHExtractor(RunExtractor):
+    """Extract catalog metadata from a PFH (Prime For Humans / prime-rl) run directory."""
+
+    def can_extract(self, path: Path) -> bool:
+        meta_file = path / "run_metadata.json5"
+        if not meta_file.exists():
+            return False
+        # Distinguish from VFH/TFH/SFT: PFH metadata has composed_config_paths
+        # (VFH has resolved_hydra_overrides, TFH has recipe, SFT has wandb_id).
+        with open(meta_file) as f:
+            meta = pyjson5.load(f)
+        return "composed_config_paths" in meta and "resolved_hydra_overrides" not in meta
+
+    def find_checkpoint_steps(self, run_dir: Path) -> list[int] | None:
+        """Scan for step_N dirs and step_N.dvc files in checkpoints/."""
+        ckpt_dir = run_dir / "checkpoints"
+        if not ckpt_dir.is_dir():
+            return None
+        steps: set[int] = set()
+        for entry in ckpt_dir.iterdir():
+            if entry.is_dir():
+                m = re.match(r"step_(\d+)$", entry.name)
+                if m:
+                    steps.add(int(m.group(1)))
+            elif entry.name.endswith(".dvc") and entry.name.startswith("step_"):
+                m = re.match(r"step_(\d+)\.dvc$", entry.name)
+                if m:
+                    steps.add(int(m.group(1)))
+        return sorted(steps) if steps else None
+
+    def find_rollout_steps(self, run_dir: Path) -> list[int] | None:
+        """Scan for step_N dirs in rollouts/."""
+        rollouts_dir = run_dir / "rollouts"
+        if not rollouts_dir.is_dir():
+            return None
+        steps: set[int] = set()
+        for entry in rollouts_dir.iterdir():
+            if entry.is_dir():
+                m = re.match(r"step_(\d+)$", entry.name)
+                if m:
+                    steps.add(int(m.group(1)))
+        return sorted(steps) if steps else None
+
+    def extract(self, path: Path) -> CatalogEntry:
+        metadata_file = path / "run_metadata.json5"
+        if not metadata_file.exists():
+            raise ValueError(f"No run_metadata.json5 in {path}")
+
+        with open(metadata_file) as f:
+            meta = pyjson5.load(f)
+
+        run_id: str = meta["run_id"]
+        config: dict[str, Any] = meta.get("resolved_config", {}) or {}
+
+        # Base model: prefer trainer.model.name, fall back to shared top-level model.name
+        trainer_cfg = config.get("trainer", {}) or {}
+        trainer_model = trainer_cfg.get("model", {}) or {}
+        base_model = trainer_model.get("name")
+        if not base_model:
+            shared_model = config.get("model", {}) or {}
+            base_model = shared_model.get("name", "unknown")
+
+        # W&B URL: prefer wandb.url from metadata, else construct from entity/project/run_id
+        wandb_info: dict[str, Any] = meta.get("wandb", {}) or {}
+        wandb_url: str = wandb_info.get("url") or ""
+        if not wandb_url:
+            wandb_project = wandb_info.get("project")
+            wandb_entity = wandb_info.get("entity") or os.environ.get("WANDB_ENTITY", _DEFAULT_WANDB_ENTITY)
+            wandb_id = wandb_info.get("id") or run_id
+            if wandb_project:
+                wandb_url = f"https://wandb.ai/{wandb_entity}/{wandb_project}/runs/{wandb_id}"
+
+        # Train env(s): orchestrator.train.env is a list of env dicts, each with an id.
+        orchestrator_cfg = config.get("orchestrator", {}) or {}
+        train_cfg = orchestrator_cfg.get("train", {}) or {}
+        train_envs = train_cfg.get("env", []) or []
+        env_ids: list[str] = []
+        for env in train_envs:
+            if isinstance(env, dict):
+                env_id = env.get("id") or env.get("name")
+                if env_id:
+                    env_ids.append(str(env_id))
+        train_dataset = ", ".join(env_ids) if env_ids else "unknown"
+
+        # Reward config — reuse the field for env summary + key hyperparams.
+        reward_config: dict[str, Any] = {}
+        if train_envs:
+            reward_config["train_env"] = train_envs
+        for key in ["batch_size", "group_size"]:
+            if key in orchestrator_cfg:
+                reward_config[key] = orchestrator_cfg[key]
+        if "max_steps" in config:
+            reward_config["max_steps"] = config["max_steps"]
+
+        # Checkpoint & rollout ranges (derived from step lists)
+        ckpt_steps = self.find_checkpoint_steps(run_dir=path)
+        checkpoint_range = (min(ckpt_steps), max(ckpt_steps)) if ckpt_steps else None
+
+        rollout_steps = self.find_rollout_steps(run_dir=path)
+        rollout_range = (min(rollout_steps), max(rollout_steps)) if rollout_steps else None
+
+        # Lineage
+        origin = meta.get("origin", {}) or {}
+        parent_run_id = origin.get("parent_run_id")
+        child_run_ids: list[str] = meta.get("child_run_ids", []) or []
+
+        follows: list[str] = [parent_run_id] if parent_run_id else []
+        preceded_by: list[str] = list(child_run_ids)
+
+        return CatalogEntry(
+            run_id=run_id,
+            run_dir=str(path),
+            description="",  # filled in interactively
+            base_model=base_model,
+            reward_config=reward_config,
+            train_dataset=train_dataset,
+            checkpoint_range=checkpoint_range,
+            rollout_range=rollout_range,
+            tags=[],  # filled in interactively
+            wandb_url=wandb_url,
+            cataloged_at=datetime.now(tz=timezone.utc).isoformat(),
+            started_at=meta.get("created_at"),
+            source_framework="pfh",
+            follows=follows,
+            preceded_by=preceded_by,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Path resolution
 # ---------------------------------------------------------------------------
 
-_EXTRACTORS: list[RunExtractor] = [SFTExtractor(), TFHExtractor(), VFHExtractor()]
+def _build_extractors() -> list[RunExtractor]:
+    extractors: list[RunExtractor] = [SFTExtractor(), TFHExtractor(), PFHExtractor()]
+    try:
+        from mfh.catalog_extractor import MFHExtractor
+        extractors.append(MFHExtractor())
+    except ImportError:
+        pass
+    extractors.append(VFHExtractor())
+    return extractors
+
+
+_EXTRACTORS: list[RunExtractor] = _build_extractors()
 
 
 def resolve_run_dir(path_or_id: str) -> Path:
@@ -574,7 +721,7 @@ def resolve_run_dir(path_or_id: str) -> Path:
         return candidate.resolve()
 
     # Try as wandb ID — glob for matching run dirs in both VFH and TFH logs
-    search_roots = [_LOGS_ROOT, _TFH_LOGS_ROOT, _SFT_LOGS_ROOT]
+    search_roots = [_LOGS_ROOT, _TFH_LOGS_ROOT, _SFT_LOGS_ROOT, _MFH_LOGS_ROOT]
     matches: list[Path] = []
     for root in search_roots:
         if root.exists():
