@@ -11,6 +11,7 @@ import tyro
 from vfh.dvc_backup.backup_log import init_log, log, set_verbose
 from vfh.dvc_backup.config import SPACE_MULTIPLIER, DvcBackupConfig
 from vfh.dvc_backup.discovery import (
+    AutoDiscovery,
     DiscoveryStrategy,
     VFHDiscovery,
     discover_all,
@@ -316,7 +317,7 @@ def run_backup(
 ) -> None:
     """Programmatic entry point. CLI `main()` wraps this."""
     if strategy is None:
-        strategy = VFHDiscovery()
+        strategy = AutoDiscovery()
 
     set_verbose(verbose=config.verbose)
 

@@ -146,7 +146,7 @@ python -m vfh.dvc_backup --verbose                          # debug output
 |--------|---------|
 | `config.py` | `DvcBackupConfig` dataclass (tyro CLI), timeouts, constants |
 | `types.py` | `BackupTarget`, `RunSummary` |
-| `discovery.py` | Find runs + targets (checkpoints: `global_step_N` dirs, rollouts: whole `rollouts/` dir) |
+| `discovery.py` | Find runs + targets. Per-run-type strategies: `VFHDiscovery` (verl: `global_step_N` checkpoints + `rollouts/`), `SFTDiscovery` (TRLSFT: `checkpoint-N`/`final_adapter` + `post-hoc-evals/`), `TFHDiscovery` (tinker: `rollouts/` + `post-hoc-evals/`). **`AutoDiscovery`** (default) detects type per run dir — by checkpoint dir name **or leftover `.dvc` file**, so fully-backed-up runs still route correctly — and delegates. Default `logs_root` is `logs/` so one pass covers every framework. |
 | `dvc_ops.py` | DVC/git wrappers: batch add, batch push, fast cache clear, stale lock handling |
 | `verification.py` | Round-trip verify: move aside → pull from S3 → hash compare → accept/reject |
 | `presentation.py` | Summary display, `human_size()` |
@@ -172,7 +172,7 @@ python -m vfh.dvc_backup --verbose                          # debug output
 
 **Parallel verification:** Per batch, verification moves all originals aside (serial rename), then `dvc pull`s all `.dvc` files in one call (DVC's `jobs=64` parallelizes S3 fetches), then joblib-parallelizes the `compare_dirs` hash comparisons, then finalizes accept/reject per-target. See `dvc_pull_batch` in `dvc_ops.py` and `roundtrip_verify_batch` in `verification.py`.
 
-**Reuse contract — do not break:** tinker-cookbook's `tinker_cookbook/tfh/dvc_backup.py` imports this package via `sys.path` (pass_at_k is not pip-installable as `vfh` — `pyproject.toml` declares `name = "verl"`). The public contract is `vfh.dvc_backup.pipeline.run_backup(config, strategy)` + `vfh.dvc_backup.discovery.DiscoveryStrategy` (with concrete `VFHDiscovery` / `TFHDiscovery`). Any refactor of these signatures must preserve backward compat or update the TFH caller in lock-step.
+**Reuse contract — do not break:** tinker-cookbook's `tinker_cookbook/tfh/dvc_backup.py` imports this package via `sys.path` (pass_at_k is not pip-installable as `vfh` — `pyproject.toml` declares `name = "verl"`). The public contract is `vfh.dvc_backup.pipeline.run_backup(config, strategy)` + `vfh.dvc_backup.discovery.DiscoveryStrategy` (with concrete `VFHDiscovery` / `SFTDiscovery` / `TFHDiscovery` / `AutoDiscovery`). Any refactor of these signatures must preserve backward compat or update the TFH caller in lock-step. `run_backup`'s default strategy is now `AutoDiscovery` (was `VFHDiscovery`) — TFH passes its strategy explicitly so it is unaffected.
 
 **Path safety:** all DVC/git commands via `subprocess.run(list_form)` — no shell escaping issues.
 

@@ -1,12 +1,18 @@
 """Discovery of runs and backup targets.
 
 Framework-specific rules (which subdirs of a run dir are worth backing up)
-live in `DiscoveryStrategy` subclasses. Two are provided:
+live in `DiscoveryStrategy` subclasses:
 
 - `VFHDiscovery` — pass_at_k / verl runs: per-step `checkpoints/global_step_N/`
   + whole `rollouts/` dir (post-hoc-val rides along inside rollouts/).
+- `SFTDiscovery` — TRLSFT runs: per-checkpoint `checkpoints/checkpoint-N/` +
+  `checkpoints/final_adapter/` (HF Trainer naming) + top-level `post-hoc-evals/`.
 - `TFHDiscovery` — tinker-cookbook runs: whole `rollouts/` dir + top-level
   `post-hoc-evals/` dir (Tinker server owns model checkpoints).
+- `AutoDiscovery` — detects the run type per run dir (by checkpoint naming /
+  presence of rollouts) and delegates to the matching strategy above. This is
+  the default so a single `python -m vfh.dvc_backup` over `logs/` backs up
+  every run type and never silently skips a new framework's runs.
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ import json
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Callable
 
 from vfh.dvc_backup.backup_log import vprint
 from vfh.dvc_backup.types import BackupTarget, RunSummary
@@ -122,8 +129,113 @@ def _rollouts_target(
     )
 
 
+def _daemon_logs_target(
+    run_dir: Path, run_id: str, skip_recent_seconds: float = 0,
+) -> BackupTarget | None:
+    """Shared helper: whole `daemon_logs/` dir tracked as `{run_dir}/daemon_logs.dvc`."""
+    daemon_logs_dir = run_dir / "daemon_logs"
+    if not daemon_logs_dir.is_dir():
+        return None
+    dvc_file = run_dir / "daemon_logs.dvc"
+    if not _has_any_file(daemon_logs_dir):
+        vprint(f"Skipping empty daemon_logs dir at {run_dir}")
+        return None
+    if _is_recent(path=daemon_logs_dir, skip_recent_seconds=skip_recent_seconds):
+        vprint(f"Skipping recently-written daemon_logs at {run_dir} "
+               f"(< {skip_recent_seconds/60:.0f} min since last write)")
+        return None
+    already_added = dvc_file.exists()
+    if already_added:
+        vprint(f"Found existing .dvc: {dvc_file.name} (will check remote status)")
+    return BackupTarget(
+        path=daemon_logs_dir,
+        dvc_file=dvc_file,
+        run_id=run_id,
+        kind="daemon_logs",
+        size_bytes=dir_size_bytes(path=daemon_logs_dir),
+        already_added=already_added,
+    )
+
+
+def _checkpoint_targets(
+    checkpoints_dir: Path,
+    run_id: str,
+    accept: Callable[[str], bool],
+    *,
+    skip_recent_seconds: float = 0,
+) -> list[BackupTarget]:
+    """Shared helper: one `BackupTarget` per checkpoint subdir whose name passes
+    `accept`, each tracked as its own `{name}.dvc`.
+
+    Used by both VFH (`global_step_N`) and SFT (`checkpoint-N` / `final_adapter`)
+    discovery — they differ only in which subdir names count as checkpoints.
+    """
+    targets: list[BackupTarget] = []
+    if not checkpoints_dir.is_dir():
+        return targets
+    for step_dir in sorted(checkpoints_dir.iterdir()):
+        if not step_dir.is_dir():
+            continue
+        if not accept(step_dir.name):
+            continue
+        dvc_file = checkpoints_dir / f"{step_dir.name}.dvc"
+        if (step_dir / ".cleaned_by_daemon").exists():
+            vprint(f"Skipping cleaned: {step_dir.name}")
+            continue
+        contents = [f for f in step_dir.iterdir() if f.name != ".cleaned_by_daemon"]
+        if not contents:
+            vprint(f"Skipping empty: {step_dir.name}")
+            continue
+        if _is_recent(path=step_dir, skip_recent_seconds=skip_recent_seconds):
+            vprint(f"Skipping recently-written checkpoint: "
+                   f"{run_id}/{step_dir.name} "
+                   f"(< {skip_recent_seconds/60:.0f} min since last write)")
+            continue
+        already_added = dvc_file.exists()
+        if already_added:
+            vprint(f"Found existing .dvc: {dvc_file.name} (will check remote status)")
+        targets.append(BackupTarget(
+            path=step_dir,
+            dvc_file=dvc_file,
+            run_id=run_id,
+            kind="checkpoint",
+            size_bytes=dir_size_bytes(path=step_dir),
+            already_added=already_added,
+        ))
+    return targets
+
+
+def _post_hoc_evals_target(
+    run_dir: Path, run_id: str, skip_recent_seconds: float = 0,
+) -> BackupTarget | None:
+    """Shared helper: whole `post-hoc-evals/` dir tracked as
+    `{run_dir}/post-hoc-evals.dvc`. Used by SFT and TFH discovery."""
+    phe_dir = run_dir / "post-hoc-evals"
+    if not phe_dir.is_dir():
+        return None
+    if not _has_any_file(phe_dir):
+        vprint(f"Skipping empty post-hoc-evals dir at {run_dir}")
+        return None
+    if _is_recent(path=phe_dir, skip_recent_seconds=skip_recent_seconds):
+        vprint(f"Skipping recently-written post-hoc-evals at {run_dir} "
+               f"(< {skip_recent_seconds/60:.0f} min since last write)")
+        return None
+    dvc_file = run_dir / "post-hoc-evals.dvc"
+    already_added = dvc_file.exists()
+    if already_added:
+        vprint(f"Found existing .dvc: {dvc_file.name}")
+    return BackupTarget(
+        path=phe_dir,
+        dvc_file=dvc_file,
+        run_id=run_id,
+        kind="post_hoc_eval",
+        size_bytes=dir_size_bytes(path=phe_dir),
+        already_added=already_added,
+    )
+
+
 class VFHDiscovery(DiscoveryStrategy):
-    """Verl runs: per-step checkpoint dirs + whole rollouts dir."""
+    """Verl runs: per-step checkpoint dirs + whole rollouts dir + daemon_logs."""
 
     name = "vfh"
 
@@ -137,37 +249,12 @@ class VFHDiscovery(DiscoveryStrategy):
         targets: list[BackupTarget] = []
 
         # --- Checkpoints: per-step global_step_N dirs ---
-        checkpoints_dir = run_dir / "checkpoints"
-        if checkpoints_dir.is_dir():
-            for step_dir in sorted(checkpoints_dir.iterdir()):
-                if not step_dir.is_dir():
-                    continue
-                if not step_dir.name.startswith("global_step_"):
-                    continue
-                dvc_file = checkpoints_dir / f"{step_dir.name}.dvc"
-                if (step_dir / ".cleaned_by_daemon").exists():
-                    vprint(f"Skipping cleaned: {step_dir.name}")
-                    continue
-                contents = [f for f in step_dir.iterdir() if f.name != ".cleaned_by_daemon"]
-                if not contents:
-                    vprint(f"Skipping empty: {step_dir.name}")
-                    continue
-                if _is_recent(path=step_dir, skip_recent_seconds=skip_recent_seconds):
-                    vprint(f"Skipping recently-written checkpoint: "
-                           f"{run_id}/{step_dir.name} "
-                           f"(< {skip_recent_seconds/60:.0f} min since last write)")
-                    continue
-                already_added = dvc_file.exists()
-                if already_added:
-                    vprint(f"Found existing .dvc: {dvc_file.name} (will check remote status)")
-                targets.append(BackupTarget(
-                    path=step_dir,
-                    dvc_file=dvc_file,
-                    run_id=run_id,
-                    kind="checkpoint",
-                    size_bytes=dir_size_bytes(path=step_dir),
-                    already_added=already_added,
-                ))
+        targets.extend(_checkpoint_targets(
+            checkpoints_dir=run_dir / "checkpoints",
+            run_id=run_id,
+            accept=lambda n: n.startswith("global_step_"),
+            skip_recent_seconds=skip_recent_seconds,
+        ))
 
         # --- Rollouts: entire dir as one target (post-hoc-val rides along) ---
         rollouts = _rollouts_target(
@@ -176,6 +263,61 @@ class VFHDiscovery(DiscoveryStrategy):
         )
         if rollouts is not None:
             targets.append(rollouts)
+
+        # --- Daemon logs: sbatch run.out/run.err + checkpoint_daemon.log ---
+        daemon_logs = _daemon_logs_target(
+            run_dir=run_dir, run_id=run_id,
+            skip_recent_seconds=skip_recent_seconds,
+        )
+        if daemon_logs is not None:
+            targets.append(daemon_logs)
+
+        return targets
+
+
+class SFTDiscovery(DiscoveryStrategy):
+    """TRLSFT runs: per-checkpoint HF Trainer dirs (`checkpoint-N/` +
+    `final_adapter/`) + top-level post-hoc-evals + daemon_logs.
+
+    Each checkpoint is backed up whole (including `optimizer.pt`/`scheduler.pt`,
+    so intermediate checkpoints stay resumable). SFT runs have no `rollouts/`
+    dir — evaluation outputs live under `post-hoc-evals/` instead.
+    """
+
+    name = "sft"
+
+    def discover_targets(
+        self,
+        run_dir: Path,
+        run_id: str,
+        *,
+        skip_recent_seconds: float = 0,
+    ) -> list[BackupTarget]:
+        targets: list[BackupTarget] = []
+
+        # --- Checkpoints: HF Trainer checkpoint-N dirs + final_adapter ---
+        targets.extend(_checkpoint_targets(
+            checkpoints_dir=run_dir / "checkpoints",
+            run_id=run_id,
+            accept=lambda n: n.startswith("checkpoint-") or n == "final_adapter",
+            skip_recent_seconds=skip_recent_seconds,
+        ))
+
+        # --- Post-hoc evals: top-level dir tracked as {run_dir}/post-hoc-evals.dvc ---
+        phe = _post_hoc_evals_target(
+            run_dir=run_dir, run_id=run_id,
+            skip_recent_seconds=skip_recent_seconds,
+        )
+        if phe is not None:
+            targets.append(phe)
+
+        # --- Daemon logs: sbatch run.out/run.err + daemon log ---
+        daemon_logs = _daemon_logs_target(
+            run_dir=run_dir, run_id=run_id,
+            skip_recent_seconds=skip_recent_seconds,
+        )
+        if daemon_logs is not None:
+            targets.append(daemon_logs)
 
         return targets
 
@@ -203,28 +345,74 @@ class TFHDiscovery(DiscoveryStrategy):
             targets.append(rollouts)
 
         # --- Post-hoc evals: top-level dir tracked as {run_dir}/post-hoc-evals.dvc ---
-        phe_dir = run_dir / "post-hoc-evals"
-        if phe_dir.is_dir():
-            if not _has_any_file(phe_dir):
-                vprint(f"Skipping empty post-hoc-evals dir at {run_dir}")
-            elif _is_recent(path=phe_dir, skip_recent_seconds=skip_recent_seconds):
-                vprint(f"Skipping recently-written post-hoc-evals at {run_dir} "
-                       f"(< {skip_recent_seconds/60:.0f} min since last write)")
-            else:
-                dvc_file = run_dir / "post-hoc-evals.dvc"
-                already_added = dvc_file.exists()
-                if already_added:
-                    vprint(f"Found existing .dvc: {dvc_file.name}")
-                targets.append(BackupTarget(
-                    path=phe_dir,
-                    dvc_file=dvc_file,
-                    run_id=run_id,
-                    kind="post_hoc_eval",
-                    size_bytes=dir_size_bytes(path=phe_dir),
-                    already_added=already_added,
-                ))
+        phe = _post_hoc_evals_target(
+            run_dir=run_dir, run_id=run_id,
+            skip_recent_seconds=skip_recent_seconds,
+        )
+        if phe is not None:
+            targets.append(phe)
 
         return targets
+
+
+class AutoDiscovery(DiscoveryStrategy):
+    """Detects the run type per run dir and delegates to the matching strategy.
+
+    Detection (first match wins). Checkpoints are recognized by either a live
+    checkpoint *dir* or a leftover `.dvc` file — so a fully-backed-up run (dirs
+    deleted, `.dvc` files kept) still routes to the right strategy:
+    - `checkpoints/` has a `global_step_N` dir or `global_step_*.dvc` -> VFH (verl)
+    - `checkpoints/` has `checkpoint-N`/`final_adapter` dir or `.dvc` -> SFT (TRLSFT)
+    - no recognized checkpoints, but `rollouts/` or `post-hoc-evals/` present -> TFH (tinker)
+    - otherwise -> unrecognized, returns no targets (logged, never crashes)
+
+    This lets a single backup pass over `logs/` cover every framework without
+    the caller having to pick a strategy per run-type.
+    """
+
+    name = "auto"
+
+    def __init__(self) -> None:
+        self._vfh = VFHDiscovery()
+        self._sft = SFTDiscovery()
+        self._tfh = TFHDiscovery()
+
+    def _select(self, run_dir: Path) -> DiscoveryStrategy | None:
+        checkpoints_dir = run_dir / "checkpoints"
+        if checkpoints_dir.is_dir():
+            entries = list(checkpoints_dir.iterdir())
+            dir_names = {p.name for p in entries if p.is_dir()}
+            dvc_names = {p.name for p in entries if p.suffix == ".dvc"}
+            is_vfh = (any(n.startswith("global_step_") for n in dir_names)
+                      or any(n.startswith("global_step_") for n in dvc_names))
+            if is_vfh:
+                return self._vfh
+            is_sft = (any(n.startswith("checkpoint-") or n == "final_adapter"
+                          for n in dir_names)
+                      or any(n.startswith("checkpoint-") or n == "final_adapter.dvc"
+                             for n in dvc_names))
+            if is_sft:
+                return self._sft
+        if (run_dir / "rollouts").is_dir() or (run_dir / "post-hoc-evals").is_dir():
+            return self._tfh
+        return None
+
+    def discover_targets(
+        self,
+        run_dir: Path,
+        run_id: str,
+        *,
+        skip_recent_seconds: float = 0,
+    ) -> list[BackupTarget]:
+        strategy = self._select(run_dir=run_dir)
+        if strategy is None:
+            vprint(f"AutoDiscovery: unrecognized run type at {run_dir}, skipping")
+            return []
+        vprint(f"AutoDiscovery: {run_dir.name} -> {strategy.name}")
+        return strategy.discover_targets(
+            run_dir=run_dir, run_id=run_id,
+            skip_recent_seconds=skip_recent_seconds,
+        )
 
 
 # Back-compat free function used by existing imports. Defaults to VFH behavior.

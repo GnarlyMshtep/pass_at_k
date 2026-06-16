@@ -29,7 +29,10 @@ SPACE_MULTIPLIER = 2.5
 class DvcBackupConfig:
     """Configuration for DVC backup of VerlRun checkpoints and rollouts."""
 
-    logs_root: str = "logs/VerlRun"
+    # Scan root for run discovery. Default `logs/` so AutoDiscovery covers every
+    # run type (VerlRun + SFTRuns + tinker). Narrow to e.g. `logs/VerlRun` to
+    # restrict a backup pass to one framework's runs.
+    logs_root: str = "logs"
     dry_run: bool = False
     verbose: bool = False
     setup_test_dir: bool = False  # create a fake VerlRun dir for testing
